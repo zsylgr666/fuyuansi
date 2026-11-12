@@ -2092,7 +2092,10 @@ function tgAnimate(ts,dt){
     checkInbox: checkInbox,      // async () => unseen steal events (also shows notifications)
     syncNow: function () { return syncGarden(true); },
     notes: function () { return noteLog.slice(); },   // recent notification texts
-    myServerPlots: [],           // last server copy of own plots (s = stolen count)
+    note: function (t, good) { note(t, good); },
+    myServerPlots: [],
+    cardButtons: [],             // extra buttons on the tap-a-player card: {label, alt?, run(id, name)}
+    rowButtons: [],              // extra buttons on each 邻居 row: {label, run(id, name)}           // last server copy of own plots (s = stolen count)
     _state: function () { return { visit: VISIT && { owner: VISIT.owner, name: VISIT.name, plots: VISIT.server }, mine: G.myServerPlots, offset: offset }; }
   };
   var VISIT = null, offset = 0, lastSig = null, syncTimer = null, syncing = null, inboxChan = null, pokeChans = {};
@@ -2459,7 +2462,15 @@ function tgAnimate(ts,dt){
     h += '<div class="tgg-sec">此刻在这里的香客</div>' + (onl.length ? onl.map(row).join('') : '<div class="tgg-empty">现在这里只有你一个人</div>');
     h += '<div class="tgg-sec">最近的邻居（熟菜多的排前面）</div>' + (rest.length ? rest.map(row).join('') : '<div class="tgg-empty">还没有邻居种菜</div>');
     panel.querySelector('.tgg-bd').innerHTML = h;
-    panel.querySelectorAll('[data-visit]').forEach(function (b) { b.onclick = function () { visit(b.getAttribute('data-visit')); }; });
+    panel.querySelectorAll('[data-visit]').forEach(function (b) {
+      b.onclick = function () { visit(b.getAttribute('data-visit')); };
+      var nid = b.getAttribute('data-visit'), nm = (list.find(function (n) { return n.id === nid; }) || {}).name;
+      (G.rowButtons || []).forEach(function (rb) {
+        var el = document.createElement('button'); el.className = 'tgg-btn alt'; el.textContent = rb.label;
+        el.onclick = function () { closePanel(); rb.run(nid, nm); };
+        b.parentNode.insertBefore(el, b);
+      });
+    });
     var hb = panel.querySelector('[data-home]'); if (hb) hb.onclick = function () { closePanel(); goHome(); };
   }
   // tap another player's monk => card with 「去他的菜园」
@@ -2474,6 +2485,11 @@ function tgAnimate(ts,dt){
     card.innerHTML = '<div>🧘 ' + esc(name || '香客') + '</div><button class="tgg-btn" data-go>去他的菜园</button><button class="tgg-btn alt" data-x>算了</button>';
     card.querySelector('[data-go]').onclick = function (e) { e.stopPropagation(); closeCard(); visit(id); };
     card.querySelector('[data-x]').onclick = function (e) { e.stopPropagation(); closeCard(); };
+    (G.cardButtons || []).forEach(function (b) {
+      var el = document.createElement('button'); el.className = 'tgg-btn' + (b.alt ? ' alt' : ''); el.textContent = b.label;
+      el.onclick = function (e) { e.stopPropagation(); closeCard(); b.run(id, name); };
+      card.insertBefore(el, card.querySelector('[data-x]'));
+    });
     card.addEventListener('pointerdown', function (e) { e.stopPropagation(); });
     appEl().appendChild(card);
   }
@@ -2583,6 +2599,486 @@ function tgAnimate(ts,dt){
       if ((window.W3 && W3.player) || tries > 40) { clearInterval(t); syncGarden(true).then(function () { checkInbox(); }); }
     }, 250);
   });
+})();
+
+</script>
+<script>/* 福缘寺 social: 附近语音 / 私信 / 顶栏菜单 */
+/*!
+ * 福缘寺 tg-social.js — proximity voice chat (WebRTC P2P, distance falloff) + 私信 (direct messages)
+ * + compact top bar (secondary buttons moved into a ☰ menu).
+ * Load AFTER the game script, tg-backend.js and tg-garden.js. DMs need backend/social.sql.
+ * Config (optional, before load): window.TG_SOCIAL_CONFIG = { iceServers:[...], near:3, far:8, maxDist:10, maxPeers:6 }
+ * Test hooks: window.TG_SOCIAL_RPC(fn,args) / window.TG_SOCIAL_SELECT() replace supabase calls.
+ */
+(function () {
+  'use strict';
+  if (window.TG_SOCIAL) return;
+  var CFG = Object.assign({
+    iceServers: [
+      { urls: 'stun:stun.l.google.com:19302' },
+      { urls: 'stun:stun.qq.com:3478' },
+      { urls: 'stun:stun.miwifi.com:3478' }
+    ],
+    near: 3, far: 8, maxDist: 10, dropDist: 12, maxPeers: 6, tickMs: 400, stateEveryMs: 3000
+  }, window.TG_SOCIAL_CONFIG || {});
+  var AUTH = window.TG_AUTH, NET = window.TG_NET || {}, GARDEN = window.TG_GARDEN;
+  function me() { return AUTH && AUTH.user && AUTH.user.id; }
+  function online() { return !!(AUTH && AUTH.online && AUTH.user); }
+  function say(t) { try { toast(t); } catch (e) { console.log('[toast]', t); } }
+  function esc(t) { return String(t == null ? '' : t).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function rpc(fn, args) {
+    var hook = window.TG_SOCIAL_RPC || window.TG_GARDEN_RPC;
+    if (hook) return Promise.resolve(hook(fn, args || {}));
+    return AUTH.client.rpc(fn, args || {}).then(function (r) { if (r.error) throw r.error; return r.data; });
+  }
+  function appEl() { return document.getElementById('app') || document.body; }
+  var S_ = window.TG_SOCIAL = {};
+
+  /* ======================= CSS ======================= */
+  var css = '' +
+    '#topbar .tgs-pill{position:relative}' +
+    '#btnMic.on{background:linear-gradient(#3d9a52,#22672f)!important;box-shadow:0 0 0 2px #ffe39a inset}' +
+    '#btnMic.speaking{animation:tgsPulse .6s ease-in-out infinite alternate}' +
+    '#btnMic.off{opacity:.85}' +
+    '@keyframes tgsPulse{from{box-shadow:0 0 0 2px #ffe39a inset,0 0 0 0 rgba(120,230,140,.8)}to{box-shadow:0 0 0 2px #ffe39a inset,0 0 0 7px rgba(120,230,140,0)}}' +
+    '.tgs-badge{position:absolute;top:-5px;right:-5px;min-width:17px;height:17px;border-radius:9px;background:#e23b2e;color:#fff;font:700 11px/17px sans-serif;text-align:center;padding:0 4px;border:2px solid #fbf1dc;display:none}' +
+    '.tgs-badge.show{display:block}' +
+    '.tgs-menu{position:absolute;right:6px;top:52px;z-index:80;background:#fbf1dc;border:3px solid #5b3820;border-radius:12px;box-shadow:0 10px 24px rgba(0,0,0,.4);padding:6px;display:none;min-width:190px;font:600 14px "PingFang SC","Noto Sans SC",sans-serif;color:#3a2615}' +
+    '.tgs-menu.show{display:block}' +
+    '.tgs-item{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 6px 6px 10px;border-radius:9px;cursor:pointer}' +
+    '.tgs-item:hover{background:#f3e2bf}' +
+    '.tgs-item .pill{flex:none}' +
+    '.tgs-dm .tgg-bd{display:flex;flex-direction:column;gap:6px;min-height:300px}' +
+    '.tgs-thread{display:flex;gap:8px;align-items:center;padding:9px 10px;background:#f3e2bf;border:1px solid #c08a57;border-radius:10px;cursor:pointer}' +
+    '.tgs-thread .n{font-weight:700}.tgs-thread .l{font-size:12px;color:#7a5a3a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}' +
+    '.tgs-thread .b{margin-left:auto;background:#e23b2e;color:#fff;border-radius:9px;font:700 11px/18px sans-serif;min-width:18px;text-align:center;padding:0 5px}' +
+    '.tgs-msgs{flex:1;overflow:auto;display:flex;flex-direction:column;gap:6px;padding:4px 2px;max-height:52vh;min-height:220px}' +
+    '.tgs-msg{max-width:78%;padding:7px 10px;border-radius:12px;font-size:14px;line-height:1.4;word-break:break-word;white-space:pre-wrap}' +
+    '.tgs-msg.them{align-self:flex-start;background:#fff9ec;border:1px solid #c08a57;border-bottom-left-radius:3px}' +
+    '.tgs-msg.mine{align-self:flex-end;background:linear-gradient(#c8423a,#9b2a22);color:#fff3d6;border-bottom-right-radius:3px}' +
+    '.tgs-time{align-self:center;font-size:11px;color:#a08060}' +
+    '.tgs-compose{display:flex;gap:6px}' +
+    '.tgs-compose input{flex:1;min-width:0;padding:9px 10px;border:2px solid #c08a57;border-radius:10px;background:#fff9ec;font-size:15px;color:#3a2615}' +
+    '.tgs-compose input:focus{outline:none;border-color:#b8322a}' +
+    '.tgs-hint{position:absolute;left:50%;bottom:150px;transform:translateX(-50%);z-index:60;background:rgba(40,22,10,.82);color:#ffe39a;border-radius:999px;padding:6px 12px;font:600 13px "PingFang SC",sans-serif;pointer-events:none;white-space:nowrap}';
+  function injectCss() { if (document.getElementById('tgs-css')) return; var s = document.createElement('style'); s.id = 'tgs-css'; s.textContent = css; document.head.appendChild(s); }
+  function note(t, good) {
+    if (GARDEN && GARDEN.note) { S_.noteLog.push({ t: Date.now(), text: t }); return GARDEN.note(t, good); }
+    var box = document.querySelector('.tgg-notes');
+    if (!box) { box = document.createElement('div'); box.className = 'tgg-notes'; appEl().appendChild(box); }
+    var n = document.createElement('div'); n.className = 'tgg-note' + (good ? ' good' : ''); n.textContent = t; box.appendChild(n);
+    while (box.children.length > 4) box.removeChild(box.firstChild);
+    setTimeout(function () { if (n.parentNode) n.parentNode.removeChild(n); }, 6000);
+    S_.noteLog.push({ t: Date.now(), text: t });
+  }
+  S_.noteLog = [];
+
+  /* ======================= top bar: 🎤 💬 ☰ ======================= */
+  var bar = document.getElementById('topbar'), btnMic, btnDM, dmBadge, btnMore, menu, btnSpeaker;
+  function mkPill(id, html, title) { var b = document.createElement('button'); b.className = 'pill tgs-pill'; b.id = id; b.innerHTML = html; if (title) b.title = title; return b; }
+  function buildBar() {
+    injectCss();
+    if (!bar || btnMic) return;
+    btnMic = mkPill('btnMic', '🎤<b>关</b>', '开麦 / 闭麦'); btnMic.classList.add('off'); btnMic.setAttribute('aria-pressed', 'false');
+    btnDM = mkPill('btnDM', '💬<span class="tgs-badge" id="dmBadge"></span>', '私信');
+    btnMore = mkPill('btnMore', '☰', '更多');
+    var anchor = document.getElementById('btnNeighbors') || document.getElementById('btnAuth');
+    [btnMic, btnDM, btnMore].forEach(function (b) { bar.insertBefore(b, anchor); });
+    dmBadge = btnDM.querySelector('.tgs-badge');
+    menu = document.createElement('div'); menu.className = 'tgs-menu'; menu.id = 'tgsMenu';
+    btnSpeaker = mkPill('btnSpeaker', '🔊', '听别人说话');
+    var items = [
+      ['btnNeighbors', '🏘️ 邻居菜园'], ['btnGuard', '🐕 放狗看门'], ['btnSpeaker', '他人声音'],
+      ['btnAuth', '账号'], ['btnMute', '背景音效'], ['btnMenu', '游戏菜单']
+    ];
+    items.forEach(function (it) {
+      var b = it[0] === 'btnSpeaker' ? btnSpeaker : document.getElementById(it[0]); if (!b) return;
+      var row = document.createElement('div'); row.className = 'tgs-item'; row.dataset.for = it[0];
+      var lab = document.createElement('span'); lab.textContent = it[1];
+      row.appendChild(lab); row.appendChild(b);
+      row.addEventListener('click', function (e) { if (!b.contains(e.target)) b.click(); setTimeout(closeMenu, 0); });
+      menu.appendChild(row);
+    });
+    appEl().appendChild(menu);
+    btnMore.onclick = function (e) { e.stopPropagation(); menu.classList.contains('show') ? closeMenu() : openMenu(); };
+    document.addEventListener('pointerdown', function (e) { if (menu.classList.contains('show') && !menu.contains(e.target) && e.target !== btnMore) closeMenu(); }, true);
+    btnMic.onclick = function (e) { e.stopPropagation(); unlockAudio(); toggleMic(); };
+    btnSpeaker.onclick = function (e) { e.stopPropagation(); unlockAudio(); setSpeaker(!V.speakerOn); };
+    btnDM.onclick = function (e) { e.stopPropagation(); openDM(); };
+    renderSpeaker();
+  }
+  function openMenu() {
+    menu.querySelectorAll('.tgs-item').forEach(function (row) {
+      var b = document.getElementById(row.dataset.for);
+      row.style.display = (b && b.style.display === 'none') ? 'none' : '';
+    });
+    menu.classList.add('show');
+  }
+  function closeMenu() { if (menu) menu.classList.remove('show'); }
+
+  /* ======================= proximity voice ======================= */
+  var V = S_.voice = {
+    micOn: false, speakerOn: true, peers: new Map(), remoteMic: {}, localStream: null, ctx: null, localLevel: 0,
+    toggleMic: function () { return toggleMic(); }, setMic: function (on) { return on ? micOn() : micOff(); },
+    setSpeaker: function (on) { setSpeaker(on); }, gainFor: gainFor, stats: stats, config: CFG
+  };
+  function gainFor(d) {
+    if (d <= CFG.near) return 1;
+    if (d >= CFG.far) return 0;
+    var t = (d - CFG.near) / (CFG.far - CFG.near);
+    return Math.max(0, Math.min(1, (1 - t) * (1 - t)));      // smooth-ish falloff
+  }
+  function ensureCtx() {
+    if (V.ctx) return V.ctx;
+    var AC = window.AudioContext || window.webkitAudioContext; if (!AC) return null;
+    try { V.ctx = new AC(); V.master = V.ctx.createGain(); V.master.gain.value = V.speakerOn ? 1 : 0; V.master.connect(V.ctx.destination); } catch (e) { V.ctx = null; }
+    return V.ctx;
+  }
+  function unlockAudio() {
+    var c = ensureCtx(); if (c && c.state !== 'running') c.resume().catch(function () {});
+    V.peers.forEach(function (p) { if (p.audioEl) p.audioEl.play().catch(function () {}); });
+    hideHint();
+  }
+  ['pointerdown', 'touchend', 'keydown'].forEach(function (ev) { document.addEventListener(ev, function () { if (V.ctx && V.ctx.state !== 'running') unlockAudio(); }, { passive: true, capture: true }); });
+  var hintEl = null;
+  function showHint(t) { if (hintEl) return; hintEl = document.createElement('div'); hintEl.className = 'tgs-hint'; hintEl.textContent = t; appEl().appendChild(hintEl); }
+  function hideHint() { if (hintEl) { hintEl.remove(); hintEl = null; } }
+  function renderMic() {
+    if (!btnMic) return;
+    btnMic.classList.toggle('on', V.micOn); btnMic.classList.toggle('off', !V.micOn);
+    btnMic.setAttribute('aria-pressed', String(V.micOn));
+    btnMic.querySelector('b').textContent = V.micOn ? '开' : '关';
+  }
+  function renderSpeaker() { if (btnSpeaker) btnSpeaker.textContent = V.speakerOn ? '🔊 开' : '🔇 关'; }
+  function setSpeaker(on) {
+    V.speakerOn = !!on; renderSpeaker();
+    if (V.master) V.master.gain.value = V.speakerOn ? 1 : 0;
+    V.peers.forEach(function (p) { if (p.audioEl && !p.viaCtx) p.audioEl.muted = !V.speakerOn; });
+    say(V.speakerOn ? '🔊 能听到附近的人说话了' : '🔇 已屏蔽别人的声音');
+  }
+  async function toggleMic() { return V.micOn ? micOff() : micOn(); }
+  async function micOn() {
+    if (!online()) { say('离线模式，不能语音'); return false; }
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { say('这个浏览器不支持麦克风（要用 https 打开）'); return false; }
+    ensureCtx(); unlockAudio();
+    try {
+      V.localStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }, video: false });
+    } catch (e) {
+      say(/NotAllowed|Permission/i.test(e && e.name) ? '没有麦克风权限，请在浏览器设置里允许' : '打不开麦克风：' + (e && e.message));
+      return false;
+    }
+    var track = V.localStream.getAudioTracks()[0];
+    V.micOn = true; renderMic();
+    V.peers.forEach(function (p) { attachTrack(p); });
+    if (V.ctx) { try { var src = V.ctx.createMediaStreamSource(V.localStream); V.localAn = V.ctx.createAnalyser(); V.localAn.fftSize = 512; src.connect(V.localAn); } catch (e) { V.localAn = null; } }
+    sendState(); tick();
+    note('🎤 已开麦：' + CFG.near + ' 米内听得清，' + CFG.far + ' 米外就听不见了', true);
+    return true;
+  }
+  function micOff() {
+    V.micOn = false; renderMic();
+    V.peers.forEach(function (p) { try { p.sender && p.sender.replaceTrack(null); } catch (e) {} });
+    if (V.localStream) V.localStream.getTracks().forEach(function (t) { t.stop(); });
+    V.localStream = null; V.localAn = null; V.localLevel = 0;
+    sendState();
+    say('🔇 已闭麦');
+    return true;
+  }
+  function attachTrack(p) {
+    var t = V.micOn && V.localStream ? V.localStream.getAudioTracks()[0] : null;
+    if (p.sender) p.sender.replaceTrack(t).catch(function () {});
+  }
+  function sendState() { if (NET.sendEvent) NET.sendEvent('vstate', { mic: V.micOn }); }
+  setInterval(function () { if (V.micOn || V.peers.size) sendState(); }, CFG.stateEveryMs);
+  function sig(type, to, data) { if (!NET.sendEvent) return; data = data || {}; data.to = to; NET.sendEvent(type, data); }
+  function myPos() { var w = window.W3; return w && w.player ? w.player.position : null; }
+  function distTo(p) { var m = myPos(); if (!m || !p || !p.pos) return Infinity; return Math.hypot(m.x - p.pos.x, m.z - p.pos.z); }
+  function createPeer(id, initiator) {
+    var pc = new RTCPeerConnection({ iceServers: CFG.iceServers });
+    var p = { id: id, pc: pc, initiator: initiator, pendingIce: [], gain: 0, dist: Infinity, level: 0, speaking: false, created: Date.now() };
+    V.peers.set(id, p);
+    pc.onicecandidate = function (e) { if (e.candidate) sig('rtc-ice', id, { c: e.candidate.toJSON ? e.candidate.toJSON() : e.candidate }); };
+    pc.onconnectionstatechange = function () { if (pc.connectionState === 'failed') { closePeer(id, true); } };
+    pc.ontrack = function (e) { onRemoteTrack(p, e.streams && e.streams[0] ? e.streams[0] : new MediaStream([e.track])); };
+    if (initiator) {
+      var tr = pc.addTransceiver('audio', { direction: 'sendrecv' });
+      p.sender = tr.sender; attachTrack(p);
+      pc.createOffer().then(function (o) { return pc.setLocalDescription(o); })
+        .then(function () { sig('rtc-offer', id, { sdp: pc.localDescription.sdp }); })
+        .catch(function (e) { console.warn('[voice] offer', e); closePeer(id, true); });
+    }
+    return p;
+  }
+  function onRemoteTrack(p, stream) {
+    if (p.stream === stream) return;
+    p.stream = stream;
+    var a = new Audio(); a.autoplay = true; a.setAttribute('playsinline', ''); a.playsInline = true; a.srcObject = stream;
+    p.audioEl = a;
+    var c = ensureCtx();
+    if (c) {
+      try {
+        p.src = c.createMediaStreamSource(stream);
+        p.gainNode = c.createGain(); p.gainNode.gain.value = 0;
+        p.an = c.createAnalyser(); p.an.fftSize = 512;
+        p.src.connect(p.an); p.src.connect(p.gainNode); p.gainNode.connect(V.master);
+        p.viaCtx = true;
+        a.muted = true;                         // Chrome needs the element attached; the sound goes through WebAudio
+      } catch (e) { p.viaCtx = false; }
+    }
+    if (!p.viaCtx) { a.volume = 0; a.muted = !V.speakerOn; }
+    a.play().catch(function () {});
+    if (c && c.state !== 'running') showHint('🔈 点一下屏幕就能听到附近的人');
+  }
+  function closePeer(id, tellThem) {
+    var p = V.peers.get(id); if (!p) return;
+    V.peers.delete(id);
+    try { p.pc.close(); } catch (e) {}
+    try { p.src && p.src.disconnect(); p.gainNode && p.gainNode.disconnect(); } catch (e) {}
+    if (p.audioEl) { try { p.audioEl.srcObject = null; } catch (e) {} }
+    if (tellThem) sig('rtc-bye', id, {});
+    setIndicator(id, null);
+  }
+  function closeAll(tell) { Array.from(V.peers.keys()).forEach(function (id) { closePeer(id, tell); }); }
+  if (NET.onEvent) NET.onEvent(function (ev) {
+    var d = ev.data || {}, from = ev.from; if (!from) return;
+    if (ev.type === 'vstate') { V.remoteMic[from] = { mic: !!d.mic, t: Date.now() }; return; }
+    if (!/^rtc-/.test(ev.type) || d.to !== me()) return;
+    var p = V.peers.get(from);
+    if (ev.type === 'rtc-offer') {
+      if (p && p.initiator && me() < from) return;          // glare: the smaller id wins as initiator
+      if (p) closePeer(from, false);
+      if (V.peers.size >= CFG.maxPeers + 2) return;          // hard cap for weak phones
+      p = createPeer(from, false);
+      var pc = p.pc;
+      pc.setRemoteDescription({ type: 'offer', sdp: d.sdp }).then(function () {
+        var tr = pc.getTransceivers()[0]; if (tr) { tr.direction = 'sendrecv'; p.sender = tr.sender; attachTrack(p); }
+        flushIce(p);
+        return pc.createAnswer();
+      }).then(function (a) { return pc.setLocalDescription(a); })
+        .then(function () { sig('rtc-answer', from, { sdp: pc.localDescription.sdp }); })
+        .catch(function (e) { console.warn('[voice] answer', e); closePeer(from, true); });
+    } else if (ev.type === 'rtc-answer' && p && p.initiator) {
+      p.pc.setRemoteDescription({ type: 'answer', sdp: d.sdp }).then(function () { flushIce(p); }).catch(function (e) { console.warn('[voice] setAnswer', e); });
+    } else if (ev.type === 'rtc-ice' && p) {
+      if (p.pc.remoteDescription) p.pc.addIceCandidate(d.c).catch(function () {}); else p.pendingIce.push(d.c);
+    } else if (ev.type === 'rtc-bye') {
+      closePeer(from, false);
+    }
+  });
+  function flushIce(p) { var q = p.pendingIce; p.pendingIce = []; q.forEach(function (c) { p.pc.addIceCandidate(c).catch(function () {}); }); }
+  var lastRoom = null;
+  function tick() {
+    if (NET.room !== lastRoom) { closeAll(true); lastRoom = NET.room; V.remoteMic = {}; }
+    var players = (NET.players ? NET.players() : []), now = Date.now(), byId = {};
+    players.forEach(function (p) { byId[p.id] = p; p._d = distTo(p); });
+    Object.keys(V.remoteMic).forEach(function (id) { if (now - V.remoteMic[id].t > 10000) delete V.remoteMic[id]; });
+    var wanted = players.filter(function (p) { return p._d <= CFG.maxDist && (V.micOn || (V.remoteMic[p.id] && V.remoteMic[p.id].mic)); })
+      .sort(function (a, b) { return a._d - b._d; }).slice(0, CFG.maxPeers);
+    var wantIds = {}; wanted.forEach(function (p) { wantIds[p.id] = 1; });
+    if (online()) wanted.forEach(function (p) { if (!V.peers.has(p.id) && me() < p.id) createPeer(p.id, true); });
+    V.peers.forEach(function (peer, id) {
+      var pl = byId[id], d = pl ? pl._d : Infinity;
+      var anyMic = V.micOn || (V.remoteMic[id] && V.remoteMic[id].mic);
+      if (anyMic || !peer.lastMic) peer.lastMic = now;
+      if (!pl || d > CFG.dropDist || (!anyMic && now - peer.lastMic > 15000) || (!wantIds[id] && d > CFG.maxDist && now - peer.created > 6000)) { closePeer(id, true); return; }
+      peer.dist = d; peer.gain = V.speakerOn ? gainFor(d) : 0;
+      if (peer.gainNode && V.ctx) peer.gainNode.gain.setTargetAtTime(gainFor(d), V.ctx.currentTime, .08);
+      else if (peer.audioEl && !peer.viaCtx) peer.audioEl.volume = gainFor(d);
+      peer.level = levelOf(peer.an);
+      peer.speaking = peer.level > 0.02 && peer.gain > 0.03;
+      setIndicator(id, peer.speaking ? 'talk' : (V.remoteMic[id] && V.remoteMic[id].mic && peer.gain > 0 ? 'mic' : null));
+    });
+    players.forEach(function (p) { if (!V.peers.has(p.id)) setIndicator(p.id, null); });
+    V.localLevel = levelOf(V.localAn);
+    var talking = V.micOn && V.localLevel > 0.02;
+    if (btnMic) btnMic.classList.toggle('speaking', talking);
+    setIndicator('__me', talking ? 'talk' : null);
+  }
+  setInterval(tick, CFG.tickMs);
+  var buf = null;
+  function levelOf(an) {
+    if (!an) return 0;
+    if (!buf || buf.length !== an.fftSize) buf = new Float32Array(an.fftSize);
+    try { an.getFloatTimeDomainData(buf); } catch (e) { return 0; }
+    var s = 0; for (var i = 0; i < buf.length; i++) s += buf[i] * buf[i];
+    return Math.sqrt(s / buf.length);
+  }
+  // 3D speaking indicator over the monk
+  var indTex = {};
+  function itex(kind) {
+    if (indTex[kind] || typeof THREE === 'undefined') return indTex[kind];
+    var cv = document.createElement('canvas'); cv.width = 128; cv.height = 128; var x = cv.getContext('2d');
+    x.fillStyle = kind === 'talk' ? '#2f9a4a' : 'rgba(60,40,20,.75)'; x.beginPath(); x.arc(64, 60, 50, 0, Math.PI * 2); x.fill();
+    x.strokeStyle = '#ffe39a'; x.lineWidth = 6; x.stroke();
+    x.font = '62px "Apple Color Emoji","Noto Color Emoji",sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle';
+    x.fillText(kind === 'talk' ? '🔊' : '🎤', 64, 64);
+    return (indTex[kind] = new THREE.CanvasTexture(cv));
+  }
+  var inds = {};
+  function setIndicator(id, kind) {
+    var w = window.W3; if (!w || typeof THREE === 'undefined') return;
+    var host = id === '__me' ? w.player : (w.remotes && w.remotes.get(String(id)) || {}).mesh;
+    var s = inds[id];
+    if (!kind || !host) { if (s) s.visible = false; return; }
+    if (!s || s.parent !== host) {
+      if (s && s.parent) s.parent.remove(s);
+      s = inds[id] = new THREE.Sprite(new THREE.SpriteMaterial({ map: itex(kind), depthTest: false, transparent: true }));
+      s.scale.set(.6, .6, 1); s.position.set(0, 2.6, 0); s.renderOrder = 12; host.add(s);
+    }
+    if (s.material.map !== itex(kind)) { s.material.map = itex(kind); s.material.needsUpdate = true; }
+    s.visible = true;
+    var t = Date.now() / 160; s.scale.setScalar(kind === 'talk' ? .62 + Math.sin(t) * .06 : .5);
+  }
+  S_.indicatorKind = function (id) { var s = inds[id]; return s && s.visible ? (s.material.map === indTex.talk ? 'talk' : 'mic') : null; };
+  async function stats() {
+    var out = [];
+    for (var entry of V.peers) {
+      var id = entry[0], p = entry[1], sent = 0, recv = 0, pk = 0;
+      try { (await p.pc.getStats()).forEach(function (r) { if (r.type === 'outbound-rtp' && r.kind === 'audio') { sent += r.bytesSent || 0; pk += r.packetsSent || 0; } if (r.type === 'inbound-rtp' && r.kind === 'audio') recv += r.bytesReceived || 0; }); } catch (e) {}
+      out.push({ id: id, state: p.pc.connectionState, initiator: p.initiator, dist: Math.round(p.dist * 100) / 100, gain: Math.round(p.gain * 1000) / 1000, level: Math.round(p.level * 1000) / 1000, speaking: p.speaking, sending: !!(p.sender && p.sender.track), bytesSent: sent, packetsSent: pk, bytesReceived: recv });
+    }
+    return out;
+  }
+  window.addEventListener('pagehide', function () { closeAll(true); });
+
+  /* ======================= 私信 DM ======================= */
+  var D = S_.dm = { unread: 0, open: openDM, openWith: function (id, name) { return openDM(id, name); }, send: send, threads: threads, history: history, refreshUnread: refreshUnread };
+  var dmPanel = null, dmWith = null, dmNames = {}, dmChan = null, pokes = {};
+  function setBadge(n) { D.unread = n | 0; if (dmBadge) { dmBadge.textContent = n > 99 ? '99+' : String(n); dmBadge.classList.toggle('show', n > 0); } }
+  // every badge-changing request takes a sequence number; a slower, older response never overwrites a newer one
+  var badgeSeq = 0;
+  async function refreshUnread() {
+    if (!online()) return 0;
+    var seq = ++badgeSeq;
+    try { var n = await rpc('dm_unread', {}); if (seq === badgeSeq) setBadge(n); return n; } catch (e) { return D.unread; }
+  }
+  async function threads() { return (await rpc('dm_threads', {})) || []; }
+  async function history(other) { return (await rpc('dm_history', { p_other: other })) || []; }
+  async function send(to, body) {
+    body = String(body || '').trim(); if (!body) return null;
+    var m = await rpc('dm_send', { p_to: to, p_body: body.slice(0, 500) });
+    poke(to);
+    return m;
+  }
+  function poke(to) {
+    if (!AUTH.client) return;
+    var ch = pokes[to];
+    if (!ch) {
+      ch = pokes[to] = AUTH.client.channel('tg-dm-' + to, { config: { broadcast: { self: false } } });
+      ch._ready = new Promise(function (res) { ch.subscribe(function (s) { if (s === 'SUBSCRIBED') res(); }); setTimeout(res, 4000); });
+    }
+    ch._ready.then(function () { ch.send({ type: 'broadcast', event: 'poke', payload: { from: me() } }).catch(function () {}); });
+  }
+  var lastSeenMax = {};
+  async function onIncoming() {
+    if (dmPanel && dmWith) { await renderChat(true); }
+    else if (dmPanel) { renderList(); }
+    // one authoritative read (not the poke payload) drives both the notification and the badge
+    var seq = ++badgeSeq, ts;
+    try { ts = await threads(); } catch (e) { return refreshUnread(); }
+    var total = 0;
+    ts.forEach(function (t) { total += t.unread | 0; });
+    ts.filter(function (t) { return t.unread > 0 && !t.last_from_me && t.id !== dmWith && (!lastSeenMax[t.id] || t.at > lastSeenMax[t.id]); }).slice(0, 2).forEach(function (t) {
+      lastSeenMax[t.id] = t.at; dmNames[t.id] = t.name;
+      note('💬 ' + t.name + '：' + (t.last.length > 24 ? t.last.slice(0, 24) + '…' : t.last));
+    });
+    if (seq === badgeSeq) setBadge(total);
+    return total;
+  }
+  function subscribeDM() {
+    if (!AUTH.client || !me()) return;
+    if (dmChan) { try { AUTH.client.removeChannel(dmChan); } catch (e) {} }
+    var ch = AUTH.client.channel('tg-dm-' + me(), { config: { broadcast: { self: false } } });
+    var deb = null, kick = function () { clearTimeout(deb); deb = setTimeout(onIncoming, 250); };
+    ch.on('broadcast', { event: 'poke' }, kick);
+    try { ch.on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'dm_messages', filter: 'recipient=eq.' + me() }, kick); } catch (e) {}
+    ch.subscribe(); dmChan = ch;
+  }
+  setInterval(function () { if (!document.hidden && online()) refreshUnread(); }, 30000);
+  function closeDM() { if (dmPanel) dmPanel.remove(); dmPanel = null; dmWith = null; }
+  function shell(title, back) {
+    if (!dmPanel) {
+      dmPanel = document.createElement('div'); dmPanel.className = 'tgg-mask tgs-dm';
+      dmPanel.addEventListener('click', function (e) { if (e.target === dmPanel) closeDM(); });
+      ['keydown', 'keyup'].forEach(function (k) { dmPanel.addEventListener(k, function (e) { e.stopPropagation(); if (k === 'keydown' && e.key === 'Escape') closeDM(); }); });
+      document.body.appendChild(dmPanel);
+    }
+    dmPanel.innerHTML = '<div class="tgg-box"><div class="tgg-hd"><span>' + (back ? '<button data-back style="font-size:18px;margin-right:6px">‹</button>' : '') + esc(title) + '</span><button data-close aria-label="关闭">×</button></div><div class="tgg-bd"></div></div>';
+    dmPanel.querySelector('[data-close]').onclick = closeDM;
+    var b = dmPanel.querySelector('[data-back]'); if (b) b.onclick = function () { dmWith = null; renderList(); };
+    return dmPanel.querySelector('.tgg-bd');
+  }
+  function fmt(ms) { var d = new Date(ms), n = new Date(); var hm = ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2); return d.toDateString() === n.toDateString() ? hm : (d.getMonth() + 1) + '/' + d.getDate() + ' ' + hm; }
+  async function openDM(id, name) {
+    injectCss(); closeMenu();
+    if (!online()) { say('离线模式，不能私信'); return; }
+    if (id) { if (id === me()) { say('不能给自己发私信'); return; } dmWith = id; if (name) dmNames[id] = name; return renderChat(false); }
+    dmWith = null; return renderList();
+  }
+  async function renderList() {
+    var bd = shell('💬 私信', false);
+    bd.innerHTML = '<div class="tgg-empty">加载中…</div>';
+    var ts = []; try { ts = await threads(); } catch (e) { bd.innerHTML = '<div class="tgg-empty">读不到私信：' + esc(e && e.message) + '</div>'; return; }
+    if (!dmPanel || dmWith) return;
+    var h = ts.length ? ts.map(function (t) {
+      dmNames[t.id] = t.name;
+      return '<div class="tgs-thread" data-id="' + esc(t.id) + '"><div style="min-width:0;flex:1"><div class="n">' + esc(t.name) + ' <span style="font-weight:400;font-size:11px;color:#a08060">' + fmt(t.at) + '</span></div><div class="l">' + (t.last_from_me ? '我：' : '') + esc(t.last) + '</div></div>' + (t.unread ? '<span class="b">' + t.unread + '</span>' : '') + '</div>';
+    }).join('') : '<div class="tgg-empty">还没有私信。点大厅里别人的小和尚，或在「邻居」里选人，就能发私信。</div>';
+    h += '<button class="tgg-btn alt" data-nb style="margin-top:6px">🏘️ 从邻居里找人</button>';
+    bd.innerHTML = h;
+    bd.querySelectorAll('.tgs-thread').forEach(function (el) { el.onclick = function () { dmWith = el.dataset.id; renderChat(false); }; });
+    bd.querySelector('[data-nb]').onclick = function () { closeDM(); if (GARDEN && GARDEN.openNeighbors) GARDEN.openNeighbors(); };
+  }
+  var rendering = false;
+  async function renderChat(keepInput) {
+    var other = dmWith, name = dmNames[other] || '香客';
+    var typed = keepInput && dmPanel && dmPanel.querySelector('.tgs-compose input') ? dmPanel.querySelector('.tgs-compose input').value : '';
+    var bd;
+    if (!keepInput || !dmPanel || !dmPanel.querySelector('.tgs-msgs')) {
+      bd = shell('与 ' + name + ' 私信', true);
+      bd.innerHTML = '<div class="tgs-msgs"><div class="tgg-empty">加载中…</div></div><div class="tgs-compose"><input maxlength="500" placeholder="说点什么…" enterkeyhint="send"><button class="tgg-btn">发送</button></div>';
+      var inp = bd.querySelector('input'), btn = bd.querySelector('.tgs-compose button');
+      var doSend = async function () {
+        var t = inp.value.trim(); if (!t) return;
+        btn.disabled = true;
+        try { await send(other, t); inp.value = ''; await renderChat(true); }
+        catch (e) { say(/rate limit/i.test(e && e.message) ? '发太快了，歇一会儿' : '没发出去：' + (e && e.message)); }
+        finally { btn.disabled = false; inp.focus(); }
+      };
+      btn.onclick = doSend;
+      inp.addEventListener('keydown', function (e) { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); doSend(); } });
+      setTimeout(function () { try { inp.focus({ preventScroll: true }); } catch (e) {} }, 50);
+    }
+    if (rendering) return; rendering = true;
+    try {
+      var msgs = await history(other);
+      if (!dmPanel || dmWith !== other) return;
+      var box = dmPanel.querySelector('.tgs-msgs'), last = 0, h = '';
+      msgs.forEach(function (m) {
+        if (m.at - last > 5 * 60000) h += '<div class="tgs-time">' + fmt(m.at) + '</div>';
+        last = m.at;
+        h += '<div class="tgs-msg ' + (m.sender === me() ? 'mine' : 'them') + '" data-id="' + m.id + '">' + esc(m.body) + '</div>';
+      });
+      box.innerHTML = h || '<div class="tgg-empty">打个招呼吧 🙏</div>';
+      box.scrollTop = box.scrollHeight;
+      if (msgs.some(function (m) { return m.sender === other && !m.read; })) { var mseq = ++badgeSeq; var n = await rpc('dm_mark_read', { p_other: other }); if (mseq === badgeSeq) setBadge(n); }
+    } catch (e) { say('读不到聊天记录：' + (e && e.message)); }
+    finally { rendering = false; }
+  }
+  S_._selectAll = function () {
+    if (window.TG_SOCIAL_SELECT) return Promise.resolve(window.TG_SOCIAL_SELECT());
+    return AUTH.client.from('dm_messages').select('*').then(function (r) { if (r.error) throw r.error; return r.data; });
+  };
+
+  /* ======================= wire-up ======================= */
+  buildBar();
+  if (GARDEN) {
+    (GARDEN.cardButtons = GARDEN.cardButtons || []).unshift({ label: '💬 私信', alt: true, run: function (id, name) { openDM(id, name); } });
+    (GARDEN.rowButtons = GARDEN.rowButtons || []).push({ label: '私信', run: function (id, name) { openDM(id, name); } });
+  }
+  if (AUTH && AUTH.ready) AUTH.ready.then(function () { if (!online()) return; subscribeDM(); refreshUnread().then(function (n) { if (n > 0) onIncoming(); }); });
+  var lastUid = null;
+  if (AUTH) AUTH.onChange(function (s) { if (s.id && s.id !== lastUid) { var had = lastUid; lastUid = s.id; if (had) { closeAll(true); subscribeDM(); refreshUnread(); } } });
 })();
 
 </script>
