@@ -364,6 +364,16 @@ body:is([data-scene="home"],[data-scene="gate"],[data-scene="market"],[data-scen
 body:is([data-scene="home"],[data-scene="gate"],[data-scene="market"],[data-scene="lotus"],[data-scene="zen"],[data-scene="study"]) #promptBtn.show{transform:translateY(0) scale(1)}
 /* Owner snapshots are browse-only while visiting; movement and pet prompts stay available. */
 body.r3-visiting [data-r3-edit],body.r3-visiting #r3Shop,body.r3-visiting #r3Arrange,body.r3-visiting #resetBtn,body.r3-visiting .r3-animal-hud>div{display:none!important}
+/* r4: compact courtyard controls, with separate seed and animal rows. */
+#yardTools{flex-wrap:wrap;justify-content:center;bottom:calc(var(--safe-bot) + 8px)}
+#yardTools .big-btn{flex:1 1 42%;min-height:38px;padding:8px 5px;font-size:13px}
+#yard #seedBar{bottom:calc(var(--safe-bot) + 96px)}
+#yard .r3-animal-hud{bottom:auto;top:calc(var(--safe-top) + 82px);left:8px;right:8px;pointer-events:none}
+#yard .r3-animal-hud>div{pointer-events:auto;display:inline-flex;gap:4px;margin:4px 2px}
+#yard .r3-animal-hud small{display:block;width:max-content;max-width:100%;margin:auto;font-size:11px;padding:3px 8px}
+#yard .r3-animal-hud .big-btn{font-size:11px;padding:6px 8px;min-height:34px}
+body.r3-visiting #plantAll,body.r3-visiting #waterAll,body.r3-visiting #harvestAll{display:none}
+body.r4-rest #view{filter:brightness(.35);transition:filter .45s}
 
 </style>
 </head>
@@ -395,6 +405,7 @@ body.r3-visiting [data-r3-edit],body.r3-visiting #r3Shop,body.r3-visiting #r3Arr
     <div id="seedBar"></div>
     <div id="yardTools">
       <button class="big-btn wood" id="backToPlaza">← 回大厅</button>
+      <button class="big-btn wood" id="plantAll">🌱 一键播种</button>
       <button class="big-btn wood" id="waterAll">💧 全浇水</button>
       <button class="big-btn" id="harvestAll">🧺 一键收获</button>
     </div>
@@ -937,6 +948,10 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
     await AUTH.ready;
     if (!AUTH.user || !AUTH.online || chanRoom !== room) return;
     var myId = AUTH.user.id;
+    // leaving + re-entering the same room quickly: supabase-js would hand back the old (still closing) channel object
+    var stale = (SB.getChannels ? SB.getChannels() : []).filter(function (ch) { return ch.topic === 'realtime:temple-' + room; });
+    for (var si = 0; si < stale.length; si++) { try { await SB.removeChannel(stale[si]); } catch (e) {} }
+    if (chanRoom !== room || chan) return;
     var priv = NET.isPrivateRoom(room);   // private rooms are authorized by realtime RLS (r3.sql tg_room_ok)
     var c = SB.channel('temple-' + room, { config: { private: priv, presence: { key: myId }, broadcast: { self: false, ack: false } } });
     chan = c;
@@ -1052,9 +1067,9 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
  * Storage: before boot set window.TG_STORAGE_ADAPTER={async load(): state|null,
  * async save(state), async clear()}. Default window.TG_STORAGE uses templeGarden.v1.
  * setStorageAdapter(adapter) replaces it at runtime. Boot awaits load and validates S.
- * Net: window.TG_NET.onLocalPlayerMove?.({x,y,z}, yaw, 'idle'|'walk'), changed only ~10Hz.
+ * Net: window.TG_NET.onLocalPlayerMove?.({x,y,z}, yaw, 'idle'|'walk'|'sit'|'sleep'), changed only ~10Hz.
  * TG_NET.applyRemotePlayers(list) === window.applyRemotePlayers(list).
- * list: [{id,name,pos:{x,y,z},rot:number|{y},anim:'idle'|'walk',scene:'plaza'|'yard'|'hall'}].
+ * list: [{id,name,pos:{x,y,z},rot:number|{y},anim:'idle'|'walk'|'sit'|'sleep',scene:'plaza'|'yard'|'hall'}].
  * Full snapshots; absent ids removed, undefined/[] clears. Matching scene only, interpolated.
  * Auth: #btnAuth calls window.TG_AUTH.open() when installed, otherwise toast('未连接').
  */
@@ -1080,16 +1095,16 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
  */
 
 /* r3 pass 3:
- * S.animals=[{id,kind,name,pen,born,lastCollect,lastPet}]; kinds chicken/cow/pig/sheep/dog/cat.
+ * S.animals=[{id,kind,name,pen,born,lastCollect,lastPet,post}]; kinds chicken/cow/pig/sheep/dog/cat.
  * pens: 0 hen-yard, 1 pasture (cows + sheep), 2 pig-yard; dogs/cats have null.
  * Shop animals are immediate residents, never backpack items; per-kind caps 4/2/2/2/2/2.
  * R3_ANIMAL_SHOP=[{id,name,emoji,price,cap,pen,nickname,desc}], IDs match animal kinds.
  * R3_PRODUCE=[{id:'egg',name:'蛋',emoji:'🥚',value:2,sell:16},
  *             {id:'milk',name:'奶',emoji:'🥛',value:4,sell:32}]. Not in CROP_BY_ID.
  * worldSyncAnimals(): cached structural key, timestamps do not rebuild models.
- * r3AnimateAnimals(ts,dt): shared instance transforms, home-only movement + follow/rest/graze.
+ * r3AnimateAnimals(ts,dt): shared instance transforms, yard-only movement + follow/rest/graze.
  * r3BuyAnimal(kind): boolean; r3PetAnimal(id): merit +1 / 8s and ready produce collection.
- * r3CollectProduce(): home-only batch collection; egg 25s / milk 40s, max 1 ready per animal.
+ * r3CollectProduce(): yard-only batch collection; egg 25s / milk 40s, max 1 ready per animal.
  * r3AppendProduceOffers(): second #btnOffer listener, preserves crop offering handler.
  * r3HallProduce(group,offering,index): renders produce; returns true when handled.
  * r3SanitizeAnimals(state), r3PolishScenes(), r3GrassMaterial(), r3RefreshAnimalHUD().
@@ -1097,7 +1112,7 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
  * Previously saved furniture is retained; no state field removed and harvest is unchanged.
  */
 
-/* r3 pass 4 / v8 integration:
+/* Historical r3 pass 4 / v8 integration (r4 policy below supersedes visiting defaults):
  * TG_SCENES hall is {id:'hall',name:'祠堂',public:false}; other flags unchanged.
  * Private go() uses TG_ACCESS.canEnter(ownerId,sceneId), or ownerId===selfId without a hook.
  * r3IsVisiting(): boolean = !!(window.TG_VISIT || TG_ACCESS?.isVisiting?.()).
@@ -1109,6 +1124,18 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
  * Standalone self play retains harvest-3 / 8888. TG_SHRINE_UPLOAD conditional guard retained.
  * Visiting: edits/spending/sales/collection blocked, edit HUD + prompts hidden, save() suppressed.
  * Petting remains available via addMerit(1); cooldown is runtime-only, owner animals unmodified.
+ */
+
+/* r4 integration: TG_SCENES yard={id:'yard',name:'心田小院',public:false,steal:true,access:'steal-only'}; #home/go('home') aliases #yard (no menu duplicate).
+ * TG_VISIT.canEdit===true permits family edits; save calls optional TG_SPACE_SAVE({plots,decor,shrine,animals}), never TG_STORAGE while visiting.
+ * TG_FAMILY.open(): menu 家庭. TG_DOG_ON_DUTY() / TG_DOG_IN_GARDEN(): same scene-independent boolean for dogs with post==='garden'.
+ * Visitor ripe-plot taps call harvest(i, el), awaiting a Promise when returned; backend wraps this unchanged signature.
+ * A string containing 'caught' (case-insensitive), {caught:true}, {error:'caught'} or {reason:'caught'} triggers bark/toast and no client loot/plot mutation.
+ * TG_STEAL / TG_ACCESS.steal are not used; no client dog-duty check in the steal path. Standalone calls the existing harvest.
+ * Own plots/decor/shrine/animals are deep-snapshotted after load, on own save/UI refresh; visit exit restores them and refreshes without storage save.
+ * TG_RERENDER() normalizes complete animal records (id/kind/name/pen/born/lastCollect/lastPet/post) before world refresh; load does too.
+ * S.animals[].post: garden|follow|home, missing defaults home. decor.home migrates by (+8,+5) into decor.yard and becomes []. Decor lantern on defaults false. Conflicting migrated furniture is moved to a free east courtyard cell; overflow returns to backpack.
+ * TG_NET.onLocalPlayerMove(position,rotation,anim) / applyRemotePlayers anim: idle|walk|sit|sleep (unknown idle). #plantAll uses selectedSeed without cost.
  */
 
 /* three.js r170 (inlined, MIT) */
@@ -1278,9 +1305,9 @@ if(!d.incense||!Array.isArray(d.incense.sticks))d.incense={total:0,sticks:[]};
 if(!Array.isArray(d.offerings))d.offerings=[];
 if(!d.inventory||typeof d.inventory!=='object')d.inventory={};
 if(!CROP_BY_ID[d.selectedSeed])d.selectedSeed='cabbage';
-sanitizeR3(d);
+sanitizeR3(d);sanitizeR4(d);
 return d;}catch(e){return defaultState();}}
-function save(){if(r3IsVisiting())return;try{Promise.resolve(window.TG_STORAGE.save(S)).catch(()=>{});}catch(e){}}
+function save(){if(r3SyncOwnSpace())window.TG_RERENDER();if(r3IsVisiting()){if(r3CanEdit())try{Promise.resolve(window.TG_SPACE_SAVE?.({plots:S.plots,decor:S.decor,shrine:S.shrine,animals:S.animals})).catch(()=>{});}catch(e){}return;}try{Promise.resolve(window.TG_STORAGE.save(S)).catch(()=>{});}catch(e){}}
 
 /* =========================================================
    三、工具函数
@@ -1321,10 +1348,9 @@ window.TG_SCENES = [
   {id:'gate',name:'山门',public:true},
   {id:'plaza',name:'大厅广场',public:true},
   {id:'market',name:'集市',public:true},
-  {id:'yard',name:'菜园',public:true},
+  {id:'yard',name:'心田小院',public:false,steal:true,access:'steal-only'},
   {id:'lotus',name:'莲花池',public:true},
   {id:'hall',name:'祠堂',public:false},
-  {id:'home',name:'自家小院',public:false},
   {id:'zen',name:'禅房',public:false},
   {id:'study',name:'书房',public:false},
 ];
@@ -1332,6 +1358,7 @@ const SCENES = window.TG_SCENES.map(s=>s.id);
 let current = null, switching = false;
 let accessRequest=0;
 async function go(name, instant){
+  if(name==='home'){window.r4EastArrival=true;name='yard';history.replaceState(null,'','#yard');}
   r3ApplyVisitingUI();
   if(!SCENES.includes(name) || name===current || switching) return;
   const request=++accessRequest;
@@ -1339,7 +1366,7 @@ async function go(name, instant){
     const ownerId=window.TG_VISIT?.ownerId || S.ownerId || 'self';
     const selfId=window.TG_AUTH?.userId || S.ownerId || 'self';
     let allowed=false;
-    try{allowed=await (window.TG_ACCESS?.canEnter ? window.TG_ACCESS.canEnter(ownerId,name) : Promise.resolve(ownerId===selfId));}catch(e){}
+    try{allowed=await (window.TG_ACCESS?.canEnter ? window.TG_ACCESS.canEnter(ownerId,name) : Promise.resolve(r3IsVisiting()?window.TG_SCENES.find(s=>s.id===name)?.steal===true:true));}catch(e){}
     if(request!==accessRequest)return;
     if(!allowed){toast('暂无权限进入');if(current)history.replaceState(null,'','#'+current);return false;}
   }
@@ -1403,6 +1430,7 @@ $('#btnMenu').addEventListener('click', ()=>{
   $('#sheet').querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>{ closeModal(); go(b.dataset.go); });
   $('#resetBtn').onclick=async()=>{
     if(r3DenyVisit())return;
+    if(r3IsVisiting())return toast('请返回自己的空间后重置');
     if(confirm('确定清空所有进度吗？')){
       await window.TG_STORAGE.clear(); S=defaultState(); save(); closeModal(); renderAll(); go('plaza'); toast('已重置');
     }
@@ -1619,6 +1647,7 @@ function renderYard(){ const __yardStart=true;
 $('#plots').addEventListener('click', e=>{
   const el = e.target.closest('.plot'); if(!el) return;
   const i = +el.dataset.i, p = S.plots[i], now = Date.now();
+  if(!r3CanEdit()){if(p&&plotProgress(p,now)>=1)r4Steal(i,el);else r3DenyVisit();return;}
   if(!p){ // 空地 → 播种
     S.plots[i] = {crop:S.selectedSeed, plantedAt:now, boost:0, lastWater:0};
     save(); renderYard(); vibrate(15); plotEffect(el, '🌱');tgFeedback('plant');
@@ -1771,7 +1800,7 @@ $('#stallFeng').addEventListener('click', openFeng);
 $('#backToPlaza').addEventListener('click', ()=>go('plaza'));
 $('#hallDoor').addEventListener('click', ()=>go('hall'));
 $('#backFromHall').addEventListener('click', ()=>go('yard'));
-window.addEventListener('hashchange', ()=>{ const h=location.hash.slice(1); if(SCENES.includes(h)) go(h); });
+window.addEventListener('hashchange', ()=>{ const h=location.hash.slice(1); if(h==='home'||SCENES.includes(h)) go(h); });
 
 function renderAll(){ renderTop(); renderSeedBar(); renderYard(); renderHall();
   if(typeof worldSyncYard==='function') worldSyncYard();
@@ -1779,16 +1808,16 @@ function renderAll(){ renderTop(); renderSeedBar(); renderYard(); renderHall();
 }
 
 // 每秒刷新：作物生长、香燃烧
-setInterval(()=>{ if(current==='yard'){ renderYard(); if(typeof worldSyncYard==='function') worldSyncYard(); } if(current==='hall'){ renderHall(); if(typeof worldSyncHall==='function') worldSyncHall(); } }, 1000);
+setInterval(()=>{ r3ApplyVisitingUI();if(current==='yard'){ renderYard(); if(typeof worldSyncYard==='function') worldSyncYard(); } if(current==='hall'){ renderHall(); if(typeof worldSyncHall==='function') worldSyncHall(); } }, 1000);
 
 /* plotEffect kept from v2 for planting/harvest juice */
 function plotEffect(el,emoji,harvesting=false){const fx=document.createElement('span');fx.className='plot-fx'+(harvesting?' harvest':'');fx.textContent=emoji;el.appendChild(fx);setTimeout(()=>fx.remove(),850);}
 
 // 启动：优先读网址里的 #场景（#plaza / #yard / #hall），否则从大厅开始
-(async()=>{S=await load();buildPlots(); renderAll();
+(async()=>{S=await load();r3SnapshotOwnSpace();buildPlots(); renderAll();
 if(typeof initWorld==='function') initWorld(document.getElementById('view'));
 const startHash = location.hash.slice(1);
-await go(SCENES.includes(startHash) ? startHash : SCENES.includes(S.scene)?S.scene:'plaza', true);
+await go((startHash==='home'||SCENES.includes(startHash)) ? startHash : SCENES.includes(S.scene)?S.scene:'plaza', true);
 if(!current)go('plaza',true);})();
 document.addEventListener('gesturestart', e=>e.preventDefault()); // 禁止 iOS 双指缩放
 
@@ -1878,14 +1907,14 @@ function worldBuild(){
   w.crops=[];
   for(let i=0;i<12;i++){
     const x=3.5+(i%3)*3.3-13.5,z=-6+Math.floor(i/3)*3.5;
-    worldBox(y,x,.1,z,2.4,.2,2.3,'#765139',true);
+    worldBox(y,x,.1,z,2.4,.2,2.3,'#765139',false);
     for(const dx of [-1.25,1.25])worldBox(y,x+dx,.16,z,.12,.3,2.55,'#aa8660');
     const group=new THREE.Group();group.position.set(x,.24,z);y.group.add(group);w.crops.push({group,key:null,ripe:false});
     worldInteract(y,x,z,()=>!S.plots[i]?'播种':plotProgress(S.plots[i],Date.now())>=1?'收获':'浇水',()=>$('#plots .plot[data-i="'+i+'"]').click(),2.05);
   }
   // 留出中央主路，另一侧花木、石凳。
-  for(const z of [-7,4,10])tree(y,11,z);
-  worldBox(y,7,.5,5,2.8,1,1,'#b5b6a3',true);
+  for(const z of [-7,5,10])tree(y,z===5?13:11,z);
+  worldBox(y,12,.5,8,2.8,1,1,'#b5b6a3',true);
   for(const x of [-6,6])worldBox(h,x,2.7,0,.3,5.4,16,'#442b25',true);
   worldBox(h,0,2.7,-8,12,5.4,.3,'#442b25',true);
   for(const x of [-4,4])worldBox(h,x,2.7,8,4,5.4,.3,'#442b25',true);
@@ -1938,6 +1967,7 @@ function worldSyncHall(){
 function worldBlocked(){return !!window.TG_PLAN||switching||$('#modal').classList.contains('show')||$('#gateLock').classList.contains('show')||/^(INPUT|SELECT|TEXTAREA)$/.test(document.activeElement.tagName);}
 function worldStop(){const w=W3;if(!w)return;w.keys.clear();w.target=null;w.path=[];w.vx=w.vz=0;w.joy.x=w.joy.y=0;w.joyId=null;if(w.pointers)w.pointers.clear();w.action=null;$('#joyKnob').style.transform='';$('#promptBtn').classList.remove('show');}
 function worldEnter(name,previous){
+  if(name==='home'){window.r4EastArrival=true;name='yard';}
   const w=W3;if(!w||!w.renderer)return;worldStop();w.active=name;Object.entries(w.spaces).forEach(([n,s])=>s.group.visible=n===name);
   const spawn=r3Spawn(name,previous),[x,z,yaw]=spawn;
   w.player.position.set(x,0,z);w.player.rotation.y=yaw+Math.PI;w.yaw=yaw;w.pitch=r3Indoor(name)?.55:.42;w.radius=r3Indoor(name)?9.8:8.8;
@@ -1983,7 +2013,7 @@ function worldInput(){
   c.addEventListener('pointermove',e=>{const p=w.pointers.get(e.pointerId);if(!p)return;if(worldBlocked()){worldStop();return;}const dx=e.clientX-p.x,dy=e.clientY-p.y;p.x=e.clientX;p.y=e.clientY;if(Math.hypot(p.x-p.startX,p.y-p.startY)>7)p.moved=true;
     if(w.pointers.size===2){const a=[...w.pointers.values()],d=Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y);if(w.pinch)w.radius=THREE.MathUtils.clamp(w.radius*w.pinch/d,7,24);w.pinch=d;}else if(p.moved){w.yaw-=dx*.008;w.pitch=THREE.MathUtils.clamp(w.pitch+dy*.006,.25,1.2);}});
   c.addEventListener('pointerup',e=>{const p=w.pointers.get(e.pointerId);if(p&&!p.moved&&w.pointers.size===1&&!worldBlocked()){
-    const r=c.getBoundingClientRect();w.ndc.set((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1);w.ray.setFromCamera(w.ndc,w.camera);const hits=w.ray.intersectObject(w.spaces[w.active].floor);if(hits.length)worldPath(hits[0].point.clone());
+    const r=c.getBoundingClientRect();w.ndc.set((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1);w.ray.setFromCamera(w.ndc,w.camera);const hits=w.ray.intersectObject(w.spaces[w.active].floor);if(hits.length){const point=hits[0].point.clone(),item=w.spaces[w.active].items.filter(i=>Math.hypot(i.x-point.x,i.z-point.z)<1.3&&(!i.r3Edit||r3CanEdit())).sort((a,b)=>Math.hypot(a.x-point.x,a.z-point.z)-Math.hypot(b.x-point.x,b.z-point.z))[0];if(item&&Math.hypot(item.x-w.player.position.x,item.z-w.player.position.z)<item.range){worldStop();item.run();}else{w.pose='idle';worldPath(point);}}
   }w.pointers.delete(e.pointerId);w.pinch=0;});
   for(const event of ['pointercancel','lostpointercapture'])c.addEventListener(event,e=>{w.pointers.delete(e.pointerId);w.pinch=0;});
   c.addEventListener('wheel',e=>{e.preventDefault();if(!worldBlocked())w.radius=THREE.MathUtils.clamp(w.radius+e.deltaY*.01,7,24);},{passive:false});
@@ -1999,6 +2029,7 @@ function worldFrame(ts){
     const acceleration=1-Math.exp(-dt*(len>.08?5.5:8));
     w.vx=(w.vx||0)+((len>.08?dx/len*Math.min(1,len)*4:0)-(w.vx||0))*acceleration;
     w.vz=(w.vz||0)+((len>.08?dz/len*Math.min(1,len)*4:0)-(w.vz||0))*acceleration;
+    if(len>.08)w.pose='idle';
     const pos=w.player.position,oldX=pos.x,oldZ=pos.z;
     if(worldCanMove(pos.x+w.vx*dt,pos.z))pos.x+=w.vx*dt;else w.vx=0;
     if(worldCanMove(pos.x,pos.z+w.vz*dt))pos.z+=w.vz*dt;else w.vz=0;
@@ -2008,21 +2039,22 @@ function worldFrame(ts){
     w.elapsed+=dt;
     const exit=w.spaces[w.active].exits.find(e=>Math.abs(w.player.position.x-e.x)<1.35&&Math.abs(w.player.position.z-e.z)<.9);
     if(!exit)w.exitLatch=null;
-    if(exit&&w.elapsed>.8&&w.exitLatch!==exit){w.exitLatch=exit;worldStop();go(exit.to);}
+    if(exit&&w.elapsed>.8&&w.exitLatch!==exit){w.exitLatch=exit;worldStop();if(exit.r4East)window.r4EastArrival=true;go(exit.to);}
   }
   w.phase+=dt*(moving?11:2);w.body.position.y=moving?Math.abs(Math.sin(w.phase))*.045:Math.sin(w.phase)*.018;
   w.limbs.forEach((l,i)=>l.rotation.x=moving?Math.sin(w.phase+(i===0||i===3?0:Math.PI))*.5:0);
+  r4Pose(w.body,w.limbs,w.pose,moving,ts);if(w.r4SipUntil>ts&&!moving)w.limbs[1].rotation.x=-1.7+Math.sin(ts*.006)*.08;if(w.r4Rock>ts&&!moving)w.body.rotation.z=Math.sin(ts*.004)*.14;
   worldCamera(1-Math.exp(-dt*6));
   if(w.feedback>0){w.feedback-=dt;w.body.position.y+=Math.sin(w.feedback*22)*.055;w.body.rotation.z=Math.sin(w.feedback*18)*.035;}else w.body.rotation.z=0;
   if(w.sky)w.sky.visible=!r3Indoor(w.active);
   tgRemotes(dt);window.__tgFps=window.__tgFps?window.__tgFps*.95+(1/Math.max(.001,dt))*.05:60;
-  if(ts-(w.netTime||0)>=100){const pos=w.player.position,rot=w.player.rotation.y,anim=moving?'walk':'idle',last=w.netLast;
+  if(ts-(w.netTime||0)>=100){const pos=w.player.position,rot=w.player.rotation.y,anim=moving?'walk':['sit','sleep'].includes(w.pose)?w.pose:'idle',last=w.netLast;
     if(!last||last.scene!==w.active||Math.hypot(pos.x-last.x,pos.z-last.z)>.001||Math.abs(rot-last.rot)>.001||anim!==last.anim){w.netTime=ts;w.netLast={x:pos.x,z:pos.z,rot,anim,scene:w.active};try{window.TG_NET.onLocalPlayerMove?.({x:pos.x,y:pos.y,z:pos.z},rot,anim);}catch(e){}}
   }
   for(const c of w.crops)c.group.position.y=.24+(c.ripe?Math.sin(ts*.002+c.group.position.x)*.035:0);
   if(w.active==='hall'&&w.smoke.visible)w.smoke.children.forEach((m,i)=>{const t=(ts*.00022+i/18)%1;m.position.set(Math.sin(t*8+i)*.13,2.1+t*1.9,-2.3+Math.cos(i+t*5)*.1);m.scale.setScalar(.035+t*.14);});
   if(typeof r3AnimateAnimals==='function')r3AnimateAnimals(ts,dt);
-  let nearest=null,best=Infinity;if(!worldBlocked())for(const item of w.spaces[w.active].items){if(item.r3Edit&&r3IsVisiting())continue;const d=Math.hypot(w.player.position.x-item.x,w.player.position.z-item.z);if(d<item.range&&d<best){best=d;nearest=item;}}
+  let nearest=null,best=Infinity;if(!worldBlocked())for(const item of w.spaces[w.active].items){if(item.r3Edit&&!r3CanEdit())continue;const d=Math.hypot(w.player.position.x-item.x,w.player.position.z-item.z);if(d<item.range&&d<best){best=d;nearest=item;}}
   const btn=$('#promptBtn');w.action=nearest?nearest.run:null;btn.classList.toggle('show',!!nearest);if(nearest)btn.textContent=typeof nearest.label==='function'?nearest.label():nearest.label;
   if(typeof tgAnimate==='function')tgAnimate(ts,dt);
   if(typeof worldSyncDecor==='function')worldSyncDecor();
@@ -2051,7 +2083,7 @@ function tgRemotes(dt){
  for(const p of tgRemoteList){const id=String(p.id);let r=w.remotes.get(id);if(!r){const mesh=w.player.clone(true);mesh.position.set(p.pos.x,p.pos.y,p.pos.z);const c=document.createElement('canvas');c.width=256;c.height=64;const tex=new THREE.CanvasTexture(c),mat=new THREE.SpriteMaterial({map:tex,depthTest:false,transparent:true}),label=new THREE.Sprite(mat);label.position.y=2;label.scale.set(1.8,.45,1);mesh.add(label);w.scene.add(mesh);r={mesh,label,c,name:null};w.remotes.set(id,r);}
  if(r.name!==p.name){r.name=p.name;const c=r.c,ctx=c.getContext('2d');ctx.clearRect(0,0,256,64);ctx.fillStyle='#31261dcc';ctx.fillRect(0,0,256,64);ctx.fillStyle='#ffe6a1';ctx.font='28px sans-serif';ctx.textAlign='center';ctx.fillText(String(p.name||'同行僧人').slice(0,16),128,42);r.label.material.map.needsUpdate=true;}
  r.mesh.visible=p.scene===w.active;const a=1-Math.exp(-dt*10);r.mesh.position.lerp(new THREE.Vector3(p.pos.x,p.pos.y,p.pos.z),a);const yaw=typeof p.rot==='number'?p.rot:p.rot?.y||0;r.mesh.rotation.y+=Math.atan2(Math.sin(yaw-r.mesh.rotation.y),Math.cos(yaw-r.mesh.rotation.y))*a;
- const body=r.mesh.children[0];body.position.y=p.anim==='walk'?Math.abs(Math.sin(performance.now()*.011))*.045:0;body.children.filter(c=>c.isGroup).forEach((l,i)=>l.rotation.x=p.anim==='walk'?Math.sin(performance.now()*.011+i*Math.PI)*.4:0);
+ const body=r.mesh.children[0];body.position.y=p.anim==='walk'?Math.abs(Math.sin(performance.now()*.011))*.045:0;body.children.filter(c=>c.isGroup).forEach((l,i)=>l.rotation.x=p.anim==='walk'?Math.sin(performance.now()*.011+i*Math.PI)*.4:0);r4Pose(body,body.children.filter(c=>c.isGroup),p.anim,p.anim==='walk',performance.now());
  }
 }
 /* 栅格 A*：膨胀障碍，八向搜索且不切墙角 */
@@ -2155,11 +2187,11 @@ function tgArtGarden(s,name){
  for(let i=0;i<80;i++){const side=i%2?-1:1,z=-9+(i%20)*1.1,x=side*(2.5+Math.floor(i/20)*.33);if(name==='yard'&&side<0)continue;grass.push([x,.16,z,.055,.28,.035,0,i,.25],[x+.1,.12,z,.04,.22,.04,0,i,-.3]);if(i%3===0){flowers.push([x,.33,z,.13,.08,.13]);centers.push([x,.39,z,.045,.045,.045]);}}
  tgInstances(s.group,leaf,worldMat('#6f9751'),grass);tgInstances(s.group,ball,worldMat('#e9a3a2'),flowers);tgInstances(s.group,ball,worldMat('#ffe0a0'),centers);
  // Repeated rounded canopies enrich the existing trees, without new trunk collisions.
- for(const [x,z]of name==='plaza'?[[-12,-7],[12,-7],[-12,8],[12,10]]:[[11,-7],[11,4],[11,10]]){trunks.push([x,1.1,z,.22,2.2,.22]);for(let j=0;j<4;j++){const a=j*2.4;(j===3?pink:greens).push([x+Math.cos(a)*.7,2.4+j*.27,z+Math.sin(a)*.65,1,.8,1]);}}
+ for(const [x,z]of name==='plaza'?[[-12,-7],[12,-7],[-12,8],[12,10]]:[[11,-7],[13,5],[11,10]]){trunks.push([x,1.1,z,.22,2.2,.22]);for(let j=0;j<4;j++){const a=j*2.4;(j===3?pink:greens).push([x+Math.cos(a)*.7,2.4+j*.27,z+Math.sin(a)*.65,1,.8,1]);}}
  tgInstances(s.group,W3.geometries.cylinder,worldMat('#89613f'),trunks);tgInstances(s.group,ball,worldMat('#81a365',true),greens);tgInstances(s.group,ball,worldMat('#dba4a3',true),pink);
  const paper=[],caps=[];for(const x of [-2.6,2.6])for(const z of [-4,9]){worldBox(s,x,.18,z,.68,.3,.68,'#afa88f');worldBox(s,x,.62,z,.22,.65,.22,'#afa88f');worldBox(s,x,1.12,z,.64,.1,.64,'#afa88f');paper.push([x,1.35,z,.4,.38,.4]);caps.push([x,1.65,z,.62,.2,.62]);}
  const lamp=W3.materials['art2:paper']||(W3.materials['art2:paper']=new THREE.MeshLambertMaterial({color:'#ffe2a0',emissive:'#a96825',emissiveIntensity:.45}));tgInstances(s.group,box,lamp,paper);tgInstances(s.group,ball,worldMat('#88938a'),caps);
- tgArtStream(s,name==='yard'?9:11,name==='yard'?-3:2,name==='yard'?7:8);
+ tgArtStream(s,name==='yard'?9:11,name==='yard'?-4:2,name==='yard'?4:8);
 }
 function tgArtStream(s,x,z,length){
  const water=new THREE.Mesh(W3.geometries.box,tgArtTexture('water'));water.position.set(x,.04,z);water.scale.set(1.25,.05,length);water.receiveShadow=true;s.group.add(water);
@@ -2224,7 +2256,7 @@ function sanitizeR3(d){
  const plaques=Array.isArray(d.shrine.plaques)?d.shrine.plaques:[];
  d.shrine.plaques=Array.from({length:Math.max(3,plaques.length)},(_,i)=>({name:typeof plaques[i]?.name==='string'?plaques[i].name:defaults.plaques[i%3].name,img:typeof plaques[i]?.img==='string'?plaques[i].img:''}));
  if(!object(d.decor))d.decor={};
- for(const key of Object.keys(d.decor))d.decor[key]=Array.isArray(d.decor[key])?d.decor[key].filter(v=>object(v)&&typeof v.id==='string'&&['x','z','rot'].every(k=>typeof v[k]==='number'&&Number.isFinite(v[k]))).map(v=>({id:v.id,x:v.x,z:v.z,rot:v.rot})):[];
+ for(const key of Object.keys(d.decor))d.decor[key]=Array.isArray(d.decor[key])?d.decor[key].filter(v=>object(v)&&typeof v.id==='string'&&['x','z','rot'].every(k=>typeof v[k]==='number'&&Number.isFinite(v[k]))).map(v=>({...v,id:v.id,x:v.x,z:v.z,rot:v.rot})):[];
  if(typeof d.ownerId!=='string')d.ownerId='self';
  r3SanitizeAnimals(d);
 }
@@ -2254,16 +2286,16 @@ function r3Build(){
   for(const dx of [-1.65,1.65]){worldMesh(g,'box','#733f2e',dx,1.6,0,.26,3.2,.55);worldMesh(g,'box','#d0b88e',dx,.15,0,.6,.3,.85);}
   worldMesh(g,'box','#8e4931',0,3.1,0,3.7,.45,.65);worldMesh(g,'box','#445b59',0,3.5,0,4.3,.22,1.2);
   worldMesh(g,'box','#c2ad83',0,.035,0,3.1,.07,.8);
-  const title=window.TG_SCENES.find(v=>v.id===to).name;
+  const title=window.TG_SCENES.find(v=>v.id===to)?.name||'心田小院';
   worldLabel(g,title,0,3.1,.36,2.5);worldLabel(g,title,0,3.1,-.36,2.5);g.children[g.children.length-1].rotation.y=Math.PI;
   // Posts are collidable, the threshold is traversable.
   for(const dx of [-1.65,1.65]){const px=x+Math.cos(angle)*dx,pz=z-Math.sin(angle)*dx;s.blocks.push({x:px-.2,X:px+.2,z:pz-.2,Z:pz+.2});}
-  if(!s.exits.some(e=>e.to===to)){s.exits.push({x,z,to});worldInteract(s,x,z,'前往'+title,()=>go(to),2.2);}
+  if(!s.exits.some(e=>e.to===to&&e.x===x&&e.z===z)){s.exits.push({x,z,to});worldInteract(s,x,z,'前往'+title,()=>go(to),2.2);}
  }
  const p=w.spaces.plaza;
  door(p,'gate',0,14);door(w.spaces.gate,'plaza',0,-12);
  door(p,'market',14,0,Math.PI/2);door(w.spaces.market,'plaza',-14,0,Math.PI/2);
- door(p,'home',-14,0,Math.PI/2);door(w.spaces.home,'plaza',14,0,Math.PI/2);
+ door(p,'yard',-14,0,Math.PI/2);p.exits[p.exits.length-1].r4East=true;p.items[p.items.length-1].run=()=>{window.r4EastArrival=true;go('yard');};door(w.spaces.yard,'plaza',14,0,Math.PI/2);
  door(h,'yard',0,7.5,Math.PI);door(h,'zen',5.6,3,Math.PI/2);door(h,'study',-5.6,3,-Math.PI/2);door(h,'lotus',4,-7.5);
  door(w.spaces.zen,'hall',-5.6,0,-Math.PI/2);door(w.spaces.study,'hall',5.6,0,Math.PI/2);door(w.spaces.lotus,'hall',0,14,Math.PI);
  for(const name of ['gate','market','lotus','home','zen','study']){
@@ -2290,9 +2322,8 @@ function r3Build(){
  for(let i=0;i<30;i++){const a=i/30*Math.PI*2;rocks.push([Math.cos(a)*7.2,.18,-2+Math.sin(a)*6.2,.5,.3,.4]);}
  tgInstances(lotus.group,new THREE.SphereGeometry(1,8,5),worldMat('#588e59'),pads);tgInstances(lotus.group,new THREE.SphereGeometry(1,8,5),worldMat('#e7a8b4'),flowers);tgInstances(lotus.group,new THREE.DodecahedronGeometry(1),worldMat('#92998d'),rocks);
  worldLabel(lotus.group,'莲花池',0,2, -10,3);
- const home=w.spaces.home;
- worldBox(home,0,1.8,-8,11,3.6,5,'#e0ccb0',true);worldBox(home,0,3.8,-8,12,.35,6,'#4a625d');worldBox(home,0,1.3,-5.45,2,2.6,.12,'#82513a');worldLabel(home.group,'心安小筑',0,3,-5.35,3);
- for(const x of [-5,5])worldMesh(home.group,'ball','#6b915c',x,1,3,1,1.5,1);
+ const home=w.spaces.yard;
+ worldBox(home,8,1.6,2,8,3.2,4,'#e0ccb0',true);worldBox(home,8,3.4,2,8.8,.3,4.8,'#4a625d');worldLabel(home.group,'心安小筑',8,2.7,4.1,3);
  for(const name of ['zen','study']){
   const s=w.spaces[name];worldLabel(s.group,name==='zen'?'静坐观心':'书香养性',0,3.4,-7.7,3);
   if(name==='zen'){
@@ -2327,7 +2358,7 @@ window.TG_CATALOG=[
 ];
 function r3Item(id){return window.TG_CATALOG.find(v=>v.id===id);}
 function r3Esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
-function r3DecorScene(id){return ['hall','home','zen','study'].includes(id);}
+function r3DecorScene(id){return ['hall','yard','zen','study'].includes(id);}
 function r3Commit(){renderTop();save();}
 function openShop(tab='furniture'){
  if(r3DenyVisit())return;
@@ -2395,11 +2426,12 @@ function r3PlacementError(sceneId,item,ignore=-1,restoring=false){
  if(b.x< -L.x+.2||b.X>L.x-.2||b.z< -L.z+.2||b.Z>L.z-.2)return '不能越过墙面，请移到房间内';
  if(r3DoorZones(space).some(zone=>r3Overlap(b,zone)))return '门前需要留出 1.6 米通道';
  if((S.decor[sceneId]||[]).some((v,i)=>i!==ignore&&r3Bounds(v)&&r3Overlap(b,r3Bounds(v))))return '与其他家具重叠了';
- if(!restoring&&sceneId==='home'&&R3_PENS.some(p=>r3Overlap(b,p)))return '牧栏内要留给小动物活动';
+ if(!restoring&&sceneId==='yard'&&R3_PENS.some(p=>r3Overlap(b,p)))return '牧栏内要留给小动物活动';
  if(space.blocks.some(v=>!v.r3Decor&&!(restoring&&v.r3Pen)&&r3Overlap(b,v)))return '这里有墙或固定设施，请换个位置';
  return '';
 }
 function enterPlacement(sceneId){
+ if(sceneId==='home')sceneId='yard';
  if(r3DenyVisit())return;
  if(!r3DecorScene(sceneId)||W3?.active!==sceneId)return toast('请先进入要布置的房间');
  if(window.TG_PLAN)return;closeModal();worldStop();S.decor[sceneId]||=[];
@@ -2482,9 +2514,9 @@ function worldSyncDecor(){
 
 /* Pass 3: livestock, companion animals, produce, and courtyard gardens. */
 var R3_PENS=[
- {id:'hen-yard',name:'咯咯鸡舍',x:-12,X:-7,z:-10,Z:-4},
- {id:'pasture',name:'青草牧栏',x:-12,X:-6,z:-1.5,Z:5.5},
- {id:'pig-yard',name:'桃花猪栏',x:-4.5,X:3.5,z:7.5,Z:12.5}
+ {id:'hen-yard',name:'咯咯鸡舍',x:-13,X:-8,z:6.5,Z:12},
+ {id:'pasture',name:'青草牧栏',x:-7.5,X:-2.5,z:6.5,Z:12},
+ {id:'pig-yard',name:'桃花猪栏',x:3.5,X:9,z:8,Z:13}
 ];
 var R3_ANIMAL_SHOP=[
  {id:'chicken',name:'小鸡',emoji:'🐔',price:40,cap:4,pen:0,nickname:'小花',desc:'约 25 秒产一枚蛋'},
@@ -2502,7 +2534,7 @@ function r3SanitizeAnimals(d){
  d.animals=(Array.isArray(d.animals)?d.animals:[]).filter(a=>a&&typeof a==='object'&&kinds.includes(a.kind)).map(a=>{
   let id=typeof a.id==='string'&&a.id?a.id:r3AnimalId();if(seen.has(id))id=r3AnimalId();seen.add(id);
   const born=Number.isFinite(a.born)&&a.born>0?Math.min(now,a.born):now;
-  return {...a,id,kind:a.kind,name:typeof a.name==='string'&&a.name.trim()?a.name.trim().slice(0,18):names[a.kind],pen:pens[a.kind],born,lastCollect:Number.isFinite(a.lastCollect)&&a.lastCollect>=0?Math.min(now,a.lastCollect):born,lastPet:Number.isFinite(a.lastPet)&&a.lastPet>=0?Math.min(now,a.lastPet):0};
+  return {...a,id,post:['garden','follow','home'].includes(a.post)?a.post:'home',kind:a.kind,name:typeof a.name==='string'&&a.name.trim()?a.name.trim().slice(0,18):names[a.kind],pen:pens[a.kind],born,lastCollect:Number.isFinite(a.lastCollect)&&a.lastCollect>=0?Math.min(now,a.lastCollect):born,lastPet:Number.isFinite(a.lastPet)&&a.lastPet>=0?Math.min(now,a.lastPet):0};
  });
 }
 function r3BuyAnimal(kind){
@@ -2511,21 +2543,21 @@ function r3BuyAnimal(kind){
  if(!Array.isArray(S.animals))S.animals=[];
  if(S.animals.filter(a=>a.kind===kind).length>=c.cap){toast(c.pen===null?'小院里这类伙伴已经住满啦':'这类动物的牧栏名额已满');return false;}
  if(S.coins<c.price){toast('铜钱不足，先出售一些作物吧');return false;}
- const now=Date.now();S.coins-=c.price;S.animals.push({id:r3AnimalId(),kind,name:c.nickname,pen:c.pen,born:now,lastCollect:now,lastPet:0});r3Commit();worldSyncAnimals();toast(`${c.emoji} ${c.nickname}已经入住自家小院`);return true;
+ const now=Date.now();S.coins-=c.price;S.animals.push({id:r3AnimalId(),kind,name:c.nickname,pen:c.pen,born:now,lastCollect:now,lastPet:0,post:'home'});r3Commit();worldSyncAnimals();toast(`${c.emoji} ${c.nickname}已经入住自家小院`);return true;
 }
 function r3ProduceItem(id){return R3_PRODUCE?.find(v=>v.id===id);}
 function r3AnimalProduce(animal){return animal.kind==='chicken'?{id:'egg',interval:25000}:animal.kind==='cow'?{id:'milk',interval:40000}:null;}
 function r3ProduceReady(animal,now=Date.now()){const p=r3AnimalProduce(animal);return !!p&&now-(animal.lastCollect??animal.born)>=p.interval;}
-function r3CollectOne(animal,now){if(r3IsVisiting())return null;const p=r3AnimalProduce(animal);if(!p||!r3ProduceReady(animal,now))return null;animal.lastCollect=now;S.inventory[p.id]=(S.inventory[p.id]||0)+1;return r3ProduceItem(p.id);}
+function r3CollectOne(animal,now){if(!r3CanEdit())return null;const p=r3AnimalProduce(animal);if(!p||!r3ProduceReady(animal,now))return null;animal.lastCollect=now;S.inventory[p.id]=(S.inventory[p.id]||0)+1;return r3ProduceItem(p.id);}
 function r3CollectProduce(){
  if(r3DenyVisit())return;
- if(W3?.active!=='home')return;const now=Date.now(),counts={};for(const a of S.animals||[]){const p=r3CollectOne(a,now);if(p)counts[p.id]=(counts[p.id]||0)+1;}
+ if(W3?.active!=='yard')return;const now=Date.now(),counts={};for(const a of S.animals||[]){const p=r3CollectOne(a,now);if(p)counts[p.id]=(counts[p.id]||0)+1;}
  if(!Object.keys(counts).length)return toast('产物还在准备中：鸡蛋约 25 秒，牛奶约 40 秒');
  r3Commit();r3RefreshAnimalHUD();toast('收取 '+Object.entries(counts).map(([id,n])=>r3ProduceItem(id).emoji+r3ProduceItem(id).name+' ×'+n).join('、'));
 }
 function r3PetAnimal(id){
- if(W3?.active!=='home'||worldBlocked())return;const animal=(S.animals||[]).find(a=>a.id===id);if(!animal)return;
- if(r3IsVisiting()){const key=(window.TG_VISIT?.ownerId||S.ownerId||'self')+':'+id,now=Date.now();if(now-(R3_VISIT_PETS.get(key)||0)<8000)return toast(animal.name+'正在开心地休息');R3_VISIT_PETS.set(key,now);addMerit(1);toast(animal.name+'蹭了蹭你的手，功德 +1');return;}
+ if(W3?.active!=='yard'||worldBlocked())return;const animal=(S.animals||[]).find(a=>a.id===id);if(!animal)return;
+ if(!r3CanEdit()){const key=(window.TG_VISIT?.ownerId||S.ownerId||'self')+':'+id,now=Date.now();if(now-(R3_VISIT_PETS.get(key)||0)<8000)return toast(animal.name+'正在开心地休息');R3_VISIT_PETS.set(key,now);addMerit(1);toast(animal.name+'蹭了蹭你的手，功德 +1');return;}
  const now=Date.now(),produce=r3CollectOne(animal,now),ready=now-(animal.lastPet||0)>=8000;
  if(ready){animal.lastPet=now;addMerit(1);}
  if(ready||produce){r3Commit();r3RefreshAnimalHUD();}
@@ -2559,14 +2591,15 @@ function r3AnimalModel(kind){
  const legs=small?[-1,1]:[-1,1,-2,2];legs.forEach((n,i)=>m(root,'cylinder',small?gold:bodyColor,(n<0?-1:1)*(small?.13:pet?.22:.31),small?.12:.23,small?0:(i<2?-.38:.34),small?.035:.09,small?.24:.46,small?.035:.09));
  return {root,head};
 }
-function r3AnimalFree(x,z,r=.65){const s=W3.spaces.home;return x> -12.8&&x<12.4&&z> -4.4&&z<12.8&&!R3_PENS.some(p=>x>p.x-r&&x<p.X+r&&z>p.z-r&&z<p.Z+r)&&!s.blocks.some(b=>x>b.x-r&&x<b.X+r&&z>b.z-r&&z<b.Z+r);}
+function r3AnimalFree(x,z,r=.65){const s=W3.spaces.yard;return x> -13.4&&x<13.4&&z> -13.4&&z<13.4&&!R3_PENS.some(p=>x>p.x-r&&x<p.X+r&&z>p.z-r&&z<p.Z+r)&&!s.blocks.some(b=>x>b.x-r&&x<b.X+r&&z>b.z-r&&z<b.Z+r);}
 function r3AnimalTarget(record){
- const pen=R3_PENS[record.animal.pen];if(pen){for(let i=0;i<32;i++){record.tx=pen.x+.9+Math.random()*(pen.X-pen.x-1.8);record.tz=pen.z+.9+Math.random()*(pen.Z-pen.z-1.8);if(!W3.spaces.home.blocks.some(b=>b.r3Decor&&record.tx>b.x-.5&&record.tx<b.X+.5&&record.tz>b.z-.5&&record.tz<b.Z+.5))break;}}
+ const pen=R3_PENS[record.animal.pen];if(pen){for(let i=0;i<32;i++){record.tx=pen.x+.9+Math.random()*(pen.X-pen.x-1.8);record.tz=pen.z+.9+Math.random()*(pen.Z-pen.z-1.8);if(!W3.spaces.yard.blocks.some(b=>b.r3Decor&&record.tx>b.x-.5&&record.tx<b.X+.5&&record.tz>b.z-.5&&record.tz<b.Z+.5))break;}}
  else{for(let i=0;i<32;i++){const x=-5.1+Math.random()*16,z=-3.5+Math.random()*15;if(r3AnimalFree(x,z)){record.tx=x;record.tz=z;break;}}}
+ if(record.animal.kind==='dog'){const post=record.animal.post||'home';if(post!=='follow'){record.tx=(post==='garden'?-7:11.3)+Math.random()*.8-.4;record.tz=(post==='garden'?0:6.5)+Math.random()*.8-.4;}}
  record.until=2+Math.random()*4;record.rest=Math.random()<.3;
 }
 function worldSyncAnimals(){
- const w=W3,s=w?.spaces?.home;if(!s)return;const animals=S.animals||[];
+ const w=W3,s=w?.spaces?.yard;if(!s)return;const animals=S.animals||[];
  // Runtime timestamps do not change meshes; adding/removing/renaming/re-penning does.
  const key=JSON.stringify(animals.map(a=>[a.id,a.kind,a.name,a.pen,a.born]));if(s.animalKey===key)return;s.animalKey=key;
  if(!s.animalGroup){s.animalGroup=new THREE.Group();s.group.add(s.animalGroup);}
@@ -2579,17 +2612,18 @@ function worldSyncAnimals(){
  s.animalBatches=[...batches.values()];for(const b of s.animalBatches){b.mesh=new THREE.InstancedMesh(b.geometry,b.material,b.parts.length);b.mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);b.mesh.frustumCulled=false;b.mesh.castShadow=true;b.mesh.receiveShadow=true;s.animalGroup.add(b.mesh);}
  r3UpdateAnimalMatrices(0);r3RefreshAnimalHUD();
 }
-function r3UpdateAnimalMatrices(ts){const s=W3.spaces.home;for(const r of s.animalRecords||[]){const walking=!r.rest&&Math.hypot(r.tx-r.x,r.tz-r.z)>.15;r.root.position.set(r.x,r.rest?.015:Math.abs(Math.sin(ts*.006+r.phase))*(walking?.045:.012),r.z);r.root.rotation.y=r.yaw;r.root.scale.y=r.rest?.7:1;r.head.rotation.x=r.rest?Math.sin(ts*.002+r.phase)*.16:walking?0:Math.sin(ts*.004+r.phase)*.26;r.root.updateMatrixWorld(true);r.prompt.x=r.x;r.prompt.z=r.z;for(const p of r.parts)p.batch.mesh.setMatrixAt(p.index,p.node.matrixWorld);}for(const b of s.animalBatches||[])b.mesh.instanceMatrix.needsUpdate=true;}
+function r3UpdateAnimalMatrices(ts){const s=W3.spaces.yard;for(const r of s.animalRecords||[]){const walking=!r.rest&&Math.hypot(r.tx-r.x,r.tz-r.z)>.15;r.root.position.set(r.x,r.rest?.015:Math.abs(Math.sin(ts*.006+r.phase))*(walking?.045:.012),r.z);if(r.barkUntil>ts)r.root.position.y+=Math.abs(Math.sin(ts*.025))*.55;r.root.rotation.y=r.yaw;r.root.scale.y=r.rest?.7:1;r.head.rotation.x=r.rest?Math.sin(ts*.002+r.phase)*.16:walking?0:Math.sin(ts*.004+r.phase)*.26;r.root.updateMatrixWorld(true);r.prompt.x=r.x;r.prompt.z=r.z;for(const p of r.parts)p.batch.mesh.setMatrixAt(p.index,p.node.matrixWorld);}for(const b of s.animalBatches||[])b.mesh.instanceMatrix.needsUpdate=true;}
 function r3AnimateAnimals(ts,dt){
- const w=W3,s=w?.spaces?.home;if(w?.active!=='home'||!s)return;
+ const w=W3,s=w?.spaces?.yard;if(w?.active!=='yard'||!s)return;
  if(s.animalKey===undefined)worldSyncAnimals();if(worldBlocked())return;
- for(const r of s.animalRecords||[]){if(r.animal.pen===null&&!r3AnimalFree(r.x,r.z)){r3AnimalTarget(r);r.x=r.tx;r.z=r.tz;}r.until-=dt;if(r.until<=0)r3AnimalTarget(r);const pet=r.animal.pen===null,player=w.player.position,dist=Math.hypot(player.x-r.x,player.z-r.z);
- if(pet&&!r.rest&&dist>1.8&&dist<7&&Math.sin(ts*.00022+r.phase)>.15&&r3AnimalFree(player.x,player.z)){r.tx=player.x;r.tz=player.z;}
+ for(const r of s.animalRecords||[]){if(!R3_PENS[r.animal.pen]&&!r3AnimalFree(r.x,r.z)){r3AnimalTarget(r);r.x=r.tx;r.z=r.tz;}r.until-=dt;if(r.until<=0)r3AnimalTarget(r);const pet=!R3_PENS[r.animal.pen],player=w.player.position,dist=Math.hypot(player.x-r.x,player.z-r.z);
+ if(pet&&(r.animal.kind!=='dog'||r.animal.post==='follow')&&!r.rest&&dist>1.8&&(r.animal.kind==='dog'||dist<7&&Math.sin(ts*.00022+r.phase)>.15)&&r3AnimalFree(player.x,player.z)){r.tx=player.x;r.tz=player.z;}
  if(pet&&dist<1.7&&Math.hypot(r.tx-player.x,r.tz-player.z)<1.8){r.tx=r.x;r.tz=r.z;}
  const dx=r.tx-r.x,dz=r.tz-r.z,len=Math.hypot(dx,dz);if(!r.rest&&len>.15){const speed=r.animal.kind==='chicken'?.6:pet?1.15:.65,step=Math.min(len,speed*Math.min(dt,.08)),x=r.x+dx/len*step,z=r.z+dz/len*step,pen=R3_PENS[r.animal.pen];
  const blocked=pet?!r3AnimalFree(x,z):x<pen.x+.7||x>pen.X-.7||z<pen.z+.7||z>pen.Z-.7||s.blocks.some(b=>b.r3Decor&&x>b.x-.5&&x<b.X+.5&&z>b.z-.5&&z<b.Z+.5);
  if(!blocked){r.x=x;r.z=z;r.yaw+=Math.atan2(Math.sin(Math.atan2(dx,dz)-r.yaw),Math.cos(Math.atan2(dx,dz)-r.yaw))*Math.min(1,dt*4);}else r.until=0;}
  }
+ for(const r of s.animalRecords||[])if(r.barkUntil>ts)r.rest=false;
  r3UpdateAnimalMatrices(ts);if(ts-(s.animalHUDTime||0)>1000){s.animalHUDTime=ts;r3RefreshAnimalHUD();}
 }
 
@@ -2626,9 +2660,9 @@ function r3PolishScenes(){
  part(g,'box','#556e69',10,3.35,6,4.6,.25,4.6);part(g,'cone','#556e69',10,3.95,6,3.4,1,3.4);part(g,'box','#806146',10,.65,7.35,2.3,.15,.45);solid(s,10,7.35,2.3,.45);
  finish(s,g);}
  // Home: an east-west walk connects the gate to the central courtyard; house approach stays open.
- {const {s,g}=garden('home');s.floor.material=r3GrassMaterial();for(let x=-4;x<=13;x+=1.4)for(const z of [-.7,.7])tile(g,x,z,1.25,1.25);for(let z=-4;z<=6;z+=1.4)tile(g,0,z,1.7,1.2);
+ {const {s,g}=garden('yard');s.floor.material=r3GrassMaterial();for(let x=2;x<=13;x+=1.4)for(const z of [-.7,.7])tile(g,x,z,1.25,1.25);for(let z=4;z<=6;z+=1.4)tile(g,8,z,1.7,1.2);
  for(const x of [-2.2,2.2]){lantern(g,x,-4);flowers(g,x,-3,1);solid(s,x,-4,.4,.4);}
- for(const [x,z]of [[7,-7],[10,10],[-9,10]]){tree(g,x,z);solid(s,x,z,.6,.6);flowers(g,x+1,z,1);}
+ for(const [x,z]of [[13,6],[12,11]]){tree(g,x,z);solid(s,x,z,.6,.6);flowers(g,x+1,z,1);}
  for(const p of R3_PENS){
   const mid=(p.x+p.X)/2,gap=1.8;
   part(g,'box','#a8ab79',mid,.015,(p.z+p.Z)/2,p.X-p.x,.05,p.Z-p.z);
@@ -2657,17 +2691,32 @@ function r3GrassMaterial(){
 var R3_VISIT_PETS=new Map();
 function r3IsVisiting(){return !!(window.TG_VISIT||window.TG_ACCESS?.isVisiting?.());}
 function r3SkipDemoGate(){return r3IsVisiting()||typeof window.TG_ACCESS?.canEnter==='function';}
-function r3DenyVisit(){if(!r3IsVisiting())return false;toast('拜访中无法修改主人的庭院');return true;}
+function r3DenyVisit(){if(r3CanEdit())return false;toast('拜访中无法修改主人的庭院');return true;}
 function r3DiscardPlan(){const p=window.TG_PLAN;if(!p)return;p.observer?.disconnect();window.TG_PLAN=null;$('#planView').hidden=true;document.body.classList.remove('r3-planning');}
+// Only these shared-space fields are swapped by family/owner visits.
+var r3OwnSpace=null,r3WasVisiting=false;
+function r3SnapshotOwnSpace(state=S){
+ if(r3IsVisiting())return;
+ r3OwnSpace=JSON.parse(JSON.stringify({plots:state.plots,decor:state.decor,shrine:state.shrine,animals:state.animals}));
+}
+function r3SyncOwnSpace(){
+ const visiting=r3IsVisiting(),ended=r3WasVisiting&&!visiting;
+ r3WasVisiting=visiting;
+ if(ended&&r3OwnSpace){Object.assign(S,JSON.parse(JSON.stringify(r3OwnSpace)));return true;}
+ if(!visiting)r3SnapshotOwnSpace();
+ return false;
+}
 function r3ApplyVisitingUI(){
- const visiting=r3IsVisiting();document.body.classList.toggle('r3-visiting',visiting);
+ if(r3SyncOwnSpace())window.TG_RERENDER();
+ const visiting=!r3CanEdit();document.body.classList.toggle('r3-visiting',visiting);
  document.querySelectorAll('[onclick*="openShop"],[onclick*="openShrineStudio"],[onclick*="enterPlacement"],[onclick*="r3CollectProduce"]').forEach(b=>{b.dataset.r3Edit='';b.disabled=visiting;});
  $('#pillCoins').disabled=visiting;
  if(visiting)r3DiscardPlan();if(r3SkipDemoGate())$('#gateLock').classList.remove('show');
 }
 // Capture old DOM actions too: an already-open modal cannot modify a newly supplied owner snapshot.
 document.addEventListener('click',e=>{
- if(!r3IsVisiting()||!e.target.closest('[data-r3-edit],#r3Shop,#r3Arrange,#resetBtn,#btnOffer,#btnIncense,#r3ProduceOffers,#plots .plot,#seedBar,#waterAll,#harvestAll,[data-buy],[data-sell],[data-sell-all],[data-animal],[data-style]'))return;
+ if(r3CanEdit()||!e.target.closest('[data-r3-edit],#r3Shop,#r3Arrange,#resetBtn,#btnOffer,#btnIncense,#r3ProduceOffers,#plots .plot,#seedBar,#plantAll,#waterAll,#harvestAll,[data-buy],[data-sell],[data-sell-all],[data-animal],[data-style]'))return;
+ const plot=e.target.closest('#plots .plot');if(plot&&S.plots[+plot.dataset.i]&&plotProgress(S.plots[+plot.dataset.i],Date.now())>=1)return;
  e.preventDefault();e.stopImmediatePropagation();r3DenyVisit();
 },true);
 window.TG_RERENDER=function(){
@@ -2677,6 +2726,62 @@ window.TG_RERENDER=function(){
  renderTop();if(current==='hall')renderHall();if(current==='yard')renderYard();
  worldSyncShrine();worldSyncDecor();worldSyncAnimals();worldSyncHall();worldSyncYard();r3RefreshAnimalHUD();
 };
+
+/* r4 adds the merged private courtyard without replacing the r3 game. */
+function r3CanEdit(){return !r3IsVisiting()||window.TG_VISIT?.canEdit===true;}
+function sanitizeR4(d){
+ if(d.scene==='home')d.scene='yard';d.decor||={};d.decor.yard||=[];
+ for(const v of d.decor.home||[])d.decor.yard.push({...v,x:v.x+8,z:v.z+5,r4Migrated:true});d.decor.home=[];
+ r3SanitizeAnimals(d);
+}
+$('#plantAll').onclick=()=>{if(r3DenyVisit())return;let n=0;const now=Date.now();for(let i=0;i<S.plots.length;i++)if(!S.plots[i]){S.plots[i]={crop:S.selectedSeed,plantedAt:now,boost:0,lastWater:0};n++;}if(n){save();renderYard();worldSyncYard();tgFeedback('plant');}toast(n?`种下了 ${n} 块地`:'没有空地可以播种');};
+window.TG_DOG_IN_GARDEN=window.TG_DOG_ON_DUTY=()=> (S.animals||[]).some(a=>a?.kind==='dog'&&a.post==='garden');
+function r4Bark(){const r=W3?.spaces.yard.animalRecords?.find(r=>r.animal.kind==='dog'&&r.animal.post==='garden');if(r)r.barkUntil=performance.now()+1300;toast('汪！被看门狗发现了');}
+var r4Stealing=new Set();
+async function r4Steal(i,el){
+ if(r4Stealing.has(i))return;const p=S.plots[i];if(!p||plotProgress(p,Date.now())<1)return;
+ r4Stealing.add(i);
+ try{const result=await harvest(i,el);
+ if((typeof result==='string'&&/caught/i.test(result))||result?.caught===true||[result?.error,result?.reason].some(v=>typeof v==='string'&&/caught/i.test(v))){r4Bark();return 'caught';}
+ return result;
+ }catch(e){toast('暂时无法摘取，请稍后再试');}finally{r4Stealing.delete(i);}
+}
+function r4SetPost(a,post){if(r3DenyVisit())return;a.post=post;W3.spaces.yard.animalKey=undefined;worldSyncAnimals();save();toast(a.name+'：'+({garden:'看菜园',follow:'跟着我',home:'回窝'}[post]));}
+function r4Guard(){if(r3DenyVisit())return;const dogs=(S.animals||[]).filter(a=>a.kind==='dog'),a=dogs.find(a=>a.post!=='garden')||dogs[0];if(!a)return toast('请先领养一只小狗');r4SetPost(a,'garden');}
+var r4Pet=r3PetAnimal;r3PetAnimal=function(id){const a=(S.animals||[]).find(a=>a.id===id);if(a?.kind!=='dog'||!r3CanEdit())return r4Pet(id);openModal(`<h2>🐕 ${r3Esc(a.name)}</h2><div class="r3-actions"><button class="btn" data-post="garden">看菜园</button><button class="btn" data-post="follow">跟着我</button><button class="btn" data-post="home">回窝</button><button class="btn" id="r4Pet">抚摸</button></div>`);$('#sheet').querySelectorAll('[data-post]').forEach(b=>b.onclick=()=>{r4SetPost(a,b.dataset.post);closeModal();});$('#r4Pet').onclick=()=>{closeModal();r4Pet(id);};};
+{const hud=$('.r3-animal-hud');$('#yard').append(hud);hud.insertAdjacentHTML('beforeend','<div><button class="big-btn wood" onclick="enterPlacement(\'yard\')">布置</button><button class="big-btn wood" data-r3-edit onclick="r4Guard()">派狗看菜园</button></div>');}
+$('#btnMenu').addEventListener('click',()=>{const b=document.createElement('button');b.className='btn ghost';b.textContent='家庭';b.onclick=()=>{if(typeof window.TG_FAMILY?.open==='function')window.TG_FAMILY.open();else toast('家庭未连接');};$('#sheet').append(b);});
+var r4Spawn=r3Spawn;r3Spawn=function(name,prev){if(name==='yard'&&(window.r4EastArrival||prev==='home')){window.r4EastArrival=false;return [11.5,0,Math.PI/2];}if(name==='plaza'&&prev==='yard'&&W3?.player?.position.x>10)return [-11,0,-Math.PI/2];return r4Spawn(name,prev);};
+var r4Build=r3Build;r3Build=function(){r4Build();const y=W3.spaces.yard;y.limit={x:14,z:14};W3.spaces.home.group.visible=false;
+ // Bed sits on the open south veranda; house and pond remain separate.
+ const g=new THREE.Group();y.group.add(g);r3Furniture(g,{id:'daybed',x:8,z:5,rot:0});g.updateMatrixWorld(true);r3BatchDecor(g);y.blocks.push({x:6.75,X:9.25,z:4.25,Z:5.75,r4Bed:true});
+};
+var r4Placement=r3PlacementError;r3PlacementError=function(scene,item,ignore=-1,restoring=false){const b=r3Bounds(item);if(scene==='yard'&&b){const zones=[...R3_PENS,{x:-1.7,X:1.7,z:-14,Z:14},{x:10.5,X:14,z:-1.8,Z:1.8},...Array.from({length:12},(_,i)=>({x:-11.3+i%3*3.3,X:-8.7+i%3*3.3,z:-7.3+Math.floor(i/3)*3.5,Z:-4.7+Math.floor(i/3)*3.5}))];if(zones.some(v=>r3Overlap(b,v)))return '田地、牧栏和门前通道需要留空';}return r4Placement(scene,item,ignore,restoring);};
+window.TG_CATALOG.push({id:'rocking-chair',name:'摇椅',cat:'furniture',price:85,w:1.2,d:1.5,emoji:'🪑'});
+var r4Furniture=r3Furniture;r3Furniture=function(g,item){if(item.id==='rocking-chair'){r4Furniture(g,{...item,id:'bench'});return;}r4Furniture(g,item);};
+function r4Pose(body,limbs,pose,moving,ts){if(!body)return;body.rotation.x=0;if(moving)return;if(pose==='sit'){body.position.y=-.28;limbs.forEach((l,i)=>l.rotation.x=i<2?-.45:-1.35);}else if(pose==='sleep'){body.rotation.x=-Math.PI/2;body.position.y=.35;limbs.forEach(l=>l.rotation.x=0);}}
+var r4Quotes=['心无挂碍，无有恐怖。','色即是空，空即是色。','一花一世界，一叶一菩提。','应无所住而生其心。','行到水穷处，坐看云起时。','时时勤拂拭，莫使惹尘埃。','春有百花秋有月，夏有凉风冬有雪。','静坐常思己过。','诸恶莫作，众善奉行。','知足常乐，随缘自在。'],r4Cooldown={};
+function r4Use(item,scene){const id=item.id,w=W3;worldStop();
+ if(id==='cabinet')return $('#pillInv').click();
+ if(id==='lantern'){if(r3DenyVisit())return;item.on=!item.on;save();worldSyncDecor();return toast(item.on?'灯已点亮':'灯已熄灭');}
+ if(id==='daybed'){w.pose='sleep';document.body.classList.add('r4-rest');setTimeout(()=>{document.body.classList.remove('r4-rest');if(w.pose==='sleep')w.pose='idle';toast('精神恢复');},1600);return;}
+ if(['bench','cushion'].includes(id)){w.pose='sit';return toast('坐下歇歇，移动即可起身');}
+ if(id==='bookshelf')return toast(r4Quotes[rand(r4Quotes.length)]);
+ if(id==='rocking-chair'){w.pose='sit';w.r4Rock=performance.now()+2400;return toast('轻轻摇，慢慢歇');}
+ if(id==='altar-table'&&scene==='hall')return $('#btnIncense').click();
+ const key=id==='altar-table'?'incense':'tea',now=Date.now();if(now-(r4Cooldown[key]||0)<8000)return toast('静心片刻，再来品味');r4Cooldown[key]=now;if(key==='tea')w.r4SipUntil=performance.now()+1300;addMerit(key==='tea'?1:3);toast(key==='tea'?'清茶一盏，功德 +1':'清香一炷，功德 +3');
+}
+var r4SyncDecor=worldSyncDecor;worldSyncDecor=function(){
+ if(W3?.active==='yard')for(const item of S.decor.yard||[]){if(!item.r4Migrated)continue;delete item.r4Migrated;
+ // Apply the migration offset first, then rescue only furniture that collides with new fixed facilities.
+ if(r3PlacementError('yard',item,S.decor.yard.indexOf(item),true)){let found=false;const old={x:item.x,z:item.z};for(let z=5;z<=12&&!found;z+=.5)for(let x=3;x<=13&&!found;x+=.5){item.x=x;item.z=z;if(!r3PlacementError('yard',item,S.decor.yard.indexOf(item),true))found=true;}if(!found){item.x=old.x;item.z=old.z;S.backpack[item.id]=(S.backpack[item.id]||0)+1;S.decor.yard=S.decor.yard.filter(v=>v!==item);}}
+ }
+ r4SyncDecor();const w=W3,s=w?.spaces[w.active];if(!s)return;const key=JSON.stringify(S.decor[w.active]||[]);if(s.r4InteractKey===key)return;s.r4InteractKey=key;s.items=s.items.filter(i=>!i.r4Furniture);if(s.r4Lights){s.group.remove(s.r4Lights);}s.r4Lights=new THREE.Group();s.group.add(s.r4Lights);
+ const list=[...(S.decor[w.active]||[])];if(w.active==='yard')list.push({id:'daybed',x:8,z:5},{id:'bench',x:12,z:8});if(w.active==='study')list.push({id:'bookshelf',x:-4,z:-6},{id:'bookshelf',x:4,z:-6});if(w.active==='zen')list.push({id:'cushion',x:-1.5,z:-2},{id:'cushion',x:1.5,z:-2});
+ const labels={daybed:'睡觉',bench:'坐下',cushion:'坐下','wood-table':'喝茶','tea-cup':'喝茶',lantern:'开关灯',bookshelf:'读书','altar-table':'上香','rocking-chair':'摇',cabinet:'打开背包'};
+ for(const item of list){if(!labels[item.id])continue;s.items.push({x:item.x,z:item.z,range:2.6,label:labels[item.id],run:()=>r4Use(item,w.active),r4Furniture:true});if(item.id==='lantern'&&item.on){const l=new THREE.PointLight('#ffd795',1.1,5);l.position.set(item.x,1.3,item.z);s.r4Lights.add(l);}}
+};
+var r4Rerender=window.TG_RERENDER;window.TG_RERENDER=function(){r3SyncOwnSpace();sanitizeR4(S);for(const s of Object.values(W3?.spaces||{}))s.r4InteractKey=undefined;r4Rerender();};
 
 </script>
 <script>/* 福缘寺 garden: 私人菜园 / 串门 / 偷菜 */
@@ -2790,7 +2895,10 @@ window.TG_RERENDER=function(){
     });
   }
   function sigOf(plots) { return JSON.stringify((plots || []).map(function (p) { return p ? [p.crop, p.plantedAt, p.boost || 0] : 0; })); }
-  function myPlots() { return VISIT ? VISIT.myPlots : (typeof S !== 'undefined' ? S.plots : []); }
+  function myPlots() {
+    if (typeof G.ownPlots === 'function') { var o = G.ownPlots(); if (o) return o; }   // tg-family: own plots while S holds the family garden
+    return VISIT ? VISIT.myPlots : (typeof S !== 'undefined' ? S.plots : []);
+  }
   function scheduleSync() {
     if (!online()) return;
     var sig = sigOf(myPlots());
@@ -2858,6 +2966,7 @@ window.TG_RERENDER=function(){
     if (r && r.ok) {
       var c = crop(r.crop);
       addInv(r.crop, 1); safe(function () { save(); }); safe(function () { renderTop(); });
+      if (STORE && window.TG_VISIT) safe(function () { STORE.save(S); });   // game save() skips while visiting; keep the loot
       fb('harvest'); stealFx(c);
       note('🧺 从 ' + v.name + ' 的菜园偷到 ' + c.emoji + c.name + '，可以拿去上供', true);
       NET.sendEvent && NET.sendEvent('steal', { owner: v.owner, plot: i, crop: r.crop });
@@ -2902,6 +3011,7 @@ window.TG_RERENDER=function(){
     return d;
   }
   async function visit(owner) {
+    if (typeof G.visitHook === 'function' && G.visitHook(owner)) return true;   // tg-family: the family home is not a steal visit
     if (!owner) return false;
     if (!online()) { say('离线模式，不能串门'); return false; }
     if (owner === me()) { goHome(); if (curScene() !== 'yard') safe(function () { go('yard'); }); return true; }
@@ -2911,6 +3021,9 @@ window.TG_RERENDER=function(){
     VISIT = { owner: owner, name: (d && d.name) || '香客', server: (d && d.plots) || [], guardUntil: d && d.guard_until, myPlots: mine };
     G.visiting = { owner: owner, name: VISIT.name };
     NET.yardOwner = owner;
+    // v4 r4: someone else's yard is steal-only -> the game blocks planting/editing while TG_VISIT is set
+    window.TG_VISIT = { ownerId: owner, name: VISIT.name, canEdit: false, steal: true };
+    safe(function () { if (typeof r3ApplyVisitingUI === 'function') r3ApplyVisitingUI(); });
     closePanel(); closeCard();
     if (curScene() === 'yard') { NET.refreshRoom && NET.refreshRoom(); } else safe(function () { go('yard'); });
     applyVisit(); renderBanner();
@@ -2922,11 +3035,14 @@ window.TG_RERENDER=function(){
   function goHome(silent, noRoom) {
     if (!VISIT) return;
     var v = VISIT; VISIT = null; G.visiting = null; NET.yardOwner = null;
+    if (window.TG_VISIT && window.TG_VISIT.steal) window.TG_VISIT = null;
+    safe(function () { if (typeof r3ApplyVisitingUI === 'function') r3ApplyVisitingUI(); });
     S.plots = v.myPlots;
     dropPokes();
     syncView(); updateMarks(); renderBanner();
     if (!noRoom) NET.refreshRoom && NET.refreshRoom();
     if (!silent) note('🏠 回到自己的菜园');
+    if (typeof G.afterHome === 'function') { try { G.afterHome(); } catch (e) {} }
   }
   setInterval(function () {
     if (!VISIT || document.hidden) return;
@@ -3131,10 +3247,10 @@ window.TG_RERENDER=function(){
     var w = window.W3; var cv = w && (w.renderer && w.renderer.domElement || w.canvas);
     if (!cv || cv._tggTap) return !!cv; cv._tggTap = true;
     var down = null;
-    cv.addEventListener('pointerdown', function (e) { down = { x: e.clientX, y: e.clientY, t: Date.now() }; closeCard(); }, { passive: true });
+    cv.addEventListener('pointerdown', function (e) { down = { x: e.clientX, y: e.clientY, t: e.timeStamp }; closeCard(); }, { passive: true });
     cv.addEventListener('pointerup', function (e) {
       if (!down) return; var d = down; down = null;
-      if (Math.hypot(e.clientX - d.x, e.clientY - d.y) > 10 || Date.now() - d.t > 400) return;
+      if (Math.hypot(e.clientX - d.x, e.clientY - d.y) > 10) return;   // movement-only: a busy main thread (slow phones) can stretch taps past any duration limit; v4 has no long-press
       var hit = G.pickPlayerAt(e.clientX, e.clientY);
       if (hit) showCard(hit.id, hit.name, e.clientX, e.clientY);
     }, { passive: true });
@@ -3822,6 +3938,7 @@ window.TG_RERENDER=function(){
   A.isVisiting = function () { return VISIT ? { owner: VISIT.owner, scene: VISIT.scene, name: VISIT.name } : null; };
   A.enter = async function (owner, scene) {
     scene = scene || SHRINE;
+    var F = window.TG_FAMILY; if (F && F.handlesEnter && F.handlesEnter(owner)) return F.enterSpace(scene);   // family home: full edit access
     if (isMe(owner)) { A.leave(true); safe(function () { go(scene); }); return true; }
     if (scene === 'yard' && GARDEN && GARDEN.visit) return GARDEN.visit(owner);
     if (!(await A.canEnter(owner, scene))) return false;
@@ -3908,14 +4025,15 @@ window.TG_RERENDER=function(){
   function stripData(v) {   // data: URLs can't be shown to others (and would bloat the row): drop them
     return JSON.parse(JSON.stringify(v === undefined ? null : v, function (k, x) { return (typeof x === 'string' && /^data:/.test(x)) ? null : x; }));
   }
+  function familyOwnsSync() { var F = window.TG_FAMILY; return !!(F && F.active && F.active()); }   // family space syncs via space_save
   function scheduleShowcase() {
-    if (!online() || !hasS()) return;
+    if (!online() || !hasS() || familyOwnsSync()) return;
     var sig = JSON.stringify([S.shrine || null, S.decor || null]);
     if (sig === lastSig) return;
     clearTimeout(scTimer); scTimer = setTimeout(syncShowcase, 1500);
   }
   async function syncShowcase() {
-    if (!online() || !hasS() || VISIT) return null;
+    if (!online() || !hasS() || VISIT || familyOwnsSync()) return null;
     var sig = JSON.stringify([S.shrine || null, S.decor || null]);
     lastSig = sig;
     try { return await rpc('sync_showcase', { p_shrine: stripData(S.shrine || {}), p_decor: stripData(S.decor || {}) }); }
@@ -4013,6 +4131,361 @@ window.TG_RERENDER=function(){
   }
   if (SOCIAL && SOCIAL.addMenuItem) SOCIAL.addMenuItem('🔒 祠堂门锁 / 邀请', A.openLockSettings, 'tgaLockItem');
   if (AUTH && AUTH.ready) AUTH.ready.then(function () { setTimeout(scheduleShowcase, 2000); });
+})();
+
+</script>
+<script>/* 福缘寺 family: 家庭共享小院/祠堂 + 看门狗 */
+/*!
+ * 福缘寺 tg-family.js — 家庭 (shared yard + shrine + decor + animals) and server-side 看门狗 by location.
+ * Load AFTER the game script, tg-backend, tg-garden, tg-social, tg-access. Needs backend/r4.sql.
+ *
+ * window.TG_FAMILY:
+ *   open()                     family panel (members, invites in/out, leave, remove)
+ *   info() -> Promise<info>    {head, is_head, members[], invites_in[], invites_out[], max}
+ *   invite(id[, name]) / accept(headId) / decline(headId) / leave() / remove(id)
+ *   enterSpace(scene='yard')   go to the family home (members) with TG_VISIT={ownerId:head, name, canEdit:true, family:true}
+ *   inSpace() / active() / head()  state helpers;  sync() push+pull now;  syncDog() push dog state now
+ * window.TG_SPACE_SAVE({plots, decor, shrine, animals})  game calls this instead of its own save while TG_VISIT.canEdit
+ * Dog: polls window.TG_DOG_ON_DUTY() (game) and stores it on the server (gardens.dog_on_duty) on change + every 60 s.
+ */
+(function () {
+  'use strict';
+  if (window.TG_FAMILY) return;
+  var AUTH = window.TG_AUTH, NET = window.TG_NET || {}, STORE = window.TG_STORAGE, GARDEN = window.TG_GARDEN, SOCIAL = window.TG_SOCIAL;
+  var SYNC_MS = window.TG_FAMILY_SYNC_MS || 4000;
+  function me() { return AUTH && AUTH.user && AUTH.user.id; }
+  function online() { return !!(AUTH && AUTH.online && AUTH.user); }
+  function rpc(fn, args) {
+    var hook = window.TG_FAMILY_RPC || window.TG_GARDEN_RPC;
+    if (hook) return Promise.resolve(hook(fn, args || {}));
+    return AUTH.client.rpc(fn, args || {}).then(function (r) { if (r.error) throw r.error; return r.data; });
+  }
+  function say(t) { try { toast(t); } catch (e) { console.log('[toast]', t); } }
+  function note(t, good) { if (GARDEN && GARDEN.note) GARDEN.note(t, good); else say(t); }
+  function esc(t) { return String(t == null ? '' : t).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function hasS() { return typeof S !== 'undefined' && S && typeof S === 'object'; }
+  function clone(o) { return o === undefined || o === null ? o : JSON.parse(JSON.stringify(o)); }
+  function J(o) { return JSON.stringify(o === undefined ? null : o); }
+  function safe(fn) { try { return fn(); } catch (e) {} }
+  function isPublic(scene) { return NET.isPublicScene ? NET.isPublicScene(scene) : scene === 'plaza'; }
+  function spaceScene(scene) { return scene === 'yard' || scene === 'home' || !isPublic(scene); }
+  function curScene() { return safe(function () { return (window.W3 && W3.active) || current; }) || (location.hash || '').slice(1) || 'plaza'; }
+  function rerender() {
+    try { if (typeof window.TG_RERENDER === 'function') { window.TG_RERENDER(); return; } } catch (e) {}
+    ['renderAll', 'worldSyncYard', 'worldSyncHall', 'worldSyncShrine', 'worldSyncDecor', 'worldSyncAnimals'].forEach(function (f) { safe(function () { if (typeof window[f] === 'function') window[f](); }); });
+  }
+  function otherVisit() { return !!((GARDEN && GARDEN.visiting) || (window.TG_ACCESS && TG_ACCESS.isVisiting && TG_ACCESS.isVisiting())); }
+  function stripData(v) { return v == null ? v : JSON.parse(JSON.stringify(v, function (k, x) { return (typeof x === 'string' && /^data:/.test(x)) ? null : x; })); }
+
+  var F = window.TG_FAMILY = {};
+  var INFO = null;                 // last family_info()
+  var FV = null;                   // member inside the family home: {head, name, stash:{plots,decor,shrine,animals}}
+  var SNAP = null;                 // last server space {plots[], decor, shrine, animals, rev} for the family head
+  var KEYS = [];                   // per plot: key the server had at the last pull/push
+  var busy = false;
+
+  F.head = function () { return INFO && INFO.head; };
+  F.isHead = function () { return !!(INFO && INFO.head && INFO.head === me()); };
+  F.isMember = function () { return !!(INFO && INFO.head && INFO.head !== me()); };
+  F.inSpace = function () { return !!FV; };
+  F.active = function () { return !!FV || (F.isHead() && INFO.members.length > 1); };
+  F.handlesEnter = function (owner) { return F.isMember() && owner === INFO.head; };
+
+  /* ---------------- plots: server <-> game ---------------- */
+  function cropOf(id) { return safe(function () { return CROP_BY_ID[id]; }) || { growMs: 60000, name: id, emoji: '🌱' }; }
+  function keyOf(p) { return p ? String(p._k || p.plantedAt) : null; }
+  function fromServer(sp, serverNow) {
+    if (!sp || typeof sp !== 'object') return null;
+    var c = cropOf(sp.c), k = String(sp.k), left = Math.max(0, Number(sp.ripe) - (serverNow || Date.now()));
+    var planted = /^\d{12,14}$/.test(k) ? Number(k) : Date.now() - (c.growMs || 60000) + left;
+    return { crop: sp.c, plantedAt: planted, boost: 0, lastWater: 0, _k: k, _by: sp.by || null };
+  }
+  function remainingMs(p) {
+    var c = cropOf(p.crop), prog = 0;
+    try { prog = plotProgress(p, Date.now()); } catch (e) { prog = Math.min(1, (Date.now() - p.plantedAt) / (c.growMs || 60000) + (p.boost || 0)); }
+    return Math.max(0, Math.round((1 - prog) * (c.growMs || 60000)));
+  }
+  // merge a server plot array into the local one; returns true if anything changed
+  function mergePlots(local, server, serverNow) {
+    var changed = false;
+    for (var i = 0; i < 12; i++) {
+      var sp = server[i] && typeof server[i] === 'object' ? server[i] : null, lp = local[i] || null;
+      var sk = sp ? String(sp.k) : null, lk = keyOf(lp);
+      if (sk === lk) { if (sp && lp && sp.by && !lp._by) lp._by = sp.by; continue; }
+      if (sp && !lp) { if (KEYS[i] === sk) continue; local[i] = fromServer(sp, serverNow); changed = true; }
+      else if (!sp && lp) { if (KEYS[i] === lk) { local[i] = null; changed = true; } }
+      else if (sp && lp) { if (KEYS[i] === lk || F.isMember()) { local[i] = fromServer(sp, serverNow); changed = true; } }
+    }
+    KEYS = []; for (var j = 0; j < 12; j++) KEYS[j] = server[j] && typeof server[j] === 'object' ? String(server[j].k) : null;
+    return changed;
+  }
+  // member: push local plot changes as per-plot RPCs
+  async function pushPlots(head) {
+    if (!hasS() || !Array.isArray(S.plots)) return;
+    for (var i = 0; i < 12; i++) {
+      var lp = S.plots[i] || null, lk = keyOf(lp), sk = KEYS[i] || null;
+      if (lk === sk) continue;
+      if (sk) {   // the plant the server knows is gone locally -> harvested here
+        var h = await rpc('space_harvest', { p_owner: head, p_plot: i, p_key: sk }).catch(function (e) { return { ok: false, reason: e.message }; });
+        if (h && h.ok) { KEYS[i] = null; if (h.stolen > 0 && S.inventory && S.inventory[h.crop] > 0) { S.inventory[h.crop] = Math.max(0, S.inventory[h.crop] - h.stolen); note('😤 这块被偷了 ' + h.stolen + ' 份'); } }
+        else if (h && h.reason === 'unripe' && !lp) { continue; }   // next pull puts it back
+        else KEYS[i] = null;
+      }
+      if (lp && lp.crop) {
+        var r = await rpc('space_plant', { p_owner: head, p_plot: i, p_crop: lp.crop, p_key: lk, p_r: remainingMs(lp) }).catch(function (e) { return { ok: false, reason: e.message }; });
+        if (r && r.ok) { KEYS[i] = lk; lp._k = lk; lp._by = me(); }
+        else if (r && r.reason === 'occupied' && r.plot) { S.plots[i] = fromServer(r.plot); KEYS[i] = String(r.plot.k); }
+      }
+    }
+  }
+  // shrine / decor (per scene) / animals: push what changed since the last server snapshot
+  async function pushFields(head) {
+    if (!hasS() || !SNAP) return false;
+    var args = { p_owner: head }, any = false, d = {};
+    var decor = S.decor && typeof S.decor === 'object' ? S.decor : {};
+    Object.keys(decor).forEach(function (k) { if (J(stripData(decor[k])) !== J((SNAP.decor || {})[k])) { d[k] = stripData(decor[k]); any = true; } });
+    if (Object.keys(d).length) args.p_decor = d;
+    if (S.shrine !== undefined && J(stripData(S.shrine)) !== J(SNAP.shrine) && !(SNAP.shrine == null && FV)) { args.p_shrine = stripData(S.shrine); any = true; }
+    if (S.animals !== undefined && J(S.animals) !== J(SNAP.animals) && !(SNAP.animals == null && FV)) { args.p_animals = S.animals; any = true; }
+    if (!any) return false;
+    var r = await rpc('space_save', args);
+    if (args.p_decor) Object.keys(args.p_decor).forEach(function (k) { SNAP.decor = SNAP.decor || {}; SNAP.decor[k] = clone(args.p_decor[k]); });
+    if (args.p_shrine) SNAP.shrine = clone(args.p_shrine);
+    if (args.p_animals) SNAP.animals = clone(args.p_animals);
+    SNAP.rev = r && r.rev;
+    return true;
+  }
+  function applyFields(sp, initial) {
+    var changed = false;
+    if (!hasS()) return false;
+    var decor = sp.decor || {};
+    if (!S.decor || typeof S.decor !== 'object') S.decor = {};
+    Object.keys(decor).forEach(function (k) {
+      if (initial || !SNAP || J(S.decor[k]) === J((SNAP.decor || {})[k])) { if (J(S.decor[k]) !== J(decor[k])) { S.decor[k] = clone(decor[k]); changed = true; } }
+    });
+    if (sp.shrine && (initial || !SNAP || J(stripData(S.shrine)) === J(SNAP.shrine)) && J(S.shrine) !== J(sp.shrine)) { S.shrine = clone(sp.shrine); changed = true; }
+    if (sp.animals && (initial || !SNAP || J(S.animals) === J(SNAP.animals)) && J(S.animals) !== J(sp.animals)) { S.animals = clone(sp.animals); changed = true; }
+    return changed;
+  }
+  async function pull(head, initial) {
+    var sp = await rpc('space_get', { p_owner: head });
+    if (!sp || sp.denied) return null;
+    var changed = false;
+    if (hasS() && (FV || head === me())) {
+      if (!Array.isArray(S.plots)) S.plots = [];
+      if (FV || INFO.members.length > 1) changed = mergePlots(S.plots, sp.plots || [], sp.now) || changed;
+      if (FV || SNAP) changed = applyFields(sp, initial) || changed;   // head's first pull: keep local edits, push them next
+    }
+    SNAP = { decor: clone(sp.decor || {}), shrine: clone(sp.shrine), animals: clone(sp.animals), rev: sp.rev, name: sp.name, dog: sp.dog };
+    if (changed) { rerender(); if (!FV) safe(function () { save(); }); }
+    return sp;
+  }
+  var running = null;
+  F.sync = async function () {
+    if (busy && running) { try { await running; } catch (e) {} }   // a caller asking for a sync gets a fresh one
+    if (busy) return null;
+    running = doSync(); return running;
+  };
+  async function doSync() {
+    if (!online() || !INFO || !INFO.head || otherVisit()) return null;
+    var head = INFO.head;
+    if (!FV && !(F.isHead() && INFO.members.length > 1)) return null;
+    busy = true;
+    try {
+      if (!SNAP) await pull(head, false);
+      var pushed = false;
+      if (FV) { await pushPlots(head); pushed = true; }
+      if (await pushFields(head)) pushed = true;
+      await pull(head, false);
+      if (pushed && NET.sendEvent) NET.sendEvent('space', { owner: head });
+      return SNAP;
+    } catch (e) { console.warn('[TG_FAMILY] sync', e && e.message); return null; }
+    finally { busy = false; }
+  }
+  var pushTimer = null;
+  window.TG_SPACE_SAVE = function (space) {
+    if (FV && space && hasS()) {   // game hands over the edited family state (it already lives in S)
+      ['plots', 'decor', 'shrine', 'animals'].forEach(function (k) { if (space[k] !== undefined && space[k] !== S[k]) S[k] = space[k]; });
+    }
+    if (STORE && hasS()) safe(function () { STORE.save(S); });   // persists the player's own fields (inventory, coins...) only
+    clearTimeout(pushTimer); pushTimer = setTimeout(F.sync, 250);
+    return true;
+  };
+
+  /* ---------------- family home (members) ---------------- */
+  function setVisit() {
+    window.TG_VISIT = { ownerId: FV.head, name: FV.name, canEdit: true, family: true };
+    NET.yardOwner = FV.head; NET.visitOwner = FV.head;
+  }
+  function enterNow(initialSpace) {
+    if (FV || !F.isMember() || !hasS()) return;
+    FV = { head: INFO.head, name: INFO.head_name || '家', stash: { plots: S.plots, decor: S.decor, shrine: S.shrine, animals: S.animals } };
+    S.plots = new Array(12).fill(null); KEYS = [];
+    S.decor = clone(S.decor) || {}; S.shrine = clone(S.shrine); S.animals = clone(S.animals);
+    if (initialSpace) { mergePlots(S.plots, initialSpace.plots || [], initialSpace.now); applyFields(initialSpace, true); }
+    setVisit(); SNAP = null;
+    renderBanner();
+  }
+  function leaveNow() {
+    if (!FV) return;
+    var st = FV.stash; FV = null; SNAP = null; KEYS = [];
+    S.plots = st.plots; S.decor = st.decor; S.shrine = st.shrine; S.animals = st.animals;
+    if (window.TG_VISIT && window.TG_VISIT.family) window.TG_VISIT = null;
+    NET.yardOwner = null; NET.visitOwner = null;
+    renderBanner();
+  }
+  F.enterSpace = async function (scene) {
+    scene = scene || 'yard';
+    if (!F.isMember()) { safe(function () { go(scene); }); return true; }
+    var sp = null; try { sp = await rpc('space_get', { p_owner: INFO.head }); } catch (e) {}
+    if (sp && sp.denied) { say('已经不在这个家庭了'); await F.refresh(); return false; }
+    if (GARDEN && GARDEN.visiting && GARDEN.goHome) GARDEN.goHome(true, true);
+    if (window.TG_ACCESS && TG_ACCESS.isVisiting && TG_ACCESS.isVisiting()) TG_ACCESS.leave(true);
+    if (!FV) enterNow(sp); else if (sp) { mergePlots(S.plots, sp.plots || [], sp.now); applyFields(sp, false); }
+    SNAP = sp ? { decor: clone(sp.decor || {}), shrine: clone(sp.shrine), animals: clone(sp.animals), rev: sp.rev } : null;
+    if (curScene() !== scene) safe(function () { go(scene); }); else { NET.refreshRoom && NET.refreshRoom(); }
+    rerender();
+    return true;
+  };
+  F.leaveSpace = function () { leaveNow(); rerender(); NET.refreshRoom && NET.refreshRoom(); };
+  // scene changes: members' yard/private scenes ARE the family home; public scenes leave it
+  var origEnter = window.worldEnter;
+  if (typeof origEnter === 'function' && !origEnter._tgf) {
+    window.worldEnter = function (name) {
+      var wantSpace = F.isMember() && spaceScene(name) && !otherVisit();
+      if (FV && !spaceScene(name)) leaveNow();
+      else if (!FV && wantSpace) { enterNow(null); setTimeout(function () { F.sync(); rerender(); }, 0); }
+      return origEnter.apply(this, arguments);
+    };
+    window.worldEnter._tgf = window.worldEnter._tga = window.worldEnter._tgg = true;
+  }
+  if (GARDEN) {
+    GARDEN.ownPlots = function () { return FV ? FV.stash.plots : null; };
+    GARDEN.visitHook = function (owner) { if (F.handlesEnter(owner)) { F.enterSpace('yard'); return true; } return false; };
+    GARDEN.afterHome = function () { if (F.isMember() && spaceScene(curScene())) F.enterSpace(curScene()); };
+  }
+  // never persist family data as the member's own save
+  if (STORE && typeof STORE.save === 'function' && !STORE.save._tgf) {
+    var origSave = STORE.save;
+    var w = function (state) {
+      if (FV && hasS() && state === S) state = Object.assign({}, state, FV.stash);
+      return origSave.call(STORE, state);
+    };
+    w._tgf = true; w._tga = origSave._tga; w._tgg = origSave._tgg; STORE.save = w;
+  }
+  var banner = null;
+  function renderBanner() {
+    if (!FV) { if (banner) banner.remove(); banner = null; return; }
+    if (!banner) { banner = document.createElement('div'); banner.className = 'tga-banner tgf-banner'; banner.style.cssText = 'position:absolute;left:50%;top:58px;transform:translateX(-50%);z-index:40;background:linear-gradient(#2f5b2a,#1f3d1b);color:#ffe39a;border:2px solid #e8b64c;border-radius:999px;padding:6px 14px;font:600 14px "PingFang SC","Noto Sans SC",sans-serif;white-space:nowrap;pointer-events:none'; (document.getElementById('app') || document.body).appendChild(banner); }
+    banner.textContent = '🏠 ' + FV.name + ' 的家 · 家人可一起种菜和布置';
+  }
+  if (NET.onEvent) NET.onEvent(function (ev) { if (ev && ev.type === 'space' && INFO && ev.data && ev.data.owner === INFO.head) F.sync(); });
+
+  /* ---------------- 看门狗 location -> server ---------------- */
+  var dogLast = {}, dogAt = {};
+  // The dog's post is STATE, independent of where the owner is standing: read it from S.animals
+  // (game's TG_DOG_ON_DUTY() also requires the owner to be in the yard, so it is only a fallback).
+  function dogInGarden() {
+    if (typeof window.TG_DOG_IN_GARDEN === 'function') { try { return !!window.TG_DOG_IN_GARDEN(); } catch (e) {} }
+    if (hasS() && Array.isArray(S.animals)) return S.animals.some(function (a) { return a && a.kind === 'dog' && a.post === 'garden'; });
+    if (typeof window.TG_DOG_ON_DUTY === 'function') { try { return !!window.TG_DOG_ON_DUTY(); } catch (e) {} }
+    return null;
+  }
+  F.dogInGarden = dogInGarden;
+  F.syncDog = async function (force) {
+    if (!online() || !hasS() || otherVisit()) return null;
+    var owner = FV ? FV.head : me(), v = dogInGarden();
+    if (v === null) return null;
+    if (!force && dogLast[owner] === v && Date.now() - (dogAt[owner] || 0) < 60000) return null;
+    dogLast[owner] = v; dogAt[owner] = Date.now();
+    try { return await rpc('set_dog_duty', { p_on: v, p_owner: owner }); } catch (e) { dogLast[owner] = undefined; return null; }
+  };
+
+  /* ---------------- membership ---------------- */
+  var seenInvites = {};
+  F.info = async function () { INFO = await rpc('family_info', {}); return INFO; };
+  F.refresh = async function () {
+    if (!online()) return null;
+    var was = INFO && INFO.head;
+    try { await F.info(); } catch (e) { return null; }
+    (INFO.invites_in || []).forEach(function (i) { if (!seenInvites[i.head]) { seenInvites[i.head] = 1; note('🏠 ' + i.name + ' 邀请你加入家庭，打开 ☰ →「家庭」接受', true); } });
+    if (FV && !F.isMember()) { leaveNow(); rerender(); NET.refreshRoom && NET.refreshRoom(); note('🏠 你已不在这个家庭，回到自己的小院'); }
+    else if (F.isMember() && !FV && spaceScene(curScene()) && !otherVisit()) F.enterSpace(curScene());
+    if (was !== (INFO && INFO.head)) SNAP = null;
+    return INFO;
+  };
+  F.invite = async function (id, name) {
+    var r = await rpc('family_invite', { p_guest: id });
+    if (r && r.ok) {
+      note('🏠 已邀请 ' + (name || '对方') + ' 加入家庭', true);
+      if (SOCIAL && SOCIAL.dm && SOCIAL.dm.send) SOCIAL.dm.send(id, '🏠 我邀请你加入我的家庭：一起种菜、布置小院和祠堂。打开 ☰ →「家庭」点接受。').catch(function () {});
+      await F.info();
+    } else say({ not_head: '只有家长可以邀请', full: '家庭已满（最多 6 人）', already_member: '已经是一家人了', too_many_invites: '邀请太多了' }[r && r.reason] || '邀请失败');
+    return r;
+  };
+  F.accept = async function (head) {
+    var r = await rpc('family_accept', { p_head: head });
+    if (r && r.ok) { note('🏠 加入家庭成功！小院和祠堂现在是一家人的了', true); await F.refresh(); }
+    else say({ in_family: '你已经在一个家庭里了，先退出', full: '那个家庭满员了', no_invite: '邀请已失效' }[r && r.reason] || '加入失败');
+    return r;
+  };
+  F.decline = async function (head) { var r = await rpc('family_decline', { p_head: head }); await F.info(); return r; };
+  F.leave = async function () { var r = await rpc('family_leave', {}); await F.refresh(); if (r && r.ok) note(r.dissolved ? '家庭已解散' : '已退出家庭'); return r; };
+  F.remove = async function (id) { var r = await rpc('family_remove', { p_member: id }); await F.info(); return r; };
+
+  /* ---------------- panel ---------------- */
+  F.open = async function () {
+    if (!online()) { say('离线模式，不能使用家庭'); return; }
+    if (GARDEN && GARDEN.injectCss) GARDEN.injectCss();
+    try { await F.info(); } catch (e) { say('读不到家庭：' + (e && e.message)); return; }
+    var old = document.querySelector('.tgf-modal'); if (old) old.remove();
+    var m = document.createElement('div'); m.className = 'tgg-mask tgf-modal';
+    var i = INFO, isHead = F.isHead(), row = 'display:flex;align-items:center;gap:8px;padding:7px 10px;background:#f3e2bf;border:1px solid #c08a57;border-radius:9px;margin:5px 0';
+    var h = '<div class="tgg-box"><div class="tgg-hd"><span>🏠 我的家庭</span><button data-x aria-label="关闭">×</button></div><div class="tgg-bd">';
+    if (!i.head) h += '<div style="font-size:13px;color:#7a5a3a">还没有家庭。点别人的小和尚或在私信里选「🏠 邀请加入家庭」，对方接受后就共享你的小院、菜园和祠堂（最多 ' + i.max + ' 人）。</div>';
+    else {
+      h += '<div class="tgg-sec">' + esc(i.head_name || '') + ' 的家 · ' + i.members.length + '/' + i.max + ' 人</div>';
+      h += i.members.map(function (x) { return '<div style="' + row + '"><span style="flex:1;font-weight:700">' + (x.is_head ? '👑 ' : '') + esc(x.name) + (x.id === me() ? '（我）' : '') + '</span>' + (isHead && !x.is_head ? '<button class="tgg-btn alt" data-rm="' + esc(x.id) + '">移出</button>' : '') + '</div>'; }).join('');
+      if (F.isMember()) h += '<button class="tgg-btn" data-home style="width:100%;margin-top:6px">🏠 回家</button>';
+    }
+    if (i.invites_in.length) h += '<div class="tgg-sec">邀请我的家庭</div>' + i.invites_in.map(function (x) { return '<div style="' + row + '"><span style="flex:1;font-weight:700">' + esc(x.name) + '</span><button class="tgg-btn" data-ok="' + esc(x.head) + '">接受</button><button class="tgg-btn alt" data-no="' + esc(x.head) + '">不了</button></div>'; }).join('');
+    if (i.invites_out.length) h += '<div class="tgg-sec">等待对方接受</div>' + i.invites_out.map(function (x) { return '<div style="' + row + '"><span style="flex:1">' + esc(x.name) + '</span></div>'; }).join('');
+    if (!i.head || isHead) {
+      var on = (NET.players ? NET.players() : []).filter(function (p) { return !i.members.some(function (x) { return x.id === p.id; }); });
+      if (on.length) h += '<div class="tgg-sec">邀请附近的人</div>' + on.slice(0, 8).map(function (p) { return '<div style="' + row + '"><span style="flex:1">' + esc(p.name) + '</span><button class="tgg-btn" data-inv="' + esc(p.id) + '" data-name="' + esc(p.name) + '">邀请</button></div>'; }).join('');
+    }
+    if (i.head) h += '<button class="tgg-btn alt" data-leave style="width:100%;margin-top:10px">' + (isHead ? '解散家庭' : '退出家庭') + '</button>';
+    m.innerHTML = h + '</div></div>';
+    ['keydown', 'keyup'].forEach(function (k) { m.addEventListener(k, function (e) { e.stopPropagation(); }); });
+    document.body.appendChild(m);
+    var close = function () { m.remove(); };
+    m.querySelector('[data-x]').onclick = close;
+    m.addEventListener('click', function (e) { if (e.target === m) close(); });
+    m.querySelectorAll('[data-rm]').forEach(function (b) { b.onclick = async function () { await F.remove(b.dataset.rm); F.open(); }; });
+    m.querySelectorAll('[data-ok]').forEach(function (b) { b.onclick = async function () { await F.accept(b.dataset.ok); F.open(); }; });
+    m.querySelectorAll('[data-no]').forEach(function (b) { b.onclick = async function () { await F.decline(b.dataset.no); F.open(); }; });
+    m.querySelectorAll('[data-inv]').forEach(function (b) { b.onclick = async function () { await F.invite(b.dataset.inv, b.dataset.name); F.open(); }; });
+    var hb = m.querySelector('[data-home]'); if (hb) hb.onclick = function () { close(); F.enterSpace('yard'); };
+    var lb = m.querySelector('[data-leave]'); if (lb) lb.onclick = async function () { if (!confirm(isHead ? '解散后家人回到各自的小院，确定？' : '退出后不能再进这个家，确定？')) return; await F.leave(); F.open(); };
+  };
+
+  /* ---------------- entry points ---------------- */
+  if (GARDEN) {
+    GARDEN.cardButtons = GARDEN.cardButtons || [];
+    GARDEN.cardButtons.push({ label: '🏠 邀请加入家庭', alt: true, run: function (id, name) { F.invite(id, name).catch(function (e) { say('邀请失败：' + (e && e.message)); }); } });
+  }
+  if (SOCIAL && SOCIAL.dm && SOCIAL.dm.chatButtons) SOCIAL.dm.chatButtons.push({ label: '🏠 邀请加入家庭', run: function (id, name) { F.invite(id, name).catch(function (e) { say('邀请失败：' + (e && e.message)); }); } });
+  // the game's ☰ (#btnMenu) already has 「家庭」; set TG_FAMILY_MENU_ITEM=true to also add it to the top-bar menu
+  if (SOCIAL && SOCIAL.addMenuItem && window.TG_FAMILY_MENU_ITEM) SOCIAL.addMenuItem('🏠 家庭', F.open, 'tgfFamilyItem');
+
+  /* ---------------- loops ---------------- */
+  function start() {
+    F.refresh().then(function () { F.sync(); F.syncDog(true); });
+    setInterval(function () { if (!document.hidden) F.sync(); }, SYNC_MS);
+    setInterval(function () { if (!document.hidden) F.syncDog(false); }, 3000);
+    setInterval(function () { if (!document.hidden) F.refresh(); }, 30000);
+  }
+  if (AUTH && AUTH.ready) AUTH.ready.then(function () { setTimeout(start, 1500); }); else setTimeout(start, 2000);
 })();
 
 </script>
