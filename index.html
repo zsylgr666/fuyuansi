@@ -374,6 +374,22 @@ body.r3-visiting [data-r3-edit],body.r3-visiting #r3Shop,body.r3-visiting #r3Arr
 #yard .r3-animal-hud .big-btn{font-size:11px;padding:6px 8px;min-height:34px}
 body.r3-visiting #plantAll,body.r3-visiting #waterAll,body.r3-visiting #harvestAll{display:none}
 body.r4-rest #view{filter:brightness(.35);transition:filter .45s}
+/* r4.1 social fallback: .tgg-mask .tgs-dm .tgg-box .tgg-hd .tgg-bd .tgg-btn .alt .tgg-empty
+ .tgs-thread .tgs-msgs .tgs-msg .me .tgs-compose .tgs-pill .tgs-badge .tgs-menu .tgs-item .tgs-hint
+ #btnDM #btnMic #btnMore #tgsMenu #tgsMsgs #tgsText. 来福: append DM to #app,
+ and/or always inject shell CSS even when tg-garden.js is absent. */
+.tgg-mask{position:fixed!important;inset:0!important;z-index:99998!important;background:#30231799;display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;color:#58432c;touch-action:auto}
+#app>.tgg-mask.r41-contained{position:absolute!important}
+.tgg-mask.tgs-dm{background:#30231799}.tgg-box{width:100%;max-width:480px;max-height:80%;display:flex;flex-direction:column;background:#fff4df;border:1px solid #bea176;border-radius:20px;box-shadow:0 12px 50px #30231766;overflow:hidden;color:#58432c}
+.tgg-hd{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:14px 16px;background:#ead7b4;font-weight:bold;flex-shrink:0}.tgg-bd{padding:14px;overflow:auto;min-height:0;overscroll-behavior:contain}.tgg-btn{border:1px solid #b68e49;border-radius:12px;background:#dfb766;color:#58432c;min-height:44px;padding:8px 14px;font:inherit;cursor:pointer}.tgg-btn.alt{background:#f6ead3}.tgg-empty{padding:28px 12px;text-align:center;color:#8a7154}
+.tgs-thread{padding:10px;border-bottom:1px solid #dcc9a6;cursor:pointer}.tgs-msgs,#tgsMsgs{display:flex;flex-direction:column;gap:10px;overflow:auto;max-height:42vh;padding:8px 0}.tgs-msg{align-self:flex-start;max-width:85%;background:#eadfc9;padding:10px 12px;border-radius:14px;overflow-wrap:anywhere}.tgs-msg.me{align-self:flex-end;background:#e5c77f}.tgs-compose{display:flex;gap:8px;align-items:flex-end;position:sticky;bottom:0;background:#fff4df;padding-top:12px}#tgsText{flex:1;min-width:0;min-height:44px;max-height:110px;border:1px solid #c4aa80;border-radius:12px;padding:10px;box-sizing:border-box;font:inherit;color:#58432c;background:#fffaf0}
+#btnDM,#btnMic,#btnMore,.tgs-pill{display:inline-flex;align-items:center;justify-content:center;gap:5px;white-space:nowrap;flex-shrink:0;min-height:36px;padding:5px 8px;line-height:1.3;border-radius:18px;background:#f5e7ca;color:#58432c;border:1px solid #bea176}#btnMic{min-width:52px;letter-spacing:1px}.tgs-badge{background:#ac4f38;color:#fff8e9;border-radius:12px;padding:1px 5px;font-size:10px}.tgs-menu,#tgsMenu{position:absolute;right:12px;top:64px;z-index:90;background:#fff4df;color:#58432c;border:1px solid #bea176;border-radius:14px;box-shadow:0 6px 24px #30231744;padding:6px}.tgs-item{display:block;padding:12px;min-height:44px;box-sizing:border-box}.tgs-hint{position:absolute!important;top:112px!important;bottom:auto!important;left:12px;right:12px;font-size:11px;padding:5px 8px;border-radius:10px;background:#fff4dfe8;color:#58432c;pointer-events:none;z-index:25}
+#r41Waypoints{position:absolute;top:calc(var(--safe-top) + 54px);left:6px;right:6px;display:flex;justify-content:center;gap:4px;z-index:24;pointer-events:none}#r41Waypoints button{pointer-events:auto;min-height:44px;border:1px solid #b59660;border-radius:12px;background:#fff0d6eb;color:#58432c;font:600 11px sans-serif;padding:5px 8px}.r3-planning #r41Waypoints{display:none}
+#yardTools{flex-wrap:nowrap;gap:4px;padding:0 6px}#yardTools .big-btn{flex:1 1 0;min-width:0;min-height:44px;padding:6px 2px;font-size:11px}#yard #seedBar{bottom:calc(var(--safe-bot) + 56px);gap:4px;padding:6px;scrollbar-width:thin;scroll-padding:8px}#yard .seed{box-sizing:border-box;min-width:0;flex:1 0 56px;padding:4px 2px;font-size:10px;min-height:48px}#yard .seed .e{font-size:20px}#yard .r3-animal-hud{top:calc(var(--safe-top) + 106px)}#yard .r3-animal-hud .big-btn{min-height:44px}body[data-scene="yard"] #promptBtn{bottom:calc(var(--safe-bot) + 122px)}
+#planView{z-index:100}#modal{z-index:110}#r41StyleStatus{min-height:24px;color:#805a30;font-size:12px}#r41BuyStyle[hidden]{display:none}#planTray>.btn{flex-shrink:0;align-self:center}#plots .plot{overflow:hidden}
+@media(min-width:600px){#app{width:540px;height:min(94vh,980px)}}
+body[data-scene="hall"] #hallStats{top:calc(var(--safe-top) + 106px)}
+body[data-scene="hall"] .tgs-hint{top:auto!important;bottom:calc(var(--safe-bot) + 180px)!important;left:auto;max-width:200px}
 
 </style>
 </head>
@@ -1276,7 +1292,7 @@ const SAVE_KEY = 'templeGarden.v1';
 function defaultState(){
   return {
     v:1,
-    coins:0, backpack:{}, animals:[], shrine:{style:'wood',plaques:[{name:'列祖列宗之位',img:''},{name:'福泽绵长',img:''},{name:'家和业兴',img:''}]},
+    coins:50, backpack:{cushion:1,vase:1}, animals:[], shrine:{style:'wood',plaques:[{name:'列祖列宗之位',img:''},{name:'福泽绵长',img:''},{name:'家和业兴',img:''}]},
     decor:{}, ownerId:'self',
     merit:0,                            // 功德
     inventory:{},                       // 背包 { cropId: 数量 }
@@ -1298,7 +1314,11 @@ async clear(){localStorage.removeItem(SAVE_KEY);}};
 function setStorageAdapter(adapter){window.TG_STORAGE=adapter;}
 let S=defaultState();
 async function load(){try{
-const d=Object.assign(defaultState(),await window.TG_STORAGE.load()||{});
+const raw=await window.TG_STORAGE.load();
+const d=Object.assign(defaultState(),raw||{});
+// Only an absent record receives the starter grant; pre-economy saves retain zero.
+if(raw!=null&&!Object.prototype.hasOwnProperty.call(raw,'coins'))d.coins=0;
+if(raw!=null&&!Object.prototype.hasOwnProperty.call(raw,'backpack'))d.backpack={};
 if(!Array.isArray(d.plots)||d.plots.length!==PLOT_COUNT)d.plots=Array(PLOT_COUNT).fill(null);
 d.plots=d.plots.map(p=>p&&CROP_BY_ID[p.crop]?p:null);
 if(!d.incense||!Array.isArray(d.incense.sticks))d.incense={total:0,sticks:[]};
@@ -1306,7 +1326,7 @@ if(!Array.isArray(d.offerings))d.offerings=[];
 if(!d.inventory||typeof d.inventory!=='object')d.inventory={};
 if(!CROP_BY_ID[d.selectedSeed])d.selectedSeed='cabbage';
 sanitizeR3(d);sanitizeR4(d);
-return d;}catch(e){return defaultState();}}
+return d;}catch(e){const d=defaultState();d.coins=0;d.backpack={};return d;}}
 function save(){if(r3SyncOwnSpace())window.TG_RERENDER();if(r3IsVisiting()){if(r3CanEdit())try{Promise.resolve(window.TG_SPACE_SAVE?.({plots:S.plots,decor:S.decor,shrine:S.shrine,animals:S.animals})).catch(()=>{});}catch(e){}return;}try{Promise.resolve(window.TG_STORAGE.save(S)).catch(()=>{});}catch(e){}}
 
 /* =========================================================
@@ -1358,6 +1378,7 @@ const SCENES = window.TG_SCENES.map(s=>s.id);
 let current = null, switching = false;
 let accessRequest=0;
 async function go(name, instant){
+  worldResize();
   if(name==='home'){window.r4EastArrival=true;name='yard';history.replaceState(null,'','#yard');}
   r3ApplyVisitingUI();
   if(!SCENES.includes(name) || name===current || switching) return;
@@ -1379,6 +1400,7 @@ async function go(name, instant){
     if(location.hash !== '#'+name) history.replaceState(null,'','#'+name);
     onEnter(name);
     if(typeof worldEnter==='function') worldEnter(name, previous);
+    worldResize();
   };
   if(instant){ apply(); return; }
   switching = true;
@@ -1737,7 +1759,7 @@ $('#btnIncense').addEventListener('click', ()=>{
   const now = Date.now();
   if(activeSticks(now).length >= INCENSE_SLOTS){ toast('香炉已插满三炷，等香燃一会儿再上吧'); return; }
   tgFeedback('incense');S.incense.sticks.push(now); S.incense.total++; save();
-  renderHall(); $('#sticks').lastElementChild.classList.add('lighting'); addMerit(3, $('#burner')); vibrate(20);
+  addMerit(3, $('#burner')); renderHall(); $('#sticks').lastElementChild.classList.add('lighting'); vibrate(20);
   toast(`🙏 敬上第 ${S.incense.total} 炷香`);
 });
 $('#btnOffer').addEventListener('click', ()=>{
@@ -1841,9 +1863,10 @@ function initWorld(canvas){
   w.sun.shadow.mapSize.set(1024,1024); Object.assign(w.sun.shadow.camera,{left:-19,right:19,top:19,bottom:-19,near:.5,far:55});
   w.sun.shadow.normalBias=.035; w.scene.add(w.sun);
   worldBuild(); worldMonk(); tgDecorate(); worldInput();
-  const resize=()=>{const a=$('#app'); const x=Math.max(1,a.clientWidth),y=Math.max(1,a.clientHeight); w.renderer.setSize(x,y,false);w.camera.aspect=x/y;w.camera.updateProjectionMatrix();};
-  resize(); window.addEventListener('resize',resize); window.addEventListener('orientationchange',resize); if(window.visualViewport) window.visualViewport.addEventListener('resize',resize);
-  new ResizeObserver(resize).observe($('#app'));
+  worldResize();requestAnimationFrame(()=>{worldResize();requestAnimationFrame(worldResize);});
+  [0,50,200].forEach(ms=>setTimeout(worldResize,ms));document.fonts?.ready.then(worldResize);
+  window.addEventListener('resize',worldResize);window.addEventListener('orientationchange',worldResize);window.visualViewport?.addEventListener('resize',worldResize);
+  new ResizeObserver(worldResize).observe($('#app'));
   canvas.addEventListener('webglcontextlost',e=>{e.preventDefault();worldStop();$('#webglFail').classList.add('show');});
   canvas.addEventListener('webglcontextrestored',()=>location.reload());
   document.addEventListener('visibilitychange',()=>{worldStop();w.last=0;});
@@ -1861,7 +1884,7 @@ function worldMesh(parent,type,color,x,y,z,sx,sy,sz){
 function worldBox(s,x,y,z,a,b,c,color,solid){const m=worldMesh(s.group,'box',color,x,y,z,a,b,c);if(solid)s.blocks.push({x:x-a/2,X:x+a/2,z:z-c/2,Z:z+c/2});return m;}
 function worldLabel(parent,text,x,y,z,width){
   const c=document.createElement('canvas');c.width=512;c.height=128;const ctx=c.getContext('2d');ctx.fillStyle='#402820';ctx.fillRect(0,0,512,128);ctx.strokeStyle='#dfb65a';ctx.lineWidth=8;ctx.strokeRect(8,8,496,112);ctx.fillStyle='#ffe6a1';ctx.font='bold 66px serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(text,256,66);
-  const t=new THREE.CanvasTexture(c);const m=new THREE.Mesh(new THREE.PlaneGeometry(width,width/4),new THREE.MeshBasicMaterial({map:t}));m.position.set(x,y,z);parent.add(m);
+  const t=new THREE.CanvasTexture(c);const m=new THREE.Sprite(new THREE.SpriteMaterial({map:t}));m.scale.set(width,width/4,1);m.userData.r41Label=true;m.position.set(x,y,z);parent.add(m);
 }
 function worldInteract(s,x,z,label,run,range){s.items.push({x,z,label,run,range:range||2.3});}
 function worldBuild(){
@@ -1967,11 +1990,12 @@ function worldSyncHall(){
 function worldBlocked(){return !!window.TG_PLAN||switching||$('#modal').classList.contains('show')||$('#gateLock').classList.contains('show')||/^(INPUT|SELECT|TEXTAREA)$/.test(document.activeElement.tagName);}
 function worldStop(){const w=W3;if(!w)return;w.keys.clear();w.target=null;w.path=[];w.vx=w.vz=0;w.joy.x=w.joy.y=0;w.joyId=null;if(w.pointers)w.pointers.clear();w.action=null;$('#joyKnob').style.transform='';$('#promptBtn').classList.remove('show');}
 function worldEnter(name,previous){
+  worldResize();
   if(name==='home'){window.r4EastArrival=true;name='yard';}
   const w=W3;if(!w||!w.renderer)return;worldStop();w.active=name;Object.entries(w.spaces).forEach(([n,s])=>s.group.visible=n===name);
   const spawn=r3Spawn(name,previous),[x,z,yaw]=spawn;
   w.player.position.set(x,0,z);w.player.rotation.y=yaw+Math.PI;w.yaw=yaw;w.pitch=r3Indoor(name)?.55:.42;w.radius=r3Indoor(name)?9.8:8.8;
-  w.follow.copy(w.player.position).y=1.1;w.scene.background=new THREE.Color(r3Indoor(name)?'#32251f':'#87b8d6');w.scene.fog=new THREE.Fog(r3Indoor(name)?'#32251f':'#9ec9e8',r3Indoor(name)?14:24,r3Indoor(name)?35:65);w.hemi.intensity=r3Indoor(name)?1.35:2;w.sun.intensity=r3Indoor(name)?1.1:2.4;w.elapsed=0;w.exitLatch=null;worldCamera(1);worldSyncYard();worldSyncHall();if(typeof worldSyncDecor==='function')worldSyncDecor();worldSyncShrine();if(typeof worldSyncAnimals==='function')worldSyncAnimals();
+  w.follow.copy(w.player.position).y=1.1;w.scene.background=new THREE.Color(r3Indoor(name)?'#32251f':'#87b8d6');w.scene.fog=new THREE.Fog(r3Indoor(name)?'#32251f':'#9ec9e8',r3Indoor(name)?14:24,r3Indoor(name)?35:65);w.hemi.intensity=r3Indoor(name)?1.35:2;w.sun.intensity=r3Indoor(name)?1.1:2.4;w.elapsed=0;w.exitLatch=null;worldCamera(1);worldSyncYard();worldSyncHall();if(typeof worldSyncDecor==='function')worldSyncDecor();worldSyncShrine();if(typeof worldSyncAnimals==='function')worldSyncAnimals();worldResize();
 }
 function worldCamera(a){
   const w=W3,goal=w.player.position.clone();goal.y+=1.1;w.follow.lerp(goal,a);
@@ -1983,6 +2007,8 @@ function worldCamera(a){
     desired.z=THREE.MathUtils.clamp(desired.z,-w.spaces[w.active].limit.z+.35,w.spaces[w.active].limit.z-.35);
     desired.y=Math.min(desired.y,5.05);
   }
+  // Keep the plaza follow camera on the courtyard side of both gate beams.
+  if(w.active==='plaza')desired.z=THREE.MathUtils.clamp(desired.z,-10.8,11.5);
   const direction=desired.clone().sub(origin),distance=direction.length();
   w.cameraRay=w.cameraRay||new THREE.Raycaster();w.cameraRay.set(origin,direction.clone().normalize());w.cameraRay.far=distance;
   const obstacles=w.spaces[w.active].group.children.filter(m=>m.isMesh&&m!==w.spaces[w.active].floor);
@@ -2054,7 +2080,7 @@ function worldFrame(ts){
   for(const c of w.crops)c.group.position.y=.24+(c.ripe?Math.sin(ts*.002+c.group.position.x)*.035:0);
   if(w.active==='hall'&&w.smoke.visible)w.smoke.children.forEach((m,i)=>{const t=(ts*.00022+i/18)%1;m.position.set(Math.sin(t*8+i)*.13,2.1+t*1.9,-2.3+Math.cos(i+t*5)*.1);m.scale.setScalar(.035+t*.14);});
   if(typeof r3AnimateAnimals==='function')r3AnimateAnimals(ts,dt);
-  let nearest=null,best=Infinity;if(!worldBlocked())for(const item of w.spaces[w.active].items){if(item.r3Edit&&!r3CanEdit())continue;const d=Math.hypot(w.player.position.x-item.x,w.player.position.z-item.z);if(d<item.range&&d<best){best=d;nearest=item;}}
+  let nearest=null,best=Infinity;if(!worldBlocked())for(const item of w.spaces[w.active].items){if(item.r3Edit&&!r3CanEdit())continue;if(w.active==='hall'&&['上香','上供','敲木鱼'].includes(item.label))continue;const d=Math.hypot(w.player.position.x-item.x,w.player.position.z-item.z);if(d<item.range&&d<best){best=d;nearest=item;}}
   const btn=$('#promptBtn');w.action=nearest?nearest.run:null;btn.classList.toggle('show',!!nearest);if(nearest)btn.textContent=typeof nearest.label==='function'?nearest.label():nearest.label;
   if(typeof tgAnimate==='function')tgAnimate(ts,dt);
   if(typeof worldSyncDecor==='function')worldSyncDecor();
@@ -2256,14 +2282,20 @@ function sanitizeR3(d){
  const plaques=Array.isArray(d.shrine.plaques)?d.shrine.plaques:[];
  d.shrine.plaques=Array.from({length:Math.max(3,plaques.length)},(_,i)=>({name:typeof plaques[i]?.name==='string'?plaques[i].name:defaults.plaques[i%3].name,img:typeof plaques[i]?.img==='string'?plaques[i].img:''}));
  if(!object(d.decor))d.decor={};
- for(const key of Object.keys(d.decor))d.decor[key]=Array.isArray(d.decor[key])?d.decor[key].filter(v=>object(v)&&typeof v.id==='string'&&['x','z','rot'].every(k=>typeof v[k]==='number'&&Number.isFinite(v[k]))).map(v=>({...v,id:v.id,x:v.x,z:v.z,rot:v.rot})):[];
+ r3NormalizeDecor(d);
  if(typeof d.ownerId!=='string')d.ownerId='self';
  r3SanitizeAnimals(d);
 }
+// Showcase records use catalog ids; normalization also runs before r4 home migration.
+function r3NormalizeDecor(d){
+ if(!d.decor||typeof d.decor!=='object'||Array.isArray(d.decor))d.decor={};
+ const ids=new Set((window.TG_CATALOG||[]).map(v=>v.id));
+ for(const scene of Object.keys(d.decor))d.decor[scene]=(Array.isArray(d.decor[scene])?d.decor[scene]:[]).filter(v=>v&&typeof v==='object'&&ids.has(v.id)).map(v=>({...v,x:Number(v.x),z:Number(v.z),rot:v.rot==null?0:Number(v.rot)})).filter(v=>[v.x,v.z,v.rot].every(Number.isFinite));
+}
 function r3Indoor(name){return ['hall','zen','study'].includes(name);}
 function r3Spawn(name,previous){
- const table={plaza:{yard:[0,-9,Math.PI],gate:[0,11,0],market:[12.5,0,Math.PI/2],home:[-11,0,-Math.PI/2]},yard:{hall:[0,-9,Math.PI],plaza:[0,11,0]},hall:{yard:[0,.2,0],zen:[4.5,3,Math.PI/2],study:[-4.5,3,-Math.PI/2],lotus:[4,-6,Math.PI]},gate:{plaza:[0,-5,Math.PI]},market:{plaza:[-6,0,-Math.PI/2]},home:{plaza:[6,0,Math.PI/2]},zen:{hall:[-4.4,0,-Math.PI/2]},study:{hall:[4.4,0,Math.PI/2]},lotus:{hall:[0,6.2,0]}};
- return table[name]?.[previous]||({hall:[0,.2,0],zen:[0,3,0],study:[0,3,0],lotus:[0,6.2,0],home:[0,2,0]}[name])||[0,8,0];
+ const table={plaza:{yard:[0,-2,Math.PI],gate:[0,2,0],market:[12.5,0,Math.PI/2],home:[-11,0,-Math.PI/2]},yard:{hall:[-6.7,10.2,0],plaza:[-6.7,10.2,0]},hall:{yard:[0,.2,0],zen:[4.5,3,Math.PI/2],study:[-4.5,3,-Math.PI/2],lotus:[4,-6,Math.PI]},gate:{plaza:[0,-5,Math.PI]},market:{plaza:[-6,0,-Math.PI/2]},home:{plaza:[6,0,Math.PI/2]},zen:{hall:[-4.4,0,-Math.PI/2]},study:{hall:[4.4,0,Math.PI/2]},lotus:{hall:[0,6.2,0]}};
+ return table[name]?.[previous]||({plaza:[0,2,0],yard:[-6.7,10.2,0],hall:[0,.2,0],zen:[0,3,0],study:[0,3,0],lotus:[0,6.2,0],home:[0,2,0]}[name])||[0,8,0];
 }
 function r3Build(){
  const w=W3;
@@ -2367,7 +2399,7 @@ function openShop(tab='furniture'){
  const rows=tab==='sell'?[...CROPS.map(c=>({...c,sell:(c.value||1)*8})),...R3_PRODUCE].filter(c=>(S.inventory[c.id]||0)>0).map(c=>`<div class="r3-row"><span class="r3-emoji">${c.emoji}</span><span><b>${c.name}</b><small>库存 ${S.inventory[c.id]} · 单价 🪙 ${c.sell}</small></span><button class="btn" data-sell="${c.id}">卖 1</button><button class="btn ghost" data-sell-all="${c.id}">全卖</button></div>`).join(''):tab==='animals'?R3_ANIMAL_SHOP.map(c=>`<div class="r3-row"><span class="r3-emoji">${c.emoji}</span><span><b>${c.name}</b><small>${c.pen===null?'小院自由活动':'入住'+R3_PENS[c.pen].name} · ${S.animals.filter(a=>a.kind===c.id).length}/${c.cap}<br>${c.desc}</small></span><button class="btn" data-animal="${c.id}">🪙 ${c.price} 领养</button></div>`).join(''):window.TG_CATALOG.filter(c=>c.cat===tab).map(c=>`<div class="r3-row"><span class="r3-emoji">${c.emoji}</span><span><b>${c.name}</b><small>${c.w} × ${c.d} 米 · 背包 ${S.backpack[c.id]||0}<br>${r3Esc(c.desc||'可在房间中布置')}</small></span><button class="btn" data-buy="${c.id}">🪙 ${c.price} 购买</button></div>`).join('');
  openModal(`<h2>🏮 集市商铺</h2><p class="r3-balance">铜钱 🪙 ${S.coins}</p><nav class="r3-tabs">${cats.map(([id,name])=>`<button class="btn ${id===tab?'':'ghost'}" data-tab="${id}">${name}</button>`).join('')}</nav>${rows||'<p class="center">背包里还没有作物，去小院收获吧。</p>'}`);
  $('#sheet').querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>openShop(b.dataset.tab));
- $('#sheet').querySelectorAll('[data-buy]').forEach(b=>b.onclick=()=>{if(r3DenyVisit())return;const c=r3Item(b.dataset.buy);if(S.coins<c.price)return toast('铜钱不足，出售作物可赚取铜钱');S.coins-=c.price;S.backpack[c.id]=(S.backpack[c.id]||0)+1;r3Commit();openShop(tab);toast('已买入'+c.name);});
+ $('#sheet').querySelectorAll('[data-buy]').forEach(b=>b.onclick=()=>{if(r3DenyVisit())return;const c=r3Item(b.dataset.buy);if(S.coins<c.price)return toast('铜钱不足，出售作物可赚取铜钱');S.coins-=c.price;S.backpack[c.id]=(S.backpack[c.id]||0)+1;r3Commit();if(window.TG_PLAN)r3PlanTray();openShop(tab);toast('已买入'+c.name);});
  $('#sheet').querySelectorAll('[data-animal]').forEach(b=>b.onclick=()=>{if(r3BuyAnimal(b.dataset.animal))openShop('animals');});
  function sell(id,all){if(r3DenyVisit())return;const c=CROP_BY_ID[id]||r3ProduceItem(id),count=S.inventory[id]||0;if(!c||count<=0)return;const n=all?count:1;S.inventory[id]-=n;S.coins+=n*(c.sell??(c.value||1)*8);r3Commit();openShop('sell');toast(`已售出 ${c.name} ×${n}`);}
  $('#sheet').querySelectorAll('[data-sell]').forEach(b=>b.onclick=()=>sell(b.dataset.sell,false));$('#sheet').querySelectorAll('[data-sell-all]').forEach(b=>b.onclick=()=>sell(b.dataset.sellAll,true));
@@ -2388,8 +2420,10 @@ if(typeof window.TG_SHRINE_UPLOAD!=='function')window.TG_SHRINE_UPLOAD=async fun
 function openShrineStudio(){
  if(r3DenyVisit())return;
  const shrine=S.shrine;shrine.owned=Array.from(new Set(['wood',shrine.style,...(Array.isArray(shrine.owned)?shrine.owned:[])]));
- openModal(`<h2>🛕 整修祠堂</h2><p class="r3-balance">铜钱 🪙 ${S.coins} · 已解锁样式可免费切换</p><div class="r3-styles">${Object.entries(R3_STYLES).map(([id,v])=>`<button class="r3-style ${shrine.style===id?'selected':''}" data-style="${id}" style="--wall:${v.wall};--wood:${v.wood};--gold:${v.gold}"><i>祠</i><b>${v.name}</b><small>${shrine.style===id?'使用中':shrine.owned.includes(id)?'免费切换':'🪙 '+v.cost}</small></button>`).join('')}</div><h3>先人牌匾</h3><p>填写先人的真实姓名，上传一张画像，陪伴每一次追思。</p>${shrine.plaques.map((p,i)=>`<div class="r3-plaque-row"><div class="r3-plaque-preview" data-preview="${i}">${r3Esc(p.name)}</div><div><label>姓名 <input data-name="${i}" maxlength="18" value="${r3Esc(p.name)}" placeholder="先人姓名"></label><label>画像 <input type="file" data-upload="${i}" accept="image/*"></label><label>或图片地址 <input data-image="${i}" type="url" value="${r3Esc(p.img.startsWith('data:')?'':p.img)}" placeholder="https://…"></label><small data-status="${i}">${p.img?'已保存画像':'使用可爱默认画像'}</small></div></div>`).join('')}`);
- $('#sheet').querySelectorAll('[data-style]').forEach(b=>b.onclick=()=>{if(r3DenyVisit())return;const id=b.dataset.style,v=R3_STYLES[id];if(shrine.style===id)return;const cost=shrine.owned.includes(id)?0:v.cost;if(S.coins<cost)return toast('铜钱不足');S.coins-=cost;shrine.style=id;if(!shrine.owned.includes(id))shrine.owned.push(id);r3Commit();worldSyncShrine();openShrineStudio();toast('已换为'+v.name);});
+ openModal(`<h2>🛕 整修祠堂</h2><p class="r3-balance">铜钱 🪙 ${S.coins} · 木饰已解锁可免费使用 · 出售作物可赚铜钱</p><div class="r3-styles">${Object.entries(R3_STYLES).map(([id,v])=>`<button class="r3-style ${shrine.style===id?'selected':''}" data-style="${id}" style="--wall:${v.wall};--wood:${v.wood};--gold:${v.gold}"><i>祠</i><b>${v.name}</b><small>${shrine.style===id?'使用中':shrine.owned.includes(id)?'免费切换':'🪙 '+v.cost}</small></button>`).join('')}</div><p id="r41StyleStatus" aria-live="polite">点击样式免费预览</p><button class="btn" id="r41BuyStyle" hidden></button><h3>先人牌匾</h3><p>填写先人的真实姓名，上传一张画像，陪伴每一次追思。</p>${shrine.plaques.map((p,i)=>`<div class="r3-plaque-row"><div class="r3-plaque-preview" data-preview="${i}">${r3Esc(p.name)}</div><div><label>姓名 <input data-name="${i}" maxlength="18" value="${r3Esc(p.name)}" placeholder="先人姓名"></label><label>画像 <input type="file" data-upload="${i}" accept="image/*"></label><label>或图片地址 <input data-image="${i}" type="url" value="${r3Esc(p.img.startsWith('data:')?'':p.img)}" placeholder="https://…"></label><small data-status="${i}">${p.img?'已保存画像':'使用可爱默认画像'}</small></div></div>`).join('')}`);
+ window.r41PreviewStyle=null;
+ onModalClose=()=>{window.r41PreviewStyle=null;worldSyncShrine();};
+ $('#sheet').querySelectorAll('[data-style]').forEach(b=>b.onclick=()=>{if(r3DenyVisit())return;const id=b.dataset.style,v=R3_STYLES[id],owned=shrine.owned.includes(id);window.r41PreviewStyle=id;worldSyncShrine();$('#sheet').querySelectorAll('[data-style]').forEach(el=>el.classList.toggle('selected',el===b));const buy=$('#r41BuyStyle');buy.hidden=owned;$('#r41StyleStatus').textContent=owned?'已免费使用'+v.name:'预览：'+v.name+' · 尚未购买';if(owned){shrine.style=id;r3Commit();}buy.textContent='购买并使用 🪙 '+v.cost;buy.onclick=()=>{if(r3DenyVisit())return;if(S.coins<v.cost){$('#r41StyleStatus').textContent='铜钱不足，出售作物可赚铜钱';return;}S.coins-=v.cost;shrine.style=id;shrine.owned.push(id);window.r41PreviewStyle=null;r3Commit();worldSyncShrine();openShrineStudio();};});
  $('#sheet').querySelectorAll('[data-name]').forEach(input=>input.oninput=()=>{if(r3DenyVisit())return;const i=+input.dataset.name;shrine.plaques[i].name=input.value.slice(0,18);$('#sheet').querySelector(`[data-preview="${i}"]`).textContent=input.value;r3Commit();worldSyncShrine();});
  $('#sheet').querySelectorAll('[data-image]').forEach(input=>input.onchange=()=>{if(r3DenyVisit())return;const i=+input.dataset.image,url=input.value.trim();if(url&&!/^https?:\/\//i.test(url))return toast('请输入 http 或 https 图片地址');shrine.plaques[i].img=url;r3Commit();worldSyncShrine();});
  $('#sheet').querySelectorAll('[data-upload]').forEach(input=>input.onchange=async()=>{if(r3DenyVisit())return;const file=input.files[0];if(!file)return;input.disabled=true;try{const data=await window.TG_SHRINE_UPLOAD(file);if(r3DenyVisit()||S.shrine!==shrine)return;if(typeof data!=='string')throw Error('上传接口没有返回图片地址');shrine.plaques[+input.dataset.upload].img=data;r3Commit();worldSyncShrine();const status=input.parentElement.parentElement.querySelector('[data-status]');if(status)status.textContent='画像已保存';toast('画像已保存');}catch(e){toast(e.message||'图片上传失败');}finally{input.disabled=false;}});
@@ -2397,7 +2431,7 @@ function openShrineStudio(){
 function r3PrepareShrine(h){
  // Clone only architecture materials before static batching; never recolor a shared world material.
  h.shrineMaterials=[];const clones=new Map();
- h.group.traverse(m=>{if(!m.isMesh||!m.material?.color)return;const p=m.position,architecture=m===h.floor||(m.parent===h.group&&(p.y>=4.1||(Math.abs(p.x)>=5.9&&p.y>1)||(p.z<=-7.9&&p.y>1)||(Math.abs(p.x)===4&&p.y===2.5)));
+ h.group.traverse(m=>{if(m.userData.r41Label&&m.position.z===-7.05){m.visible=false;m.userData.r3OldTablet=true;}if(!m.isMesh||!m.material?.color)return;const p=m.position,architecture=m===h.floor||(m.parent===h.group&&(p.y>=4.1||(Math.abs(p.x)>=5.9&&p.y>1)||(p.z<=-7.9&&p.y>1)||(Math.abs(p.x)===4&&p.y===2.5)));
  if(architecture){const original=m.material;let mat=clones.get(original);if(!mat){mat=original.clone();clones.set(original,mat);h.shrineMaterials.push({mat,base:original.color.clone(),kind:m===h.floor?'wood':p.y>=5.4?'tile':p.y>=4?'gold':'wall'});}m.material=mat;}
  // Hide the old name strips, retain the original wooden tablets and pedestals.
  if(m.parent===h.group&&p.z===-7.05){m.visible=false;m.userData.r3OldTablet=true;}
@@ -2412,8 +2446,8 @@ function r3PlaqueTexture(p,texture,valid){
  if(p.img){const image=new Image();image.crossOrigin='anonymous';image.onload=()=>{if(!valid())return;ctx.save();ctx.beginPath();ctx.arc(128,111,57,0,Math.PI*2);ctx.clip();const ratio=Math.max(114/image.width,114/image.height);ctx.drawImage(image,128-image.width*ratio/2,111-image.height*ratio/2,image.width*ratio,image.height*ratio);ctx.restore();texture.needsUpdate=true;};image.onerror=()=>{};image.src=p.img;}
 }
 function worldSyncShrine(){
- const h=W3?.spaces?.hall;if(!h?.plaqueGroup)return;const key=JSON.stringify(S.shrine);if(h.shrineKey===key)return;h.shrineKey=key;const style=R3_STYLES[S.shrine.style]||R3_STYLES.wood;
- h.shrineMaterials.forEach(({mat,base,kind})=>{mat.color.copy(S.shrine.style==='wood'?base:new THREE.Color(style[kind]));});
+ const h=W3?.spaces?.hall;if(!h?.plaqueGroup)return;const key=JSON.stringify(S.shrine)+(window.r41PreviewStyle||'');if(h.shrineKey===key)return;h.shrineKey=key;const style=R3_STYLES[window.r41PreviewStyle||S.shrine.style]||R3_STYLES.wood;
+ h.shrineMaterials.forEach(({mat,base,kind})=>{mat.color.copy((window.r41PreviewStyle||S.shrine.style)==='wood'?base:new THREE.Color(style[kind]));});
  h.plaqueGroup.children.forEach(m=>{m.material.map?.dispose();m.material.dispose();m.geometry.dispose();});worldClear(h.plaqueGroup);
  S.shrine.plaques.slice(0,3).forEach((p,i)=>{const c=document.createElement('canvas');c.width=256;c.height=512;const t=new THREE.CanvasTexture(c);r3PlaqueTexture(p,t,()=>h.shrineKey===key);const m=new THREE.Mesh(new THREE.PlaneGeometry(1.18,2.36),new THREE.MeshBasicMaterial({map:t}));m.position.set((i-1)*1.8,2.95,-7.025);h.plaqueGroup.add(m);});
 }
@@ -2457,6 +2491,7 @@ function r3PlanTray(){
  const p=window.TG_PLAN;if(!p)return;const items=window.TG_CATALOG.filter(c=>c.w&&c.d&&(S.backpack[c.id]||0)>0);
  $('#planTray').innerHTML=items.map(c=>`<button class="r3-tray-item ${p.pick===c.id?'selected':''}" data-item="${c.id}"><span>${c.emoji}</span>${c.name}<small>×${S.backpack[c.id]} · ${c.w}×${c.d}</small></button>`).join('')||'<span>背包空了，可收回家具或完成后去商店购买。</span>';
  $('#planSelection').textContent=p.pick?r3Item(p.pick).name:p.selected>=0?r3Item(S.decor[p.sceneId][p.selected].id)?.name||'家具':'请选择物品';
+ $('#planTray').insertAdjacentHTML('afterbegin','<button class="btn" id="r41PlanShop">购置家具</button>');$('#r41PlanShop').onclick=()=>{if(!r3DenyVisit())openShop('furniture');};
  $('#planTray').querySelectorAll('[data-item]').forEach(b=>b.onclick=()=>{p.pick=b.dataset.item;p.selected=-1;p.rot=0;r3PlanTray();r3DrawPlan();});
 }
 function r3DrawPlan(){
@@ -2469,7 +2504,7 @@ function r3DrawPlan(){
  s.blocks.filter(v=>!v.r3Decor).forEach(v=>box(v,'#887f7188'));
  ctx.strokeStyle='#6a5037';ctx.lineWidth=5;ctx.strokeRect(px(-L.x),pz(-L.z),L.x*2*scale,L.z*2*scale);
  for(const zone of r3DoorZones(s)){box(zone,'#e7ac8644','#bc8064');ctx.save();ctx.beginPath();ctx.rect(px(zone.x),pz(zone.z),(zone.X-zone.x)*scale,(zone.Z-zone.z)*scale);ctx.clip();ctx.strokeStyle='#bd8f6b';ctx.lineWidth=1;for(let n=-rect.height;n<rect.width+rect.height;n+=8){ctx.beginPath();ctx.moveTo(n,0);ctx.lineTo(n+rect.height,rect.height);ctx.stroke();}ctx.restore();
- ctx.strokeStyle='#f7eedb';ctx.lineWidth=7;ctx.beginPath();if(zone.side==='x'){const x=Math.sign(zone.e.x)*L.x;ctx.moveTo(px(x),pz(zone.z));ctx.lineTo(px(x),pz(zone.Z));}else{const z=Math.sign(zone.e.z)*L.z;ctx.moveTo(px(zone.x),pz(z));ctx.lineTo(px(zone.X),pz(z));}ctx.stroke();ctx.fillStyle='#75482c';ctx.font='10px sans-serif';ctx.textAlign='center';ctx.fillText('门 → '+(window.TG_SCENES.find(v=>v.id===zone.e.to)?.name||''),px((zone.x+zone.X)/2),pz((zone.z+zone.Z)/2));}
+ ctx.strokeStyle='#f7eedb';ctx.lineWidth=7;ctx.beginPath();if(zone.side==='x'){const x=Math.sign(zone.e.x)*L.x;ctx.moveTo(px(x),pz(zone.z));ctx.lineTo(px(x),pz(zone.Z));}else{const z=Math.sign(zone.e.z)*L.z;ctx.moveTo(px(zone.x),pz(z));ctx.lineTo(px(zone.X),pz(z));}ctx.stroke();ctx.fillStyle='#75482c';ctx.font='10px sans-serif';ctx.textAlign='center';const label='门·'+(window.TG_SCENES.find(v=>v.id===zone.e.to)?.name||'');const tw=ctx.measureText(label).width;ctx.fillText(label,Math.max(tw/2+8,Math.min(rect.width-tw/2-8,px((zone.x+zone.X)/2))),Math.max(16,Math.min(rect.height-12,pz((zone.z+zone.Z)/2))));}
  ctx.fillStyle='#786346';ctx.font='10px sans-serif';ctx.textAlign='center';ctx.fillText('北墙',ox,pz(-L.z)-10);ctx.fillText('南墙',ox,pz(L.z)+16);
  function draw(item,selected,ghost){const b=r3Bounds(item),c=r3Item(item.id);if(!b)return;box(b,ghost?(r3PlacementError(p.sceneId,item,p.drag?.index)?'#d86d6d99':'#75ae8e99'):selected?'#dcb86e':'#d6c39d',selected?'#745027':'#9d855c');ctx.save();ctx.translate(px(item.x),pz(item.z));ctx.rotate(-item.rot);ctx.fillStyle='#392d22';ctx.textAlign='center';ctx.font=`${Math.max(8,Math.min(12,scale*.45))}px sans-serif`;ctx.fillText(c.name,0,3);ctx.fillText('↑',0,-Math.min(12,scale*.4));ctx.restore();}
  (S.decor[p.sceneId]||[]).forEach((v,i)=>draw(v,i===p.selected,false));if(p.ghost)draw(p.ghost,true,true);
@@ -2506,7 +2541,7 @@ function r3BatchDecor(group){
 function worldSyncDecor(){
  const w=W3,sceneId=w?.active;if(!r3DecorScene(sceneId))return;const space=w.spaces[sceneId],items=S.decor[sceneId]||[],key=JSON.stringify(items);if(space.decorKey===key)return;space.decorKey=key;
  if(!space.decorGroup){space.decorGroup=new THREE.Group();space.group.add(space.decorGroup);}space.decorGroup.children.forEach(m=>m.dispose?.());worldClear(space.decorGroup);space.blocks=space.blocks.filter(v=>!v.r3Decor);
- for(const item of items){const b=r3Bounds(item);if(!b||r3PlacementError(sceneId,item,items.indexOf(item),true))continue;r3Furniture(space.decorGroup,item);space.blocks.push({...b,r3Decor:true});}
+ for(const item of items){const b=r3Bounds(item);if(!b||!r3Item(item.id)||![item.x,item.z].every(Number.isFinite))continue;r3Furniture(space.decorGroup,item);space.blocks.push({...b,r3Decor:true});}
  space.group.updateMatrixWorld(true);r3BatchDecor(space.decorGroup);
  // A restored save may place furniture over the current spawn. Recover onto a free half-grid cell.
  if(w.player&&!worldCanMove(w.player.position.x,w.player.position.z)){let best=null,dist=Infinity;for(let x=-space.limit.x+.5;x<space.limit.x;x+=.5)for(let z=-space.limit.z+.5;z<space.limit.z;z+=.5){const d=Math.hypot(x-w.player.position.x,z-w.player.position.z);if(d<dist&&worldCanMove(x,z)){dist=d;best={x,z};}}if(best){w.player.position.x=best.x;w.player.position.z=best.z;worldStop();}}
@@ -2534,7 +2569,7 @@ function r3SanitizeAnimals(d){
  d.animals=(Array.isArray(d.animals)?d.animals:[]).filter(a=>a&&typeof a==='object'&&kinds.includes(a.kind)).map(a=>{
   let id=typeof a.id==='string'&&a.id?a.id:r3AnimalId();if(seen.has(id))id=r3AnimalId();seen.add(id);
   const born=Number.isFinite(a.born)&&a.born>0?Math.min(now,a.born):now;
-  return {...a,id,post:['garden','follow','home'].includes(a.post)?a.post:'home',kind:a.kind,name:typeof a.name==='string'&&a.name.trim()?a.name.trim().slice(0,18):names[a.kind],pen:pens[a.kind],born,lastCollect:Number.isFinite(a.lastCollect)&&a.lastCollect>=0?Math.min(now,a.lastCollect):born,lastPet:Number.isFinite(a.lastPet)&&a.lastPet>=0?Math.min(now,a.lastPet):0};
+  return {...a,id,post:['garden','follow','home'].includes(a.post)?a.post:'home',kind:a.kind,name:typeof a.name==='string'&&a.name.trim()?a.name.trim().slice(0,18):names[a.kind],pen:a.pen===null?null:Number.isFinite(a.pen)?a.pen:pens[a.kind],born,lastCollect:Number.isFinite(a.lastCollect)&&a.lastCollect>=0?Math.min(now,a.lastCollect):born,lastPet:Number.isFinite(a.lastPet)&&a.lastPet>=0?Math.min(now,a.lastPet):0};
  });
 }
 function r3BuyAnimal(kind){
@@ -2700,14 +2735,14 @@ function r3SnapshotOwnSpace(state=S){
  r3OwnSpace=JSON.parse(JSON.stringify({plots:state.plots,decor:state.decor,shrine:state.shrine,animals:state.animals}));
 }
 function r3SyncOwnSpace(){
- const visiting=r3IsVisiting(),ended=r3WasVisiting&&!visiting;
+ const visiting=r3IsVisiting(),started=!r3WasVisiting&&visiting,ended=r3WasVisiting&&!visiting;
  r3WasVisiting=visiting;
  if(ended&&r3OwnSpace){Object.assign(S,JSON.parse(JSON.stringify(r3OwnSpace)));return true;}
  if(!visiting)r3SnapshotOwnSpace();
- return false;
+ return started;
 }
-function r3ApplyVisitingUI(){
- if(r3SyncOwnSpace())window.TG_RERENDER();
+function r3ApplyVisitingUI(sync=true){
+ if(sync&&r3SyncOwnSpace())window.TG_RERENDER();
  const visiting=!r3CanEdit();document.body.classList.toggle('r3-visiting',visiting);
  document.querySelectorAll('[onclick*="openShop"],[onclick*="openShrineStudio"],[onclick*="enterPlacement"],[onclick*="r3CollectProduce"]').forEach(b=>{b.dataset.r3Edit='';b.disabled=visiting;});
  $('#pillCoins').disabled=visiting;
@@ -2721,7 +2756,7 @@ document.addEventListener('click',e=>{
 },true);
 window.TG_RERENDER=function(){
  // Never commit an editor bound to the preceding S after the backend replaces that snapshot.
- r3DiscardPlan();closeModal();r3ApplyVisitingUI();if(W3)worldStop();
+ r3DiscardPlan();closeModal();r3ApplyVisitingUI(false);if(W3)worldStop();
  if(W3){W3.hallKey=undefined;for(const space of Object.values(W3.spaces||{})){space.decorKey=undefined;space.shrineKey=undefined;space.animalKey=undefined;}for(const c of W3.crops||[])c.key=undefined;}
  renderTop();if(current==='hall')renderHall();if(current==='yard')renderYard();
  worldSyncShrine();worldSyncDecor();worldSyncAnimals();worldSyncHall();worldSyncYard();r3RefreshAnimalHUD();
@@ -2730,6 +2765,7 @@ window.TG_RERENDER=function(){
 /* r4 adds the merged private courtyard without replacing the r3 game. */
 function r3CanEdit(){return !r3IsVisiting()||window.TG_VISIT?.canEdit===true;}
 function sanitizeR4(d){
+ r3NormalizeDecor(d);
  if(d.scene==='home')d.scene='yard';d.decor||={};d.decor.yard||=[];
  for(const v of d.decor.home||[])d.decor.yard.push({...v,x:v.x+8,z:v.z+5,r4Migrated:true});d.decor.home=[];
  r3SanitizeAnimals(d);
@@ -2772,7 +2808,7 @@ function r4Use(item,scene){const id=item.id,w=W3;worldStop();
  const key=id==='altar-table'?'incense':'tea',now=Date.now();if(now-(r4Cooldown[key]||0)<8000)return toast('静心片刻，再来品味');r4Cooldown[key]=now;if(key==='tea')w.r4SipUntil=performance.now()+1300;addMerit(key==='tea'?1:3);toast(key==='tea'?'清茶一盏，功德 +1':'清香一炷，功德 +3');
 }
 var r4SyncDecor=worldSyncDecor;worldSyncDecor=function(){
- if(W3?.active==='yard')for(const item of S.decor.yard||[]){if(!item.r4Migrated)continue;delete item.r4Migrated;
+ if(!r3IsVisiting()&&r3CanEdit()&&W3?.active==='yard')for(const item of S.decor.yard||[]){if(!item.r4Migrated)continue;delete item.r4Migrated;
  // Apply the migration offset first, then rescue only furniture that collides with new fixed facilities.
  if(r3PlacementError('yard',item,S.decor.yard.indexOf(item),true)){let found=false;const old={x:item.x,z:item.z};for(let z=5;z<=12&&!found;z+=.5)for(let x=3;x<=13&&!found;x+=.5){item.x=x;item.z=z;if(!r3PlacementError('yard',item,S.decor.yard.indexOf(item),true))found=true;}if(!found){item.x=old.x;item.z=old.z;S.backpack[item.id]=(S.backpack[item.id]||0)+1;S.decor.yard=S.decor.yard.filter(v=>v!==item);}}
  }
@@ -2782,6 +2818,523 @@ var r4SyncDecor=worldSyncDecor;worldSyncDecor=function(){
  for(const item of list){if(!labels[item.id])continue;s.items.push({x:item.x,z:item.z,range:2.6,label:labels[item.id],run:()=>r4Use(item,w.active),r4Furniture:true});if(item.id==='lantern'&&item.on){const l=new THREE.PointLight('#ffd795',1.1,5);l.position.set(item.x,1.3,item.z);s.r4Lights.add(l);}}
 };
 var r4Rerender=window.TG_RERENDER;window.TG_RERENDER=function(){r3SyncOwnSpace();sanitizeR4(S);for(const s of Object.values(W3?.spaces||{}))s.r4InteractKey=undefined;r4Rerender();};
+
+/* art3 — 公共地图美化（山门/大厅广场/集市/莲花池）+ 祠堂「古朴木作」与「禅意素雅」两种风格的明显区分。
+ * 独立文件：只通过已有全局钩子挂载（THREE、W3、TG_SCENES、TG_RERENDER、initWorld、worldEnter、
+ * worldSyncShrine、tgAnimate、worldMat），不修改任何既有函数体；所有包装都幂等、带守卫。
+ * 新增模型全部放在各场景 group 下的独立子 Group（art3Group）里：
+ *   - 不是 group 的直接 Mesh 子节点 → 不参与相机避障射线、不被 art2 tgArtBatch 合并；
+ *   - 点击拾取只命中 space.floor → 不影响点击走路/交互；
+ *   - 只往 space.blocks 追加小块碰撞，不动出口、交互点、地板。
+ */
+(function(){
+'use strict';
+var G=typeof window!=='undefined'?window:globalThis;
+if(G.__TG_ART3)return;
+var A=G.__TG_ART3={version:'art3-1',applied:{},styleBuilt:{},errors:[]};
+var PUBLIC_BUILDERS={};           // sceneId -> builder(space)
+var LIVE={};                      // per-scene animated objects
+var GEO={},MAT={},TEX={};
+
+function hooksReady(){
+ return typeof THREE!=='undefined'&&typeof W3!=='undefined'&&!!W3&&!!W3.spaces&&!!W3.scene&&!!W3.renderer&&
+  Array.isArray(G.TG_SCENES)&&typeof G.worldMat==='function';
+}
+function warn(where,e){A.errors.push(where+': '+(e&&e.message||e));try{console.warn('[art3] '+where,e);}catch(_){}}
+/* 可复现的伪随机，保证每次进入布局一致。 */
+function rng(seed){var s=seed>>>0||1;return function(){s=(s*16807)%2147483647;return s/2147483647;};}
+
+/* ---------- 几何/材质缓存（挂在 W3.geometries / W3.materials 的 art3: 前缀下） ---------- */
+function geo(name){
+ if(GEO[name])return GEO[name];
+ var g;
+ switch(name){
+  case 'box':g=new THREE.BoxGeometry(1,1,1);break;
+  case 'ball':g=new THREE.SphereGeometry(1,10,7);break;
+  case 'ball6':g=new THREE.SphereGeometry(1,7,5);break;
+  case 'cyl':g=new THREE.CylinderGeometry(1,1,1,12);break;
+  case 'cyl6':g=new THREE.CylinderGeometry(1,1,1,6);break;
+  case 'cyl8':g=new THREE.CylinderGeometry(1,1,1,8);break;
+  case 'cone':g=new THREE.ConeGeometry(1,1,8);break;
+  case 'cone6':g=new THREE.ConeGeometry(1,1,6);break;
+  case 'rock':g=new THREE.DodecahedronGeometry(1,0);break;
+  case 'plane':g=new THREE.PlaneGeometry(1,1);break;
+  case 'flat':g=new THREE.PlaneGeometry(1,1).rotateX(-Math.PI/2);break;
+  case 'disc':g=new THREE.CircleGeometry(1,40).rotateX(-Math.PI/2);break;
+  case 'leaf':g=new THREE.CircleGeometry(1,16,.28,Math.PI*2-.56).rotateX(-Math.PI/2);break;
+  case 'torus':g=new THREE.TorusGeometry(1,.16,6,18);break;
+  case 'petal':g=new THREE.SphereGeometry(1,7,5).translate(0,1,0);break;
+  case 'bowl':g=new THREE.SphereGeometry(1,12,4,0,Math.PI*2,0,1.05).rotateX(Math.PI).translate(0,1,0);break;
+  case 'tri':{g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute([-.5,0,0,.5,0,0,0,-1,0],3));g.computeVertexNormals();break;}
+  default:g=new THREE.BoxGeometry(1,1,1);
+ }
+ W3.geometries['art3:'+name]=g;return GEO[name]=g;
+}
+function mat(c){return G.worldMat(c);}                 // 共享平面着色 Lambert（与原场景一致）
+function smat(c){return G.worldMat(c,true);}
+function cached(key,make){return MAT[key]||(MAT[key]=W3.materials['art3:'+key]=make());}
+function dmat(c){return cached('d:'+c,function(){return new THREE.MeshLambertMaterial({color:c,side:THREE.DoubleSide});});}
+function emat(c,e,i){return cached('e:'+c+':'+(e||c)+':'+(i||.6),function(){return new THREE.MeshLambertMaterial({color:c,emissive:e||c,emissiveIntensity:i||.6});});}
+function canvasTex(key,w,h,draw,repeat){
+ if(TEX[key])return TEX[key];
+ var c=document.createElement('canvas');c.width=w;c.height=h;draw(c.getContext('2d'),w,h);
+ var t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;if(repeat)t.repeat.set(repeat[0],repeat[1]);
+ if('colorSpace' in t&&THREE.SRGBColorSpace)t.colorSpace=THREE.SRGBColorSpace;
+ return TEX[key]=t;
+}
+function texMat(key,w,h,draw,opts){
+ return cached('t:'+key,function(){var o=Object.assign({map:canvasTex(key,w,h,draw)},opts||{});return o.basic?(delete o.basic,new THREE.MeshBasicMaterial(o)):new THREE.MeshLambertMaterial(o);});
+}
+
+/* ---------- 构件 ---------- */
+/* P(group, 几何名|几何, 颜色|材质, 位置, 缩放, 旋转, 是否投影) */
+function P(g,gn,m,x,y,z,sx,sy,sz,rx,ry,rz,cast){
+ var mesh=new THREE.Mesh(typeof gn==='string'?geo(gn):gn,typeof m==='string'?mat(m):m);
+ mesh.position.set(x,y,z);mesh.scale.set(sx,sy==null?sx:sy,sz==null?sx:sz);
+ if(rx||ry||rz)mesh.rotation.set(rx||0,ry||0,rz||0);
+ mesh.userData.a3cast=!!cast;g.add(mesh);return mesh;
+}
+function sub(g,x,y,z,ry,s){var o=new THREE.Group();o.position.set(x,y,z);if(ry)o.rotation.y=ry;if(s)o.scale.setScalar(s);g.add(o);return o;}
+function block(s,x,z,a,b){s.blocks.push({x:x-a/2,X:x+a/2,z:z-b/2,Z:z+b/2,art3:true});}
+/* 把静态构件按 几何+材质 合并成 InstancedMesh：大幅减少 draw call。userData.a3live 的直接子节点保留不动（动画用）。 */
+function bake(g){
+ g.updateMatrixWorld(true);
+ var inv=new THREE.Matrix4().copy(g.matrixWorld).invert(),buckets=new Map(),keep=[];
+ g.traverse(function(o){
+  if(o===g)return;
+  var p=o.parent,live=false;while(p&&p!==g){if(p.userData.a3live)live=true;p=p.parent;}
+  if(live)return;
+  if(o.userData.a3live){if(o.parent===g)keep.push(o);return;}
+  if(o.isMesh&&!o.isInstancedMesh){var k=o.geometry.uuid+'|'+o.material.uuid;if(!buckets.has(k))buckets.set(k,[]);buckets.get(k).push(o);}
+  else if((o.isInstancedMesh||o.isPoints)&&o.parent===g)keep.push(o);
+ });
+ var built=[];
+ buckets.forEach(function(list){
+  var f=list[0],mtx=new THREE.Matrix4(),out;
+  if(list.length===1){out=new THREE.Mesh(f.geometry,f.material);mtx.multiplyMatrices(inv,f.matrixWorld);mtx.decompose(out.position,out.quaternion,out.scale);}
+  else{out=new THREE.InstancedMesh(f.geometry,f.material,list.length);for(var i=0;i<list.length;i++){mtx.multiplyMatrices(inv,list[i].matrixWorld);out.setMatrixAt(i,mtx);}out.instanceMatrix.needsUpdate=true;out.computeBoundingSphere();}
+  out.castShadow=false;out.receiveShadow=false;built.push(out);
+ });
+ while(g.children.length)g.remove(g.children[0]);
+ keep.forEach(function(o){g.add(o);});built.forEach(function(o){g.add(o);});
+ return g;
+}
+function glowTexture(){return canvasTex('glow',64,64,function(a){var gr=a.createRadialGradient(32,32,0,32,32,32);gr.addColorStop(0,'rgba(255,255,255,1)');gr.addColorStop(.35,'rgba(255,255,255,.45)');gr.addColorStop(1,'rgba(255,255,255,0)');a.fillStyle=gr;a.fillRect(0,0,64,64);});}
+/* 一次 draw call 的发光点（灯笼光晕/萤火）：不用真实点光源，手机上更省。 */
+function glow(g,pts,color,size,opacity){
+ if(!pts.length)return null;var flat=[];pts.forEach(function(p){flat.push(p[0],p[1],p[2]);});
+ var bg=new THREE.BufferGeometry();bg.setAttribute('position',new THREE.Float32BufferAttribute(flat,3));
+ var m=new THREE.PointsMaterial({map:glowTexture(),color:color,size:size,sizeAttenuation:true,transparent:true,opacity:opacity||.8,depthWrite:false,blending:THREE.AdditiveBlending});
+ var p=new THREE.Points(bg,m);p.userData.a3live=true;p.userData.baseOpacity=opacity||.8;p.frustumCulled=false;g.add(p);return p;
+}
+
+/* 曲面屋顶：中脊陡、檐口缓、四角起翘（中式反宇飞檐）。顶面用瓦垄贴图，底面用 BackSide 彩色材质。 */
+function roofGeo(len,depth,rise,lift){
+ var key='roof:'+[len,depth,rise,lift].map(function(v){return (+v).toFixed(2);}).join(',');
+ if(GEO[key])return GEO[key];
+ var nu=12,nv=20,pos=[],uv=[],idx=[],i,j;
+ for(i=0;i<=nu;i++){var u=-1+2*i/nu,au=Math.abs(u);
+  for(j=0;j<=nv;j++){var v=j/nv,e=Math.pow(Math.abs(2*v-1),5);
+   pos.push((v-.5)*len*(1+.07*au),rise*Math.pow(1-au,1.8)+lift*e*Math.pow(au,1.6),u*depth/2*(1+.1*e));
+   uv.push(v*len/1.1,(u+1)*depth/2.2);}}
+ for(i=0;i<nu;i++)for(j=0;j<nv;j++){var a=i*(nv+1)+j,b=a+1,c=a+nv+1,d=c+1;idx.push(a,c,b,b,c,d);}
+ var g=new THREE.BufferGeometry();g.setIndex(idx);g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));g.computeVertexNormals();
+ W3.geometries['art3:'+key]=g;return GEO[key]=g;
+}
+function tileMat(color,double){
+ return cached('tile:'+color+(double?':2':''),function(){
+  var t=canvasTex('tiles',128,128,function(a){a.fillStyle='#ffffff';a.fillRect(0,0,128,128);for(var x=0;x<128;x+=16){var gr=a.createLinearGradient(x,0,x+16,0);gr.addColorStop(0,'#8c8c8c');gr.addColorStop(.45,'#ffffff');gr.addColorStop(1,'#7a7a7a');a.fillStyle=gr;a.fillRect(x,0,16,128);}a.fillStyle='rgba(0,0,0,.22)';for(var y=0;y<128;y+=21)a.fillRect(0,y,128,2);});
+  return new THREE.MeshLambertMaterial({map:t,color:color,side:double?THREE.DoubleSide:THREE.FrontSide});
+ });
+}
+function underMat(color){return cached('under:'+color,function(){return new THREE.MeshLambertMaterial({color:color,side:THREE.BackSide});});}
+function roof(g,x,y,z,len,depth,rise,lift,o){
+ o=o||{};var r=sub(g,x,y,z,o.ry||0),gm=roofGeo(len,depth,rise,lift);
+ var top=new THREE.Mesh(gm,tileMat(o.tile||'#4a5d5c'));top.userData.a3cast=true;r.add(top);
+ var under=new THREE.Mesh(gm,underMat(o.under||'#8e3b2b'));under.position.y=-.09;r.add(under);
+ var rc=o.ridge||'#2f3b3b';P(r,'box',rc,0,rise+.07,0,len*.9,.26,.28,0,0,0,true);
+ for(var s=-1;s<=1;s+=2){P(r,'cone',rc,s*len*.45,rise+.36,0,.17,.6,.22,0,0,-s*.38);P(r,'ball6',rc,s*len*.45,rise+.18,0,.2,.2,.2);}
+ if(o.pearl)P(r,'ball',emat('#e8c45a','#a8761c',.35),0,rise+.42,0,.22);
+ return r;
+}
+/* 攒尖顶（亭子/香炉宝顶）：Lathe 凹曲面。 */
+function latheRoofGeo(radius,height,segs,exp){
+ var key='lathe:'+[radius,height,segs,exp].join(',');if(GEO[key])return GEO[key];
+ var pts=[];for(var i=0;i<=12;i++){var t=i/12;pts.push(new THREE.Vector2(Math.max(.001,radius*t),height*Math.pow(1-t,exp||1.6)));}
+ var g=new THREE.LatheGeometry(pts,segs||8,0,Math.PI*2);W3.geometries['art3:'+key]=g;return GEO[key]=g;
+}
+function latheRoof(g,x,y,z,radius,height,segs,color,exp,tips,noFinial){
+ var r=sub(g,x,y,z,0);var m=new THREE.Mesh(latheRoofGeo(radius,height,segs,exp),tileMat(color||'#4a5d5c',true));m.userData.a3cast=true;r.add(m);
+ if(tips)for(var i=0;i<segs;i++){var a=i/segs*Math.PI*2;P(r,'cone',color||'#4a5d5c',Math.sin(a)*radius*1.02,.12,Math.cos(a)*radius*1.02,.09,.38,.09,Math.cos(a)*-.9,0,Math.sin(a)*.9);}
+ if(!noFinial){P(r,'ball',emat('#d9b356','#8a5d16',.25),0,height+.1,0,.16,.2,.16);P(r,'cyl8','#3a4747',0,height-.05,0,.12,.3,.12);}
+ return r;
+}
+function textTex(key,text,bg,fg,border,w,h,font){
+ return canvasTex(key,w||64,h||256,function(a,W,H){a.fillStyle=bg;a.fillRect(0,0,W,H);if(border){a.strokeStyle=border;a.lineWidth=5;a.strokeRect(5,5,W-10,H-10);}a.fillStyle=fg;a.textAlign='center';a.textBaseline='middle';var ch=[...text],step=(H-30)/ch.length;a.font=(font||'bold ')+Math.min(W*.68,step*.8)+'px serif';ch.forEach(function(c,i){a.fillText(c,W/2,15+step*(i+.5));});});
+}
+function signPlane(g,key,text,bg,fg,border,x,y,z,w,h,ry){
+ var m=new THREE.Mesh(geo('plane'),cached('sign:'+key,function(){return new THREE.MeshLambertMaterial({map:textTex(key,text,bg,fg,border),side:THREE.DoubleSide});}));
+ m.position.set(x,y,z);m.scale.set(w,h,1);if(ry)m.rotation.y=ry;g.add(m);return m;
+}
+/* 红灯笼：返回光晕位置。 */
+function lantern(g,x,y,z,s,color){
+ s=s||1;var red=emat(color||'#d2402c','#b3261a',.55),gold=mat('#d8ae55');
+ P(g,'ball',red,x,y,z,.26*s,.31*s,.26*s);
+ P(g,'cyl8',gold,x,y+.3*s,z,.13*s,.07*s,.13*s);P(g,'cyl8',gold,x,y-.3*s,z,.13*s,.07*s,.13*s);
+ P(g,'box','#c9372a',x,y-.48*s,z,.03*s,.26*s,.03*s);
+ return [x,y,z];
+}
+function pine(g,s,x,z,h,seed){
+ var r=rng(seed||7);h=h||4.5;P(g,'cyl','#6e4e37',x,h*.4,z,.2,h*.8,.2,0,0,.05,true);
+ for(var i=0;i<5;i++){var t=i/4,y=h*(.45+t*.5),rad=1.7*(1-t*.55),a=r()*6.28;P(g,'ball6',i%2?'#4d774b':'#5b8653',x+Math.cos(a)*.35*(1-t),y,z+Math.sin(a)*.35*(1-t),rad,.42,rad*.9,0,a,0,true);}
+ block(s,x,z,.6,.6);
+}
+function roundTree(g,s,x,z,h,col,seed){
+ var r=rng(seed||3);h=h||3;P(g,'cyl','#7a573c',x,h*.45,z,.2,h*.9,.2,0,0,0,true);
+ for(var i=0;i<5;i++){var a=r()*6.28,d=.6*r();P(g,'ball',col||'#79a05c',x+Math.cos(a)*d,h+r()*.8,z+Math.sin(a)*d,.9+r()*.4,.8+r()*.3,.9+r()*.4,0,0,0,true);}
+ block(s,x,z,.6,.6);
+}
+function willow(g,s,x,z,seed){
+ var r=rng(seed||11);P(g,'cyl','#6f5440',x,1.4,z,.22,2.8,.22,0,0,.08,true);
+ for(var i=0;i<4;i++)P(g,'ball','#8db35f',x+(r()-.5)*1.2,3+r()*.5,z+(r()-.5)*1.2,1.1,.6,1.1,0,0,0,true);
+ for(i=0;i<34;i++){var a=i/34*6.28+r()*.2,d=.9+r()*.7,len=1.2+r()*1.1;P(g,'box',i%3?'#9cc26a':'#b5d17c',x+Math.cos(a)*d,3.1-len/2,z+Math.sin(a)*d,.05,len,.05,Math.sin(a)*.12,0,-Math.cos(a)*.12);}
+ block(s,x,z,.6,.6);
+}
+function stoneLantern(g,x,z,s,light){
+ s=s||1;var st='#a7a79c',dk='#8d8d82';
+ P(g,'cyl6',st,x,.12*s,z,.45*s,.24*s,.45*s,0,0,0,true);P(g,'cyl6',st,x,.62*s,z,.14*s,.8*s,.14*s,0,0,0,true);
+ P(g,'cyl6',dk,x,1.06*s,z,.36*s,.1*s,.36*s);P(g,'box',light||emat('#f3e6c2','#e0b25a',.5),x,1.3*s,z,.36*s,.38*s,.36*s);
+ P(g,'cone6',dk,x,1.66*s,z,.56*s,.36*s,.56*s,0,0,0,true);P(g,'ball6',st,x,1.9*s,z,.1*s,.13*s,.1*s);
+ return [x,1.3*s,z];
+}
+/* 石狮：朝 +z。male 踩绣球，female 抚幼狮。 */
+function lion(g,x,y,z,ry,s,male){
+ var L=sub(g,x,y,z,ry,s),st='#b4b1a4',dk='#94907f';
+ P(L,'ball',st,0,.5,-.25,.42,.42,.5,0,0,0,true);P(L,'ball',st,0,.86,.1,.4,.55,.38,0,0,0,true);
+ for(var sx=-1;sx<=1;sx+=2){P(L,'box',st,sx*.2,.38,.32,.15,.76,.17);P(L,'ball6',st,sx*.24,.2,-.18,.17,.22,.3);P(L,'ball6',dk,sx*.2,.04,.42,.11,.06,.14);}
+ P(L,'ball',st,0,1.34,.3,.34,.33,.32,0,0,0,true);
+ for(var i=0;i<12;i++){var a=i/12*Math.PI*2;P(L,'ball6',dk,Math.cos(a)*.31,1.34+Math.sin(a)*.31,.14,.12);}
+ P(L,'box',dk,0,1.25,.6,.22,.15,.14);P(L,'box','#7e7a6c',0,1.12,.55,.2,.05,.1);
+ for(sx=-1;sx<=1;sx+=2){P(L,'ball6','#3d3b35',sx*.12,1.41,.6,.04,.04,.03);P(L,'ball6',dk,sx*.24,1.62,.22,.08,.1,.08);}
+ P(L,'ball6',dk,0,.72,-.68,.15,.28,.15,.6,0,0);
+ if(male)P(L,'ball',dk,.26,.15,.58,.16);else{P(L,'ball6',st,-.28,.18,.55,.14,.13,.18);P(L,'ball6',st,-.28,.33,.62,.09);}
+ return L;
+}
+function ground(g,size,color,y){P(g,'flat',smat(color),0,y==null?-.33:y,0,size,1,size);}
+
+/* ================= 场景：山门 gate ================= */
+PUBLIC_BUILDERS.gate=function(s,g){
+ var red='#9b3a2c',gold='#d9b052',stone='#c3bca8';
+ ground(g,170,'#9fae86');
+ // 低矮石台基 + 两级浅阶（高度 ≤ .08，不挡走路）
+ P(g,'box',stone,0,.04,-5,15,.08,4.4);for(var j=0;j<2;j++)P(g,'box','#b5ae99',0,.02,-2.55+j*.3,10-j*1.4,.04,.35);
+ P(g,'box','#aaa38e',0,.02,-7.45,15.4,.04,.4);
+ // 主楼曲檐顶、斗拱、彩画梁
+ roof(g,0,5.42,-5,13.4,3.2,1,.6,{tile:'#3f5453',under:'#a34a33',pearl:true});
+ var dou=[];for(var x=-6;x<=6.01;x+=.6)for(var sd=-1;sd<=1;sd+=2){P(g,'box',(Math.round(x/.6)%2)?'#2f6f68':gold,x,5.16,-5+sd*.72,.3,.16,.36);P(g,'box','#7b3424',x,5.0,-5+sd*.66,.2,.14,.24);}
+ var band=texMat('gateband',256,32,function(a){a.fillStyle='#2f6f68';a.fillRect(0,0,256,32);a.fillStyle='#d9b052';a.fillRect(0,0,256,3);a.fillRect(0,29,256,3);for(var i=0;i<8;i++){a.fillStyle=i%2?'#1f4f6a':'#3f8a7a';a.beginPath();a.ellipse(16+i*32,16,13,9,0,0,Math.PI*2);a.fill();a.strokeStyle='#e8cf7a';a.lineWidth=2;a.stroke();}});
+ [[-3.65,3.1],[3.65,3.1]].forEach(function(b){P(g,'plane',band,b[0],4.6,-4.385,b[1],.6,1);});
+ P(g,'plane',band,0,4.6,-5.615,10.8,.6,1,0,Math.PI,0);
+ // 抱鼓石夹柱
+ for(var sx=-1;sx<=1;sx+=2){for(var sz=-1;sz<=1;sz+=2){P(g,'cyl',stone,sx*5,.55,-5+sz*.72,.42,.16,.42,Math.PI/2,0,0,true);P(g,'box',stone,sx*5,.2,-5+sz*.72,.36,.4,.5);}block(s,sx*5,-5,.8,2.3);}
+ // 次间：两侧矮柱 + 小屋顶 + 额枋
+ for(sx=-1;sx<=1;sx+=2){var px=sx*7.5;P(g,'box',red,px,1.7,-5,.5,3.4,.6,0,0,0,true);P(g,'box',stone,px,.2,-5,.9,.4,1.1);P(g,'box',red,sx*6.25,3.05,-5,2.5,.45,.7);P(g,'box',gold,sx*6.25,3.05,-4.64,2.2,.12,.02);
+  roof(g,sx*6.3,3.4,-5,3.6,2.4,.6,.35,{tile:'#3f5453',under:'#a34a33'});block(s,px,-5,.6,.7);P(g,'box',gold,px,3.42,-5,.6,.12,.7);}
+ // 石狮一对（台基上）
+ for(sx=-1;sx<=1;sx+=2){P(g,'box',stone,sx*2.65,.32,-3.15,1.05,.5,1.35,0,0,0,true);P(g,'box','#d0c9b4',sx*2.65,.6,-3.15,1.15,.08,1.45);lion(g,sx*2.65,.64,-3.15,0,.95,sx>0);block(s,sx*2.65,-3.15,1.1,1.4);}
+ // 石碑（龟趺）
+ P(g,'ball','#8f8d80',-9.4,.35,-.6,.9,.42,1.2,0,0,0,true);P(g,'ball6','#8f8d80',-9.4,.42,.55,.3,.26,.32);
+ P(g,'box','#a9a698',-9.4,1.55,-.6,1.1,2.1,.32,0,0,0,true);P(g,'box','#9a978a',-9.4,2.72,-.6,1.25,.3,.4);
+ signPlane(g,'stele','福缘胜境','#a9a698','#4a4638',null,-9.4,1.55,-.43,.75,1.8);block(s,-9.4,-.3,1.6,2.2);
+ // 松柏夹道
+ [[-12.5,-3],[12.5,-3],[-12.5,10.5],[12.5,10.5],[-6.8,11.6],[6.8,11.6],[12.3,3.8]].forEach(function(p,i){pine(g,s,p[0],p[1],4+i%3*.6,i+3);});
+ // 远景：山坡、上山石阶、坡顶殿宇、宝塔、远山
+ P(g,'ball',smat('#86a070'),0,-1,-35,24,7,14);P(g,'ball',smat('#7e9a6c'),-20,-2,-40,16,9,12);P(g,'ball',smat('#7e9a6c'),20,-2,-41,17,8,12);
+ for(j=0;j<18;j++){var zz=-20.2-j*.5,yy=Math.max(0,-1+7*Math.sqrt(Math.max(0,1-Math.pow((zz+35)/14,2))));P(g,'box','#cfc6ad',0,yy-.15,zz,3.2,.32,.55);}
+ P(g,'box','#cfc6ad',0,5.85,-31.5,7,.3,4);P(g,'box','#a54436',0,7.3,-33.4,7,2.8,2.6);for(sx=-3;sx<=3;sx+=2)P(g,'box','#7d2f24',sx,7.2,-32.05,.25,2.8,.25);
+ roof(g,0,8.7,-33.4,9.2,4.6,1.5,.7,{tile:'#3b4b4b',under:'#a34a33',pearl:true});
+ var pg=sub(g,-10,3.2,-34,0);for(j=0;j<5;j++){var w=1.9-j*.28;P(pg,'box','#d8cfb8',0,j*1.05+.4,0,w,.8,w);latheRoof(pg,0,j*1.05+.82,0,w*.95,.42,4,'#3b4b4b',1.4,false,j<4);}
+ for(var i=0;i<7;i++){var m=P(g,'cone',smat(i%2?'#9fb0a6':'#8ea398'),-42+i*14,6,-52-(i%3)*3,12,14+(i%3)*4,9);}
+ var tp=[];var r=rng(5);for(i=0;i<16;i++){var tx=(r()-.5)*36,tz=-24-r()*14;if(Math.abs(tx)<3)tx+=6;P(g,'cone','#557e52',tx,2+r()*2,tz,1,3,1);}
+ bake(g);
+ // 雾气感由 worldEnter 包装里的 fog 设置提供
+};
+
+/* ================= 场景：集市 market ================= */
+PUBLIC_BUILDERS.market=function(s,g){
+ var wood='#7c5236',gold='#d8ae55',glows=[];
+ ground(g,170,'#c2b392');
+ // 路沿石
+ for(var sd=-1;sd<=1;sd+=2)P(g,'box','#8f8a7a',0,.05,sd*1.55,26,.1,.16);
+ var names=[['花木','#3f7a5a'],['家具','#8a4a2e'],['香烛','#a8322a']];
+ [-7,0,7].forEach(function(x,i){
+  // 瓦顶 + 花边垂幔
+  roof(g,x,3.18,-5,5.4,3.5,.75,.38,{tile:'#4b5f5d',under:'#7d4a30'});
+  for(var j=0;j<16;j++){var col=j%2?'#f3e6c6':(i===1?'#a8553b':'#c0473a');P(g,'disc',dmat(col),x-2.25+j*.3,2.88,-3.52,.15,1,.15,Math.PI/2,0,0);}
+  // 货架 + 货物
+  P(g,'box',wood,x,1.25,-6.25,3.6,2.5,.4,0,0,0,true);for(var k=0;k<3;k++)P(g,'box','#9a6b48',x,.5+k*.8,-6.05,3.5,.06,.5);
+  var r=rng(20+i);
+  for(k=0;k<15;k++){var row=k%3,cx=x-1.5+Math.floor(k/3)*.75;
+   if(i===0){P(g,'cyl','#9c7448',cx,.62+row*.8,-6,.17,.18,.17);P(g,'ball6',row===1?'#e48aa0':row?'#f0c25a':'#6f9a52',cx,.82+row*.8,-6,.2,.18,.2);}
+   else if(i===1){P(g,'box',r()>.5?'#8a5a3c':'#6e4630',cx,.72+row*.8,-6,.36,.38,.32);}
+   else{P(g,'cyl','#c94a35',cx,.65+row*.8,-6,.05,.3,.05);P(g,'cyl','#e8d6a8',cx+.12,.62+row*.8,-6,.07,.24,.07);}}
+  block(s,x,-6.25,3.7,.5);
+  // 柜台上的篮/罐
+  for(k=0;k<3;k++){var bx=x-1.2+k*1.2;P(g,'cyl','#a77b4c',bx,1.5,-5.35,.3,.18,.3);P(g,'ball6',i===2?'#c6a46a':['#ef8a5a','#e7c65a','#86b35c'][k],bx,1.62,-5.35,.26,.12,.26);}
+  // 幌子
+  var px=x+2.6;P(g,'cyl','#5f412c',px,2.1,-3.6,.06,4.2,.06,0,0,0,true);P(g,'box','#5f412c',px-.35,4.1,-3.6,.8,.06,.06);
+  signPlane(g,'mk'+i,names[i][0],names[i][1],'#fff0c8','#e2c06a',px-.55,3.15,-3.6,.46,1.5);block(s,px,-3.6,.22,.22);
+  // 地上的箱筐/麻袋
+  P(g,'box','#9a7048',x-2.45,.3,-5.6,.6,.6,.6,0,.3,0,true);P(g,'box','#8a6040',x-2.45,.8,-5.6,.45,.4,.45,0,.9,0);P(g,'ball6','#d8c49a',x+2.35,.32,-5.9,.32,.34,.3);
+  block(s,x-2.45,-5.6,.8,.8);
+ });
+ // 横跨街道的灯笼串（4 组）+ 彩旗
+ var poles=[-10.5,-3.5,3.5,10.5];
+ poles.forEach(function(x){for(var sd=-1;sd<=1;sd+=2){P(g,'cyl','#5f412c',x,2,sd*2.7,.07,4,.07,0,0,0,true);P(g,'ball6',gold,x,4.05,sd*2.7,.1);block(s,x,sd*2.7,.24,.24);}
+  for(var t=0;t<=8;t++){var u=t/8,zz=-2.7+u*5.4,yy=3.85-.45*(1-Math.pow(2*u-1,2));if(t<8){var u2=(t+.5)/8;P(g,'box','#3b2a20',x,3.85-.45*(1-Math.pow(2*u2-1,2)),-2.7+u2*5.4,.02,.02,.7);}
+   if(t%2===1)glows.push(lantern(g,x,yy-.45,zz,.85));}});
+ var flagC=['#c0473a','#e2b24a','#3f7a5a','#3f6a8a'];
+ for(sd=-1;sd<=1;sd+=2)for(var p=0;p<3;p++){var x0=poles[p],x1=poles[p+1];for(var f=0;f<12;f++){var u=(f+.5)/12,fx=x0+(x1-x0)*u,fy=3.55-.4*(1-Math.pow(2*u-1,2));P(g,'tri',dmat(flagC[f%4]),fx,fy,sd*2.7,.42,.5,1);}}
+ // 南侧：茶摊 + 水果车 + 水缸
+ var tea=sub(g,-6,0,6.5,0);P(tea,'cyl','#7c5236',0,.36,0,.12,.72,.12);P(tea,'cyl','#9a6b48',0,.74,0,.75,.06,.75,0,0,0,true);
+ for(var a=0;a<3;a++){var aa=a/3*6.28+.5;P(tea,'cyl','#8a5d3e',Math.cos(aa)*1.15,.24,Math.sin(aa)*1.15,.25,.48,.25,0,0,0,true);}
+ P(tea,'ball','#5d7f86',0,.9,0,.16,.13,.16);P(tea,'cyl','#5d7f86',.17,.92,0,.03,.14,.03,0,0,-.9);for(a=0;a<3;a++)P(tea,'cyl','#efe6d2',Math.cos(a*2)*.42,.8,Math.sin(a*2)*.42,.06,.07,.06);
+ P(tea,'cyl','#5f412c',.05,1.6,.05,.04,3,.04);P(tea,'cone',dmat('#d8a24a'),.05,3.05,.05,1.9,.55,1.9,0,0,0,true);P(tea,'ball6','#a8322a',.05,3.35,.05,.08);
+ block(s,-6,6.5,2.6,2.6);
+ var cart=sub(g,5.2,0,6.6,-.15);P(cart,'box','#8a5a3c',0,.85,0,2.2,.5,1.1,0,0,0,true);for(sd=-1;sd<=1;sd+=2){P(cart,'cyl','#5f412c',-.4,.45,sd*.62,.45,.08,.45,Math.PI/2,0,0);P(cart,'box','#5f412c',1.6,.85,sd*.4,1.2,.06,.06);}
+ var fr=rng(9);for(a=0;a<22;a++)P(cart,'ball6',['#f08a3c','#e8c64a','#d9483a','#8fbf5a'][a%4],-.9+fr()*1.8,1.18+fr()*.18,-.4+fr()*.8,.15);
+ for(var cx=-1;cx<=1;cx+=2)for(var cz=-1;cz<=1;cz+=2)P(cart,'cyl','#5f412c',cx*1,1.6,cz*.5,.03,1.5,.03);P(cart,'box',dmat('#3f7a5a'),0,2.36,0,2.4,.05,1.3,0,0,0,true);
+ block(s,5.2,6.6,3.4,1.8);
+ for(sd=-1;sd<=1;sd+=2){P(g,'cyl','#6a5f50',sd*12.3,.45,-5.6,.55,.9,.55,0,0,0,true);P(g,'cyl','#5f9aa0',sd*12.3,.88,-5.6,.48,.02,.48);block(s,sd*12.3,-5.6,1.2,1.2);}
+ // 远景：墙外民居屋顶
+ [-10,-3.5,3.5,10].forEach(function(x,i){P(g,'box','#e8e0cc',x,2.4,-18,5,4.8,4,0,0,0,false);roof(g,x,4.8,-18,5.8,4.6,1.1,.45,{tile:'#4b5a5a',under:'#6a5040'});});
+ [-9,0,9].forEach(function(x){P(g,'box','#e8e0cc',x,2.4,18.5,6,4.8,4);roof(g,x,4.8,18.5,6.8,4.6,1.1,.45,{tile:'#4b5a5a',under:'#6a5040'});});
+ var pag=sub(g,-14,0,-30,0);for(var j=0;j<6;j++){var w=2.6-j*.33;P(pag,'box','#d8cfb8',0,j*1.25+.5,0,w,1,w);latheRoof(pag,0,j*1.25+1.02,0,w*.95,.5,4,'#3b4b4b',1.4,false,j<5);}
+ bake(g);
+ LIVE.market={glow:glow(g,glows,'#ffb35a',1.5,.75)};
+};
+
+/* ================= 场景：莲花池 lotus ================= */
+PUBLIC_BUILDERS.lotus=function(s,g){
+ var r=rng(42),cx=0,cz=-2;
+ ground(g,170,'#93ab7c');
+ // 水面：深浅渐变底 + 加色闪光层（动画）
+ var base=texMat('pondbase',256,256,function(a){var gr=a.createRadialGradient(128,128,10,128,128,128);gr.addColorStop(0,'#2f7f86');gr.addColorStop(.7,'#4c9f9c');gr.addColorStop(1,'#86c3b0');a.fillStyle=gr;a.fillRect(0,0,256,256);});
+ var basem=P(g,'disc',base,cx,.072,cz,6.95,1,5.95);basem.userData.a3live=true;basem.receiveShadow=true;
+ var shimmer=cached('shimmer',function(){var t=canvasTex('shimmer',256,256,function(a){a.clearRect(0,0,256,256);var q=rng(3);for(var i=0;i<70;i++){a.strokeStyle='rgba(255,255,255,'+(.18+q()*.35)+')';a.lineWidth=1+q()*1.5;var x=q()*256,y=q()*256,l=8+q()*26;a.beginPath();a.moveTo(x,y);a.quadraticCurveTo(x+l/2,y-2-q()*3,x+l,y);a.stroke();}},[3,3]);return new THREE.MeshBasicMaterial({map:t,transparent:true,opacity:.55,depthWrite:false,blending:THREE.AdditiveBlending});});
+ var sh=P(g,'disc',shimmer,cx,.09,cz,6.9,1,5.9);sh.userData.a3live=true;
+ // 锦鲤（实例化，逐帧更新）
+ var koiBody=new THREE.InstancedMesh(geo('ball6'),smat('#f0763a'),8),koiTail=new THREE.InstancedMesh(geo('cone'),smat('#f3a06a'),8),koiSpot=new THREE.InstancedMesh(geo('ball6'),smat('#fff4e6'),8);
+ [koiBody,koiTail,koiSpot].forEach(function(m){m.userData.a3live=true;m.frustumCulled=false;g.add(m);});
+ var fish=[];for(var i=0;i<8;i++)fish.push({r:2.6+(i%4)*.75,speed:(.18+r()*.12)*(i%2?1:-1),phase:r()*6.28});
+ // 石砌驳岸（规则条石，压在原有卵石下）
+ for(i=0;i<56;i++){var a=i/56*Math.PI*2;P(g,'box',i%2?'#b9b3a1':'#c8c1ae',cx+Math.cos(a)*7.05,.07,cz+Math.sin(a)*6.05,.62,.14,.95,0,-a,0);}
+ // 北侧汉白玉栏杆
+ for(i=0;i<=14;i++){var a2=Math.PI+.9+(Math.PI-1.8)*i/14,px=cx+Math.cos(a2)*7.9,pz=cz+Math.sin(a2)*6.9;P(g,'box','#ece8dc',px,.38,pz,.16,.76,.16,0,0,0,true);P(g,'ball6','#f4f1e8',px,.82,pz,.12,.12,.12);block(s,px,pz,.24,.24);
+  if(i<14){var a3=Math.PI+.9+(Math.PI-1.8)*(i+.5)/14,qx=cx+Math.cos(a3)*7.9,qz=cz+Math.sin(a3)*6.9,seg=2*Math.PI*7.4*(Math.PI-1.8)/(2*Math.PI)/14;P(g,'box','#e4dfd1',qx,.6,qz,seg,.08,.08,0,-a3-Math.PI/2,0);P(g,'box','#e4dfd1',qx,.22,qz,seg,.08,.08,0,-a3-Math.PI/2,0);P(g,'box','#efebe0',qx,.41,qz,seg*.8,.3,.04,0,-a3-Math.PI/2,0);}}
+ // 荷叶（带缺口）、高荷叶、荷花与花苞
+ function inPond(x,z,k){return Math.pow((x-cx)/(7*k),2)+Math.pow((z-cz)/(6*k),2)<1;}
+ var island={x:2.8,z:-4.3,r:1.25};
+ function free(x,z){return inPond(x,z,.88)&&Math.hypot(x-island.x,z-island.z)>island.r+.5;}
+ var placed=0,tries=0;while(placed<34&&tries++<400){var lx=cx+(r()-.5)*13,lz=cz+(r()-.5)*11;if(!free(lx,lz))continue;placed++;var sc=.32+r()*.42;P(g,'leaf',dmat(placed%3?'#5f9a55':'#78ad5e'),lx,.1+r()*.01,lz,sc,1,sc*.92,0,r()*6.28,0);}
+ var flowers=[],tf=0;tries=0;while(flowers.length<9&&tries++<400){var fx=cx+(r()-.5)*12,fz=cz+(r()-.5)*10;if(!free(fx,fz)||flowers.some(function(f){return Math.hypot(f[0]-fx,f[1]-fz)<1.2;}))continue;flowers.push([fx,fz]);}
+ flowers.forEach(function(f,k){var h=.25+(k%3)*.18,fx=f[0],fz=f[1];P(g,'cyl','#5b8a4c',fx,h/2+.08,fz,.025,h,.025);
+  var y=h+.1;if(k%4===3){P(g,'petal',smat('#f08fac'),fx,y,fz,.09,.16,.09);return;}
+  for(var p=0;p<8;p++){var pa=p/8*6.28;P(g,'petal',smat('#f3a9bf'),fx+Math.cos(pa)*.04,y,fz+Math.sin(pa)*.04,.07,.15,.04,Math.sin(pa)*.95,0,-Math.cos(pa)*.95);}
+  for(p=0;p<6;p++){var pb=p/6*6.28+.3;P(g,'petal',smat('#fbd6e1'),fx+Math.cos(pb)*.02,y,fz+Math.sin(pb)*.02,.055,.13,.035,Math.sin(pb)*.45,0,-Math.cos(pb)*.45);}
+  P(g,'cyl','#e5c95a',fx,y+.06,fz,.05,.05,.05);P(g,'leaf',dmat('#5f9a55'),fx+.25,.105,fz+.1,.45,1,.42,0,k,0);});
+ for(i=0;i<6;i++){var ux,uz;tries=0;do{ux=cx+(r()-.5)*11;uz=cz+(r()-.5)*9;}while(!free(ux,uz)&&tries++<60);var hh=.55+r()*.5;P(g,'cyl','#5b8a4c',ux,hh/2,uz,.025,hh,.025);P(g,'bowl',dmat('#6aa35a'),ux,hh,uz,.42,.16,.42);}
+ // 芦苇/香蒲
+ [[-5.8,-4.5],[5.5,.5],[-4.5,1.8],[5.4,-5.2]].forEach(function(c,k){for(var j=0;j<9;j++){var a=j*2.4,d=.15+j%3*.14,x=c[0]+Math.cos(a)*d,z=c[1]+Math.sin(a)*d,h=.9+(j%4)*.25;P(g,'cyl','#7c9a4e',x,h/2,z,.022,h,.022,Math.cos(a)*.08,0,Math.sin(a)*.08);if(j%3===0)P(g,'cyl','#7a4f2e',x,h-.05,z,.045,.22,.045);else P(g,'box','#8fae5a',x,h*.7,z,.03,h*.6,.07,0,a,.25);}});
+ // 湖心石岛 + 五层石塔
+ for(i=0;i<9;i++){var ia=i*2.1;P(g,'rock','#9d9b8c',island.x+Math.cos(ia)*.65*(i%3?1:.4),.12+(i%3)*.08,island.z+Math.sin(ia)*.55*(i%3?1:.4),.45+(i%2)*.15,.3,.4,0,ia,0,true);}
+ var tower=sub(g,island.x,.25,island.z,0);for(var t=0;t<5;t++){var w=.6-t*.08;P(tower,'box','#b8b4a5',0,t*.42+.15,0,w*.6,.3,w*.6);latheRoof(tower,0,t*.42+.31,0,w*.62,.13,4,'#8e8b7f',1.2,false,t<4);}
+ // 柳树
+ willow(g,s,-9.6,1.4,5);willow(g,s,9.2,-6.6,8);
+ // 亭子：八角攒尖顶覆盖原圆锥顶 + 挂灯
+ var glows=[];latheRoof(g,10,3.5,6,3.7,2,8,'#44595a',1.6,true);
+ for(var gx=8.5;gx<=11.51;gx+=3)for(var gz=4.5;gz<=7.51;gz+=3){glows.push(lantern(g,gx+(gx<10?.25:-.25),2.85,gz+(gz<6?.25:-.25),.8));P(g,'box','#d2402c',gx,3.2,gz,.16,.3,.16);}
+ P(g,'box','#a34a33',10,3.18,4.45,3.3,.18,.08);P(g,'box','#a34a33',10,3.18,7.55,3.3,.18,.08);
+ // 远景树林
+ for(i=0;i<20;i++){var ra=i/20*Math.PI*2,rr=19+r()*5;P(g,'ball',smat(i%2?'#6f9560':'#7fa66b'),Math.cos(ra)*rr,1.6+r()*1.5,Math.sin(ra)*rr,2.4+r(),2.2+r()*1.4,2.4+r());}
+ var glow2=null;
+ bake(g);
+ // 萤火 / 水面微光
+ var ff=[];for(i=0;i<14;i++)ff.push([cx+(r()-.5)*12,.4+r()*1.2,cz+(r()-.5)*10]);
+ LIVE.lotus={water:shimmer,base:basem,koi:{body:koiBody,tail:koiTail,spot:koiSpot,fish:fish,cx:cx,cz:cz},glow:glow(g,glows,'#ffb35a',1.4,.75),ff:glow(g,ff,'#fff2b0',.35,.85)};
+};
+
+/* ================= 场景：大厅广场 plaza ================= */
+PUBLIC_BUILDERS.plaza=function(s,g){
+ var bronze='#7d6a3e',bz2='#9a8550',stone='#c9c1aa',glows=[];
+ // 中轴路沿 + 圆形莲纹铺装
+ for(var sd=-1;sd<=1;sd+=2)P(g,'box','#8f8a7a',sd*1.58,.05,1,.14,.1,24);
+ var inlay=texMat('inlay',256,256,function(a){a.fillStyle='#d9cfb4';a.fillRect(0,0,256,256);a.translate(128,128);for(var ring=0;ring<3;ring++){a.strokeStyle=ring?'#a99a76':'#8d7d58';a.lineWidth=5-ring;a.beginPath();a.arc(0,0,122-ring*30,0,Math.PI*2);a.stroke();}for(var i=0;i<12;i++){a.save();a.rotate(i/12*Math.PI*2);a.fillStyle=i%2?'#c9b48a':'#bba479';a.beginPath();a.ellipse(0,-64,13,30,0,0,Math.PI*2);a.fill();a.restore();}a.fillStyle='#b19e74';a.beginPath();a.arc(0,0,26,0,Math.PI*2);a.fill();});
+ P(g,'disc',inlay,0,.092,-6.5,2.4,1,2.4).receiveShadow=true;
+ // 宝鼎香炉：八角石台、三足鼎身、双耳、两层攒尖宝顶
+ P(g,'cyl8',stone,0,.16,-6.5,1.25,.32,1.25,0,0,0,true);P(g,'cyl8','#b8af96',0,.36,-6.5,1.05,.1,1.05);
+ for(var i=0;i<3;i++){var a=i/3*Math.PI*2+.5;P(g,'cyl',bronze,Math.cos(a)*.5,.68,-6.5+Math.sin(a)*.5,.09,.62,.09,Math.sin(a)*.12,0,-Math.cos(a)*.12);}
+ P(g,'ball',smat(bronze),0,1.3,-6.5,.78,.55,.78,0,0,0,true);P(g,'torus',smat(bz2),0,1.72,-6.5,.72,.72,.9,Math.PI/2,0,0);P(g,'cyl',smat('#3d3428'),0,1.73,-6.5,.66,.03,.66);
+ for(sd=-1;sd<=1;sd+=2)P(g,'torus',smat(bz2),sd*.82,1.92,-6.5,.24,.24,.3);
+ for(i=0;i<4;i++){var b=i/4*Math.PI*2+Math.PI/4;P(g,'cyl',bronze,Math.cos(b)*.45,2.1,-6.5+Math.sin(b)*.45,.05,.7,.05);}
+ latheRoof(g,0,2.4,-6.5,.95,.48,6,'#5e5236',1.4,true);
+ for(i=0;i<9;i++)P(g,'cyl','#c9663f',(i%3-1)*.16,1.95,-6.5+(Math.floor(i/3)-1)*.16,.012,.45,.012);
+ block(s,0,-6.5,2.4,2.4);
+ // 檐下红灯笼（与原有一对呼应）
+ [-6,-9.5,6,9.5].forEach(function(x){P(g,'box','#674c2b',x,3.25,-11.1,.03,.7,.03);glows.push(lantern(g,x,2.62,-11.1,1));});
+ // 经幡旗杆
+ for(sd=-1;sd<=1;sd+=2){var fx=sd*5.8;P(g,'cyl6',stone,fx,.2,-3.2,.35,.4,.35);P(g,'cyl','#6a4a30',fx,3,-3.2,.07,6,.07,0,0,0,true);P(g,'box','#6a4a30',fx+sd*-.4,5.75,-3.2,.9,.05,.05);
+  signPlane(g,'fan'+sd,sd<0?'风调雨顺':'国泰民安',sd<0?'#d9b24a':'#b33a2c','#5a1f14','#7a2a1a',fx-sd*.4,4.3,-3.2,.55,2.7);P(g,'ball',emat('#e0bd5c','#8a6018',.3),fx,6.08,-3.2,.12);block(s,fx,-3.2,.5,.5);}
+ // 古松与银杏
+ pine(g,s,-7.6,-8.4,5.4,21);pine(g,s,8.9,-3.9,4.8,22);
+ roundTree(g,s,-7.2,10.6,3.2,'#e3c25a',31);P(g,'cyl','#b9b29c',-7.2,.2,10.6,.75,.4,.75);
+ for(var pt of [[-7.6,-8.4],[8.9,-3.9]])P(g,'cyl','#b9b29c',pt[0],.18,pt[1],.75,.36,.75);
+ // 两侧石灯笼（广场入口）
+ for(sd=-1;sd<=1;sd+=2){glows.push(stoneLantern(g,sd*4.2,12.2,1.2));block(s,sd*4.2,12.2,.7,.7);}
+ // 原有门前石兽外加完整石狮造型（位置不变）
+ for(sd=-1;sd<=1;sd+=2)lion(g,sd*4,.6,-10,0,1.12,sd>0);
+ bake(g);
+ var smoke=[];for(i=0;i<16;i++)smoke.push([0,2,-6.5]);
+ LIVE.plaza={glow:glow(g,glows,'#ffb35a',1.5,.7),smoke:glow(g,smoke,'#e8e0d0',.9,.35)};
+};
+
+/* ================= 祠堂风格：wood / zen ================= */
+function buildShrineStyles(h){
+ if(h.art3Styles)return h.art3Styles;
+ var root=new THREE.Group();root.name='art3-shrine';h.group.add(root);
+ var wood=new THREE.Group(),zen=new THREE.Group();wood.name='art3-wood';zen.name='art3-zen';root.add(wood,zen);
+ /* --- 古朴木作：暖木、朱漆柱、雕花窗棂、彩画额枋、宫灯、红毯 --- */
+ var lattice=texMat('lattice',128,128,function(a){a.fillStyle='#3a2116';a.fillRect(0,0,128,128);a.strokeStyle='#8a5634';a.lineWidth=7;a.strokeRect(4,4,120,120);a.lineWidth=4;for(var i=0;i<4;i++){a.beginPath();a.moveTo(16+i*32,4);a.lineTo(16+i*32,124);a.moveTo(4,16+i*32);a.lineTo(124,16+i*32);a.stroke();}a.strokeStyle='#b07a44';a.lineWidth=3;a.beginPath();a.arc(64,64,24,0,Math.PI*2);a.stroke();a.fillStyle='#c79a52';for(var j=0;j<4;j++){a.beginPath();a.arc(j%2?96:32,j<2?32:96,5,0,Math.PI*2);a.fill();}});
+ var frieze=texMat('frieze',256,32,function(a){a.fillStyle='#7a2a20';a.fillRect(0,0,256,32);a.fillStyle='#d6ad55';a.fillRect(0,0,256,4);a.fillRect(0,28,256,4);for(var i=0;i<16;i++){a.strokeStyle='#e0bf6a';a.lineWidth=2;a.beginPath();a.moveTo(i*16,22);a.lineTo(i*16,10);a.lineTo(i*16+10,10);a.lineTo(i*16+10,18);a.lineTo(i*16+5,18);a.stroke();}});
+ var carpet=texMat('carpet',64,256,function(a){a.fillStyle='#a2382b';a.fillRect(0,0,64,256);a.fillStyle='#d8ae55';a.fillRect(4,0,4,256);a.fillRect(56,0,4,256);a.fillStyle='#b8473a';for(var y=16;y<256;y+=40){a.beginPath();a.arc(32,y,9,0,Math.PI*2);a.fill();}});
+ var carved=texMat('carved',256,32,function(a){a.fillStyle='#8a5a2a';a.fillRect(0,0,256,32);a.strokeStyle='#e6c46a';a.lineWidth=2;for(var i=0;i<8;i++){a.beginPath();a.arc(16+i*32,16,10,0,Math.PI*2);a.stroke();a.beginPath();a.arc(16+i*32,16,4,0,Math.PI*2);a.stroke();}a.strokeRect(2,2,252,28);});
+ [[-3.25,8.3],[6.25,2.5]].forEach(function(seg){for(var sx=-1;sx<=1;sx+=2){P(wood,'plane',lattice,sx*5.835,2.25,seg[0],seg[1],2.2,1,0,-sx*Math.PI/2,0);P(wood,'box','#5a3322',sx*5.8,1.1,seg[0],.08,.12,seg[1]);P(wood,'box','#5a3322',sx*5.8,3.38,seg[0],.08,.12,seg[1]);}});
+ for(var sx=-1;sx<=1;sx+=2){P(wood,'plane',frieze,sx*5.835,3.98,0,15.6,.38,1,0,-sx*Math.PI/2,0);}
+ P(wood,'plane',frieze,0,3.98,-7.84,11.6,.38,1);
+ [[-5.62,-7.6],[5.62,-7.6],[-5.62,.95],[5.62,.95],[-5.62,5.05],[5.62,5.05],[-2.35,7.62],[2.35,7.62]].forEach(function(c){P(wood,'cyl','#9e2f25',c[0],2.1,c[1],.17,4.2,.17,0,0,0,true);P(wood,'cyl8','#d6ad55',c[0],4.05,c[1],.22,.18,.22);P(wood,'cyl8','#8d8476',c[0],.08,c[1],.26,.16,.26);});
+ for(var z of [-6,0,6])for(sx=-1;sx<=1;sx+=2){P(wood,'box','#a8452f',sx*5.55,4.75,z,.5,.16,.34);P(wood,'box','#d6ad55',sx*5.5,4.93,z,.7,.14,.3);P(wood,'box','#7a2a20',sx*5.45,5.08,z,.9,.12,.28);}
+ var carpetMesh=P(wood,'flat',carpet,0,.052,2.95,2.2,1,8.7);carpet.map.repeat.set(1,4);
+ P(wood,'plane',carved,0,1.35,-5.045,5.2,.26,1);
+ var wg=[];[[-2.7,-4.2],[2.7,-4.2],[-2.7,2.6],[2.7,2.6]].forEach(function(c){P(wood,'box','#3b2a20',c[0],4.6,c[1],.025,1.1,.025);wg.push(lantern(wood,c[0],3.72,c[1],1.25,'#c7362a'));P(wood,'box','#d6ad55',c[0],3.32,c[1],.02,.3,.02);});
+ bake(wood);glow(wood,wg,'#ffa64a',1.6,.7);
+ /* --- 禅意素雅：灰白枯山水、石灯笼、竹、障子纸门、榻榻米、素木供桌、一圆相 --- */
+ var tatami=texMat('tatami',256,256,function(a){a.fillStyle='#cfc8a8';a.fillRect(0,0,256,256);a.strokeStyle='rgba(120,112,80,.14)';a.lineWidth=1;for(var y=0;y<256;y+=4){a.beginPath();a.moveTo(0,y);a.lineTo(256,y);a.stroke();}a.fillStyle='#77786a';a.fillRect(0,0,256,4);a.fillRect(0,126,256,4);a.fillRect(0,252,256,4);a.fillRect(126,0,4,128);a.fillRect(0,0,4,256);a.fillRect(252,0,4,256);});
+ var gravel=texMat('raked',128,256,function(a){a.fillStyle='#dcd9d0';a.fillRect(0,0,128,256);a.strokeStyle='#b9b5aa';a.lineWidth=2;for(var x=6;x<128;x+=10){a.beginPath();a.moveTo(x,0);for(var y=0;y<=256;y+=16)a.lineTo(x+Math.sin(y/40)*2,y);a.stroke();}var q=rng(4);a.fillStyle='rgba(150,146,135,.5)';for(var i=0;i<260;i++)a.fillRect(q()*128,q()*256,1.5,1.5);});
+ var shoji=texMat('shoji',128,128,function(a){a.fillStyle='#f3efe4';a.fillRect(0,0,128,128);a.strokeStyle='#8a8478';a.lineWidth=3;for(var i=0;i<=4;i++){a.beginPath();a.moveTo(i*32,0);a.lineTo(i*32,128);a.stroke();}for(var j=0;j<=6;j++){a.beginPath();a.moveTo(0,j*21.3);a.lineTo(128,j*21.3);a.stroke();}},{emissive:'#d9d3c2',emissiveIntensity:.25});
+ var scroll=texMat('enso',96,256,function(a){a.fillStyle='#efe9da';a.fillRect(0,0,96,256);a.fillStyle='#6b6a62';a.fillRect(0,0,96,10);a.fillRect(0,246,96,10);a.strokeStyle='#2c2b28';a.lineWidth=7;a.lineCap='round';a.beginPath();a.arc(48,92,30,.4,Math.PI*2-.15);a.stroke();a.fillStyle='#2c2b28';a.font='bold 42px serif';a.textAlign='center';a.fillText('禅',48,190);a.fillStyle='#b8473a';a.fillRect(62,214,12,12);});
+ P(zen,'flat',tatami,0,.064,0,8.8,1,15.2);tatami.map.repeat.set(2,4);
+ [[-3.4,8.4],[6.3,2.6]].forEach(function(seg){for(var sx=-1;sx<=1;sx+=2){P(zen,'flat',gravel,sx*5.15,.058,seg[0],1.3,1,seg[1]);P(zen,'box','#8d8b82',sx*4.47,.06,seg[0],.1,.12,seg[1]);
+  P(zen,'plane',shoji,sx*5.835,2.25,seg[0],seg[1]-.2,2.4,1,0,-sx*Math.PI/2,0);P(zen,'box','#c9c2b2',sx*5.8,1.03,seg[0],.07,.08,seg[1]);P(zen,'box','#c9c2b2',sx*5.8,3.47,seg[0],.07,.08,seg[1]);}});
+ for(sx=-1;sx<=1;sx+=2){P(zen,'rock','#8f8f88',sx*5.1,.2,-1.6,.42,.3,.36,0,sx,0,true);P(zen,'rock','#a2a29a',sx*5.25,.14,-2.4,.24,.18,.22);P(zen,'ball6','#6f8a5a',sx*5.05,.07,-1.0,.3,.08,.26);}
+ var zg=[];for(sx=-1;sx<=1;sx+=2){zg.push(stoneLantern(zen,sx*5.1,-7.1,1,emat('#f2ede0','#d9cfae',.45)));zg.push(stoneLantern(zen,sx*5.15,7.2,.9,emat('#f2ede0','#d9cfae',.45)));}
+ for(sx=-1;sx<=1;sx+=2)for(var k=0;k<7;k++){var bx=sx*5.2+Math.cos(k*2.3)*.35,bz=5.9+Math.sin(k*2.3)*.4,bh=3.2+(k%3)*.4;P(zen,'cyl6','#87a26a',bx,bh/2,bz,.04,bh,.04);for(var n=1;n<5;n++)P(zen,'cyl6','#6d8a55',bx,n*bh/5,bz,.05,.03,.05);for(var l=0;l<3;l++)P(zen,'box','#7f9e5c',bx+.15,bh-.2-l*.35,bz,.35,.02,.07,0,k+l,.4);}
+ P(zen,'box','#cfc6b3',0,1.35,-5.8,5.46,.33,1.54,0,0,0,true);for(sx=-1;sx<=1;sx+=2)P(zen,'box','#b8ad97',sx*2.3,.65,-5.8,.33,1.32,1.03);
+ P(zen,'plane',scroll,-3.6,2.7,-7.83,.8,2.2,1);P(zen,'box','#5b5a54',-3.6,3.83,-7.82,.95,.05,.05);
+ for(sx=-1;sx<=1;sx+=2)signPlane(zen,'zenc'+sx,sx<0?'本来无一物':'明镜亦非台','#eee8d9','#2f2e2a','#9c968a',sx*4.7,2.8,-7.69,.46,2.32);
+ P(zen,'cyl','#ddd6c6',0,.12,-2.3,1.05,.08,1.05);
+ bake(zen);glow(zen,zg,'#fff0cc',.9,.55);
+ h.art3Styles={root:root,wood:wood,zen:zen};
+ return h.art3Styles;
+}
+function syncShrineStyle(){
+ try{
+  var h=W3&&W3.spaces&&W3.spaces.hall;if(!h||!h.group)return;
+  var st=buildShrineStyles(h),style=window.r41PreviewStyle||(typeof S!=='undefined'&&S&&S.shrine&&S.shrine.style)||'wood';
+  st.wood.visible=style==='wood';st.zen.visible=style==='zen';
+  // 禅意：主灯偏冷白；其他风格恢复原色（不改强度/位置）
+  h.group.children.forEach(function(o){if(o.isPointLight){if(!o.userData.a3base)o.userData.a3base=o.color.getHex();o.color.setHex(style==='zen'?(o.intensity>10?0xf1efe8:0xffd9a0):o.userData.a3base);}});
+  A.style=style;
+ }catch(e){warn('shrine style',e);}
+}
+
+/* ---------- 灯光/雾：每次 worldEnter 后按场景调整 ---------- */
+var TUNE={
+ plaza:{fog:'#ecdcb9',near:28,far:78,hemi:'#fff1d6',ground:'#6f6a4e',hi:2,sun:'#ffd59a',si:2.55},
+ market:{fog:'#efd6ae',near:24,far:70,hemi:'#fff0d2',ground:'#6e6048',hi:2.05,sun:'#ffcf94',si:2.45},
+ gate:{fog:'#dbe3dc',near:18,far:62,hemi:'#f3f3ea',ground:'#5f7058',hi:2,sun:'#ffe7c2',si:2.3},
+ lotus:{fog:'#d4e7de',near:22,far:64,hemi:'#effaf2',ground:'#5b7a5c',hi:2.05,sun:'#fff1cf',si:2.35}
+};
+var BASE=null;
+function tune(name){
+ var w=W3;if(!w||!w.hemi||!w.sun)return;
+ if(!BASE)BASE={hemi:w.hemi.color.getHex(),ground:w.hemi.groundColor.getHex(),sun:w.sun.color.getHex()};
+ var t=TUNE[name];
+ if(t&&A.applied[name]){if(w.scene.fog){w.scene.fog.color.set(t.fog);w.scene.fog.near=t.near;w.scene.fog.far=t.far;}w.hemi.color.set(t.hemi);w.hemi.groundColor.set(t.ground);w.hemi.intensity=t.hi;w.sun.color.set(t.sun);w.sun.intensity=t.si;}
+ else{w.hemi.color.setHex(BASE.hemi);w.hemi.groundColor.setHex(BASE.ground);w.sun.color.setHex(BASE.sun);}
+ if(name==='hall')syncShrineStyle();
+}
+
+/* ---------- 动画（挂在 tgAnimate 之后，仅当前场景运行） ---------- */
+var tmpO=null;
+function animate(ts,dt){
+ var w=W3;if(!w)return;var act=w.active,L=LIVE[act];if(!L)return;
+ if(L.glow){L.glow.material.opacity=L.glow.userData.baseOpacity*(.9+Math.sin(ts*.004)*.06+Math.sin(ts*.011)*.04);}
+ if(act==='lotus'){
+  var m=L.water.map;m.offset.x=(m.offset.x+dt*.018)%1;m.offset.y=(m.offset.y-dt*.011)%1;L.water.opacity=.45+Math.sin(ts*.0012)*.12;
+  tmpO=tmpO||new THREE.Object3D();var k=L.koi;
+  k.fish.forEach(function(f,i){var a=f.phase+ts*.001*f.speed,x=k.cx+Math.cos(a)*f.r,z=k.cz+Math.sin(a)*f.r*.82,dir=f.speed>0?1:-1,wig=Math.sin(ts*.012+i)*.25;
+   var yaw=Math.atan2(Math.cos(a)*f.r*.82*dir,-Math.sin(a)*f.r*dir);
+   tmpO.position.set(x,.08,z);tmpO.rotation.set(0,-yaw,0);tmpO.scale.set(.26,.06,.1);tmpO.updateMatrix();k.body.setMatrixAt(i,tmpO.matrix);
+   tmpO.scale.set(.06,.03,.05);tmpO.position.set(x+Math.cos(yaw)*.06,.1,z+Math.sin(yaw)*.06);tmpO.updateMatrix();k.spot.setMatrixAt(i,tmpO.matrix);
+   tmpO.position.set(x-Math.cos(yaw)*.3,.08,z-Math.sin(yaw)*.3);tmpO.rotation.set(0,-yaw+wig,-Math.PI/2);tmpO.scale.set(.08,.16,.03);tmpO.updateMatrix();k.tail.setMatrixAt(i,tmpO.matrix);
+  });
+  k.body.instanceMatrix.needsUpdate=k.tail.instanceMatrix.needsUpdate=k.spot.instanceMatrix.needsUpdate=true;
+  if(L.ff){L.ff.position.y=Math.sin(ts*.0009)*.15;L.ff.material.opacity=.55+Math.sin(ts*.003)*.3;}
+ }
+ if(act==='plaza'&&L.smoke){var pos=L.smoke.geometry.attributes.position;for(var i=0;i<pos.count;i++){var t=(ts*.00018+i/pos.count)%1;pos.setXYZ(i,Math.sin(t*7+i)*.25*t,2.1+t*3.2,-6.5+Math.cos(t*5+i)*.2*t);}pos.needsUpdate=true;L.smoke.material.opacity=.32;}
+}
+
+/* ---------- 挂载 ---------- */
+function applyScene(id){
+ if(A.applied[id])return;var s=W3.spaces[id],b=PUBLIC_BUILDERS[id];if(!s||!s.group||!b)return;
+ var g=new THREE.Group();g.name='art3-'+id;g.userData.art3=true;s.group.add(g);s.art3Group=g;
+ try{b(s,g);A.applied[id]=true;}catch(e){warn('build '+id,e);try{s.group.remove(g);}catch(_){}}
+}
+function wrapOnce(name,make){
+ var f=G[name];if(typeof f!=='function'||f.__art3)return false;var nf=make(f);nf.__art3=true;nf.__art3Orig=f;G[name]=nf;return true;
+}
+function apply(){
+ if(A.ready)return true;if(!hooksReady())return false;A.ready=true;
+ try{
+  var ids=G.TG_SCENES.filter(function(v){return v&&v.public;}).map(function(v){return v.id;});
+  ids.forEach(function(id){if(PUBLIC_BUILDERS[id])applyScene(id);});
+  wrapOnce('worldEnter',function(orig){return function(name){var r=orig.apply(this,arguments);try{tune(W3&&W3.active);}catch(e){warn('tune',e);}return r;};});
+  wrapOnce('worldSyncShrine',function(orig){return function(){var r=orig.apply(this,arguments);syncShrineStyle();return r;};});
+  wrapOnce('tgAnimate',function(orig){return function(ts,dt){var r=orig.apply(this,arguments);try{animate(ts,dt);}catch(e){if(!A.animErr){A.animErr=1;warn('animate',e);}}return r;};});
+  if(typeof G.tgAnimate!=='function'){G.tgAnimate=function(ts,dt){try{animate(ts,dt);}catch(e){}};G.tgAnimate.__art3=true;}
+  wrapOnce('TG_RERENDER',function(orig){return function(){var r=orig.apply(this,arguments);syncShrineStyle();try{tune(W3&&W3.active);}catch(e){}return r;};});
+  syncShrineStyle();tune(W3.active);
+ }catch(e){warn('apply',e);}
+ return true;
+}
+A.apply=apply;
+// 情况 1：与其他模块打包在同一 <script> 里（pack.mjs 追加在 r4.js 之后）——此时 initWorld 尚未执行，包装它。
+// 情况 2：作为独立 <script> 晚于主脚本加载——世界可能已建好，直接挂载。
+if(!apply()){
+ wrapOnce('initWorld',function(orig){return function(){var r=orig.apply(this,arguments);try{apply();}catch(e){warn('initWorld',e);}return r;};});
+ if(typeof G.initWorld!=='function'){var tries=0,iv=setInterval(function(){if(apply()||++tries>40)clearInterval(iv);},250);}
+}
+})();
+
+/* r4.1: layout recovery and backend-independent social containment. */
+function worldResize(){
+ const w=W3,a=document.getElementById('app');if(!w?.renderer||!a)return;
+ const x=a.clientWidth,y=a.clientHeight;if(x<100||y<100){clearTimeout(w.resizeRetry);w.resizeRetry=setTimeout(worldResize,50);return;}
+ w.renderer.setSize(x,y,false);w.camera.aspect=x/y;w.camera.updateProjectionMatrix();
+ if(w.active&&w.player){worldCamera(1);w.renderer.render(w.scene,w.camera);}
+}
+(()=>{
+ const app=$('#app');
+ const contain=()=>{document.querySelectorAll('body > .tgg-mask').forEach(el=>{app.append(el);el.classList.add('r41-contained');});};
+ new MutationObserver(contain).observe(document.body,{childList:true});contain();
+ new MutationObserver(worldResize).observe($('#modal'),{attributes:true,attributeFilter:['class']});
+ // Persistent, tappable direction signs supplement the physical doors at phone size.
+ const nav=document.createElement('nav');nav.id='r41Waypoints';nav.setAttribute('aria-label','场景出口');app.append(nav);
+ const routes={plaza:[['南 · 山门','gate'],['东 · 集市','market'],['北/西 · 心田小院','yard']],hall:[['北 · 莲花池','lotus'],['东 · 禅房','zen'],['西 · 书房','study']],yard:[['北 · 祠堂','hall'],['南 · 大厅','plaza']],gate:[['北 · 大厅','plaza']],market:[['西 · 大厅','plaza']],lotus:[['南 · 祠堂','hall']],zen:[['西 · 祠堂','hall']],study:[['东 · 祠堂','hall']]};
+ const enter=worldEnter;worldEnter=function(name,previous){enter.apply(this,arguments);nav.innerHTML=(routes[W3.active]||[]).map(([text,to])=>`<button data-exit="${to}">${text} ↗</button>`).join('');nav.querySelectorAll('button').forEach(b=>b.onclick=()=>go(b.dataset.exit));worldResize();requestAnimationFrame(worldResize);};
+})();
+// Billboards that would be cut by the phone edge stay hidden until fully readable.
+(()=>{const animate=tgAnimate,point=new THREE.Vector3(),view=new THREE.Vector3();tgAnimate=function(ts,dt){animate(ts,dt);const w=W3;if(!w?.active)return;w.camera.updateMatrixWorld();w.spaces[w.active].group.traverse(m=>{if(!m.userData.r41Label||m.userData.r3OldTablet)return;m.getWorldPosition(point);view.copy(point).applyMatrix4(w.camera.matrixWorldInverse);const depth=-view.z,tan=Math.tan(w.camera.fov*Math.PI/360),hx=m.scale.x/(2*depth*tan*w.camera.aspect),hy=m.scale.y/(2*depth*tan);point.project(w.camera);m.visible=depth>0&&Math.abs(point.x)+hx<.97&&Math.abs(point.y)+hy<.97;});};})();
 
 </script>
 <script>/* 福缘寺 garden: 私人菜园 / 串门 / 偷菜 */
@@ -2921,7 +3474,10 @@ var r4Rerender=window.TG_RERENDER;window.TG_RERENDER=function(){r3SyncOwnSpace()
   if (STORE && typeof STORE.save === 'function' && !STORE.save._tgg) {
     var origSave = STORE.save;
     var wrapped = function (state) {
-      if (VISIT && state === S) { state = Object.assign({}, state, { plots: VISIT.myPlots }); }
+      if (VISIT && state === S) {
+        state = Object.assign({}, state, { plots: VISIT.myPlots });
+        if (VISIT.mine) { state.decor = VISIT.mine.decor; state.animals = VISIT.mine.animals; }   // owner's yard showcase is view-only
+      }
       var r = origSave.call(STORE, state);
       scheduleSync();
       return r;
@@ -3010,15 +3566,46 @@ var r4Rerender=window.TG_RERENDER;window.TG_RERENDER=function(){r3SyncOwnSpace()
     noteNow(d && d.now);
     return d;
   }
+  /* owner's yard showcase (furniture + animals) shown to visitors, view-only */
+  var YARD_IDS = ['wood-table', 'bench', 'cabinet', 'daybed', 'altar-table', 'vase', 'lantern', 'bonsai', 'screen', 'cushion', 'fruit-plate', 'incense-set', 'tea-cup', 'rocking-chair'];
+  function clone(v) { return v === undefined ? undefined : JSON.parse(JSON.stringify(v)); }
+  function yardIds() {
+    var ids = YARD_IDS.slice();
+    safe(function () { (window.TG_CATALOG || []).forEach(function (c) { if (c && c.id && ids.indexOf(c.id) < 0) ids.push(c.id); }); });
+    return ids;
+  }
+  function showDecor(list) {
+    var ids = yardIds();
+    return (Array.isArray(list) ? list : []).filter(function (d) { return d && ids.indexOf(d.id) >= 0 && isFinite(+d.x) && isFinite(+d.z); }).slice(0, 80)
+      .map(function (d) { var o = { id: d.id, x: +d.x, z: +d.z, rot: isFinite(+d.rot) ? +d.rot : 0 }; if (d.on === true) o.on = true; return o; });
+  }
+  function showAnimals(list) {
+    return (Array.isArray(list) ? list : []).filter(function (a) { return a && typeof a === 'object' && a.kind; }).slice(0, 40)
+      .map(function (a) { var o = clone(a); if (!('pen' in o)) o.pen = o.kind === 'dog' ? null : 0; return o; });
+  }
+  function loadShow(owner) { return rpc('get_showcase', { p_owner: owner, p_scene: 'yard' }).then(function (r) { return r && !r.denied ? r : null; }, function () { return null; }); }
+  function applyShow(v, sc) {
+    if (VISIT !== v || !v.mine) return;
+    var decor = showDecor(sc && sc.decor), animals = showAnimals(sc && sc.animals), sig = JSON.stringify([decor, animals]);
+    if (sig === v.showSig) return;
+    v.showSig = sig;
+    S.decor = Object.assign({}, clone(v.mine.decor) || {}, { yard: decor });   // never the owner's decor.home
+    S.animals = animals;
+    safe(function () { window.TG_RERENDER && window.TG_RERENDER(); });
+    applyVisit();
+  }
+  G.loadShowcase = loadShow;
   async function visit(owner) {
     if (typeof G.visitHook === 'function' && G.visitHook(owner)) return true;   // tg-family: the family home is not a steal visit
     if (!owner) return false;
     if (!online()) { say('离线模式，不能串门'); return false; }
     if (owner === me()) { goHome(); if (curScene() !== 'yard') safe(function () { go('yard'); }); return true; }
-    var d;
+    var d, scP = loadShow(owner);
     try { d = await loadVisit(owner); } catch (e) { say('打不开这个菜园：' + (e && e.message)); return false; }
     var mine = VISIT ? VISIT.myPlots : S.plots;
-    VISIT = { owner: owner, name: (d && d.name) || '香客', server: (d && d.plots) || [], guardUntil: d && d.guard_until, myPlots: mine };
+    if (!VISIT) safe(function () { if (typeof r3SnapshotOwnSpace === 'function') r3SnapshotOwnSpace(); });   // game's own-space snapshot is fresh
+    var own = VISIT ? VISIT.mine : { decor: clone(S.decor), animals: clone(S.animals) };
+    VISIT = { owner: owner, name: (d && d.name) || '香客', server: (d && d.plots) || [], guardUntil: d && d.guard_until, myPlots: mine, mine: own };
     G.visiting = { owner: owner, name: VISIT.name };
     NET.yardOwner = owner;
     // v4 r4: someone else's yard is steal-only -> the game blocks planting/editing while TG_VISIT is set
@@ -3027,6 +3614,8 @@ var r4Rerender=window.TG_RERENDER;window.TG_RERENDER=function(){r3SyncOwnSpace()
     closePanel(); closeCard();
     if (curScene() === 'yard') { NET.refreshRoom && NET.refreshRoom(); } else safe(function () { go('yard'); });
     applyVisit(); renderBanner();
+    applyShow(VISIT, await scP);
+    if (!VISIT || VISIT.owner !== owner) return true;
     var n = VISIT.server.filter(function (o) { return o && o.c && Number(o.ripe) <= serverNow() && (o.s || 0) < 1 && (o.t || []).indexOf(me()) < 0; }).length;
     note('🏡 来到 ' + VISIT.name + ' 的菜园' + (n ? '，有 ' + n + ' 块菜可以偷 🤫' : '，暂时没有熟的菜'));
     if (VISIT.guardUntil && VISIT.guardUntil > serverNow()) note('🐕 小心！' + VISIT.name + ' 家的看门狗正醒着');
@@ -3038,6 +3627,7 @@ var r4Rerender=window.TG_RERENDER;window.TG_RERENDER=function(){r3SyncOwnSpace()
     if (window.TG_VISIT && window.TG_VISIT.steal) window.TG_VISIT = null;
     safe(function () { if (typeof r3ApplyVisitingUI === 'function') r3ApplyVisitingUI(); });
     S.plots = v.myPlots;
+    if (v.mine) { S.decor = v.mine.decor; S.animals = v.mine.animals; safe(function () { window.TG_RERENDER && window.TG_RERENDER(); }); S.plots = v.myPlots; }
     dropPokes();
     syncView(); updateMarks(); renderBanner();
     if (!noRoom) NET.refreshRoom && NET.refreshRoom();
@@ -3048,6 +3638,7 @@ var r4Rerender=window.TG_RERENDER;window.TG_RERENDER=function(){r3SyncOwnSpace()
     if (!VISIT || document.hidden) return;
     var v = VISIT;
     loadVisit(v.owner).then(function (d) { if (VISIT === v && d) { v.server = d.plots || []; v.guardUntil = d.guard_until; applyVisit(); } }, function () {});
+    if ((v.tick = (v.tick || 0) + 1) % 3 === 0) loadShow(v.owner).then(function (sc) { if (sc) applyShow(v, sc); });   // owner rearranged furniture
   }, VISIT_REFRESH_MS);
 
   // block planting / watering / harvesting in someone else's yard; tap ripe => steal
@@ -3225,7 +3816,14 @@ var r4Rerender=window.TG_RERENDER;window.TG_RERENDER=function(){r3SyncOwnSpace()
       card.insertBefore(el, card.querySelector('[data-x]'));
     });
     card.addEventListener('pointerdown', function (e) { e.stopPropagation(); });
+    // the tap's own synthesized click lands right after pointerup: ignore clicks on the fresh card for a moment
+    var born = Date.now();
+    card.addEventListener('click', function (e) { if (Date.now() - born < 450) { e.stopPropagation(); e.preventDefault(); } }, true);
     appEl().appendChild(card);
+    // keep the card clear of the finger: above the tapped monk, or below it when there is no room
+    var h = card.offsetHeight || 120, ty = y - r.top, top = ty - h - 18;
+    if (top < 60) top = Math.min(r.height - h - 8, ty + 24);
+    card.style.top = Math.max(60, top) + 'px';
   }
   G.showPlayerCard = showCard;
   G.pickPlayerAt = function (clientX, clientY) {
@@ -3395,7 +3993,26 @@ var r4Rerender=window.TG_RERENDER;window.TG_RERENDER=function(){r3SyncOwnSpace()
     '.tgs-compose input{flex:1;min-width:0;padding:9px 10px;border:2px solid #c08a57;border-radius:10px;background:#fff9ec;font-size:15px;color:#3a2615}' +
     '.tgs-compose input:focus{outline:none;border-color:#b8322a}' +
     '.tgs-hint{position:absolute;left:50%;bottom:150px;transform:translateX(-50%);z-index:60;background:rgba(40,22,10,.82);color:#ffe39a;border-radius:999px;padding:6px 12px;font:600 13px "PingFang SC",sans-serif;pointer-events:none;white-space:nowrap}';
-  function injectCss() { if (document.getElementById('tgs-css')) return; var s = document.createElement('style'); s.id = 'tgs-css'; s.textContent = css; document.head.appendChild(s); }
+  // base modal look (same as tg-garden.js) so the DM panel works even without tg-garden.js loaded
+  var baseCss = '' +
+    '.tgg-mask{position:fixed;inset:0;z-index:99998;background:rgba(30,16,8,.55);display:flex;align-items:center;justify-content:center;padding:16px;font-family:"PingFang SC","Noto Sans SC",sans-serif}' +
+    '.tgg-box{width:min(380px,100%);max-height:80vh;display:flex;flex-direction:column;background:#fbf1dc;color:#3a2615;border:3px solid #5b3820;border-radius:14px;box-shadow:0 0 0 4px #c08a57 inset,0 18px 40px rgba(0,0,0,.45);overflow:hidden}' +
+    '.tgg-hd{background:linear-gradient(#b8322a,#7e1d17);color:#ffe39a;padding:10px 14px;font-size:18px;font-weight:700;letter-spacing:2px;display:flex;justify-content:space-between;border-bottom:3px solid #e8b64c}' +
+    '.tgg-hd button{background:none;border:0;color:#ffe39a;font-size:22px;cursor:pointer}' +
+    '.tgg-bd{padding:10px 12px 14px;overflow:auto}' +
+    '.tgg-btn{border:0;border-radius:9px;padding:7px 10px;font:700 14px inherit;cursor:pointer;background:linear-gradient(#c8423a,#8f231c);color:#ffe39a;box-shadow:0 3px 0 #5b1510}' +
+    '.tgg-btn.alt{background:linear-gradient(#a8744a,#6b4426);box-shadow:0 3px 0 #3d2412}' +
+    '.tgg-btn:disabled{opacity:.5}' +
+    '.tgg-empty{font-size:13px;color:#8a5a34;padding:6px 2px}' +
+    '.tgg-notes{position:absolute;right:8px;top:104px;z-index:60;display:flex;flex-direction:column;gap:6px;align-items:flex-end;pointer-events:none;max-width:78%}' +
+    '.tgg-note{background:#fbf1dc;color:#3a2615;border:2px solid #8a5a34;border-left:6px solid #b8322a;border-radius:10px;padding:7px 10px;font:600 13px "PingFang SC","Noto Sans SC",sans-serif;box-shadow:0 4px 10px rgba(0,0,0,.3)}' +
+    '.tgg-note.good{border-left-color:#3d8a4a}';
+  // inside #app the panel covers the game frame (absolute), and follows the frame's dvh height when the phone keyboard opens
+  css += '#app>.tgs-dm{position:absolute}';   // v4 r4.1 styles.css: #app>.tgg-mask.r41-contained{position:absolute!important}
+  function injectCss() {
+    if (!document.getElementById('tgg-css') && !document.getElementById('tgs-base-css')) { var b = document.createElement('style'); b.id = 'tgs-base-css'; b.textContent = baseCss; document.head.appendChild(b); }
+    if (document.getElementById('tgs-css')) return; var s = document.createElement('style'); s.id = 'tgs-css'; s.textContent = css; document.head.appendChild(s);
+  }
   function note(t, good) {
     if (GARDEN && GARDEN.note) { S_.noteLog.push({ t: Date.now(), text: t }); return GARDEN.note(t, good); }
     var box = document.querySelector('.tgg-notes');
@@ -3743,8 +4360,10 @@ var r4Rerender=window.TG_RERENDER;window.TG_RERENDER=function(){r3SyncOwnSpace()
       dmPanel = document.createElement('div'); dmPanel.className = 'tgg-mask tgs-dm';
       dmPanel.addEventListener('click', function (e) { if (e.target === dmPanel) closeDM(); });
       ['keydown', 'keyup'].forEach(function (k) { dmPanel.addEventListener(k, function (e) { e.stopPropagation(); if (k === 'keydown' && e.key === 'Escape') closeDM(); }); });
-      document.body.appendChild(dmPanel);
+      var host = appEl(); if (host.id === 'app') dmPanel.classList.add('r41-contained');
+      host.appendChild(dmPanel);   // #app when present (stays inside the game frame), else body
     }
+    injectCss();
     dmPanel.innerHTML = '<div class="tgg-box"><div class="tgg-hd"><span>' + (back ? '<button data-back style="font-size:18px;margin-right:6px">‹</button>' : '') + esc(title) + '</span><button data-close aria-label="关闭">×</button></div><div class="tgg-bd"></div></div>';
     dmPanel.querySelector('[data-close]').onclick = closeDM;
     var b = dmPanel.querySelector('[data-back]'); if (b) b.onclick = function () { dmWith = null; renderList(); };
@@ -4026,18 +4645,25 @@ var r4Rerender=window.TG_RERENDER;window.TG_RERENDER=function(){r3SyncOwnSpace()
     return JSON.parse(JSON.stringify(v === undefined ? null : v, function (k, x) { return (typeof x === 'string' && /^data:/.test(x)) ? null : x; }));
   }
   function familyOwnsSync() { var F = window.TG_FAMILY; return !!(F && F.active && F.active()); }   // family space syncs via space_save
+  function yardVisit() { return !!(GARDEN && GARDEN.visiting); }   // S holds someone else's yard decor/animals right now
+  var animalsArg = true;   // false once the server turns out to be pre-r4.1 (2-arg sync_showcase)
   function scheduleShowcase() {
-    if (!online() || !hasS() || familyOwnsSync()) return;
-    var sig = JSON.stringify([S.shrine || null, S.decor || null]);
+    if (!online() || !hasS() || familyOwnsSync() || yardVisit()) return;
+    var sig = JSON.stringify([S.shrine || null, S.decor || null, S.animals || null]);
     if (sig === lastSig) return;
     clearTimeout(scTimer); scTimer = setTimeout(syncShowcase, 1500);
   }
   async function syncShowcase() {
-    if (!online() || !hasS() || VISIT || familyOwnsSync()) return null;
-    var sig = JSON.stringify([S.shrine || null, S.decor || null]);
+    if (!online() || !hasS() || VISIT || familyOwnsSync() || yardVisit()) return null;
+    var sig = JSON.stringify([S.shrine || null, S.decor || null, S.animals || null]);
     lastSig = sig;
-    try { return await rpc('sync_showcase', { p_shrine: stripData(S.shrine || {}), p_decor: stripData(S.decor || {}) }); }
-    catch (e) { lastSig = null; console.warn('[TG_ACCESS] showcase sync', e && e.message); return null; }
+    var args = { p_shrine: stripData(S.shrine || {}), p_decor: stripData(S.decor || {}) };
+    if (animalsArg) args.p_animals = stripData(Array.isArray(S.animals) ? S.animals : []);   // r4.1: visitors see the yard's animals
+    try { return await rpc('sync_showcase', args); }
+    catch (e) {
+      if (animalsArg && /sync_showcase|function|schema cache|PGRST202/i.test(String(e && (e.message || e.code)))) { animalsArg = false; lastSig = null; return syncShowcase(); }
+      lastSig = null; console.warn('[TG_ACCESS] showcase sync', e && e.message); return null;
+    }
   }
   A.syncShowcase = syncShowcase;
 
