@@ -1636,7 +1636,7 @@ function initWorld(canvas){
     w.renderer.setPixelRatio(Math.min(1.5,window.devicePixelRatio||1));
     w.renderer.shadowMap.enabled=true; w.renderer.shadowMap.type=THREE.PCFSoftShadowMap;
   }catch(e){ $('#webglFail').classList.add('show'); return; }
-  w.scene=new THREE.Scene(); w.camera=new THREE.PerspectiveCamera(48,1,.1,100);
+  w.scene=new THREE.Scene(); w.camera=new THREE.PerspectiveCamera(55,1,.1,100);
   w.follow=new THREE.Vector3(); w.ray=new THREE.Raycaster(); w.ndc=new THREE.Vector2();
   w.hemi=new THREE.HemisphereLight(0xfff4d9,0x667054,2); w.scene.add(w.hemi);
   w.sun=new THREE.DirectionalLight(0xffe4b4,2.4); w.sun.position.set(-8,16,9); w.sun.castShadow=true;
@@ -1655,10 +1655,10 @@ function initWorld(canvas){
   $('#app').addEventListener('click',()=>queueMicrotask(()=>{worldSyncYard();worldSyncHall();}));
   requestAnimationFrame(worldFrame);
 }
-function worldMat(color){const w=W3;return w.materials[color]||(w.materials[color]=new THREE.MeshLambertMaterial({color,flatShading:true}));}
+function worldMat(color,smooth){const w=W3;const key=smooth?color+':s':color;return w.materials[key]||(w.materials[key]=new THREE.MeshLambertMaterial({color,flatShading:!smooth}));}
 function worldMesh(parent,type,color,x,y,z,sx,sy,sz){
-  const w=W3;const geo=w.geometries[type]||(w.geometries[type]=type==='ball'?new THREE.SphereGeometry(1,10,7):type==='cone'?new THREE.ConeGeometry(1,1,8):type==='cylinder'?new THREE.CylinderGeometry(1,1,1,12):new THREE.BoxGeometry(1,1,1));
-  const m=new THREE.Mesh(geo,worldMat(color));m.position.set(x,y,z);m.scale.set(sx,sy,sz);m.castShadow=true;m.receiveShadow=true;parent.add(m);return m;
+  const w=W3;const geo=w.geometries[type]||(w.geometries[type]=type==='head'?new THREE.SphereGeometry(1,32,24):type==='ball'?new THREE.SphereGeometry(1,10,7):type==='cone'?new THREE.ConeGeometry(1,1,8):type==='cylinder'?new THREE.CylinderGeometry(1,1,1,12):new THREE.BoxGeometry(1,1,1));
+  const m=new THREE.Mesh(geo,worldMat(color,type==='head'));m.position.set(x,y,z);m.scale.set(sx,sy,sz);m.castShadow=true;m.receiveShadow=true;parent.add(m);return m;
 }
 function worldBox(s,x,y,z,a,b,c,color,solid){const m=worldMesh(s.group,'box',color,x,y,z,a,b,c);if(solid)s.blocks.push({x:x-a/2,X:x+a/2,z:z-c/2,Z:z+c/2});return m;}
 function worldLabel(parent,text,x,y,z,width){
@@ -1744,12 +1744,12 @@ function worldMonk(){
   const w=W3;w.player=new THREE.Group();w.body=new THREE.Group();w.player.add(w.body);w.scene.add(w.player);
   worldMesh(w.body,'cone','#e39432',0,.68,0,.43,.95,.36);
   const sash=worldMesh(w.body,'box','#a95725',.08,.84,.27,.18,.68,.12);sash.rotation.z=-.4;
-  worldMesh(w.body,'ball','#f2ca9d',0,1.3,0,.32,.35,.31);
-  for(const x of [-.32,.32])worldMesh(w.body,'ball','#e8b98e',x,1.28,0,.075,.12,.07);
-  for(const x of [-.105,.105])worldMesh(w.body,'ball','#372f2a',x,1.34,.282,.028,.035,.02);
-  worldMesh(w.body,'ball','#ba7354',0,1.19,.297,.055,.018,.015);
+  worldMesh(w.body,'head','#f2ca9d',0,1.3,0,.32,.35,.31);
+  for(const x of [-.32,.32])worldMesh(w.body,'head','#e8b98e',x,1.28,0,.075,.12,.07);
+  for(const x of [-.105,.105])worldMesh(w.body,'head','#372f2a',x,1.34,.282,.028,.035,.02);
+  worldMesh(w.body,'head','#ba7354',0,1.19,.297,.055,.018,.015);
   w.limbs=[];
-  for(let i=0;i<4;i++){const limb=new THREE.Group();const arm=i<2;limb.position.set((i%2?1:-1)*(arm?.4:.19),arm?1:.42,0);w.body.add(limb);worldMesh(limb,'cylinder',arm?'#d77728':'#7b4b30',0,arm?-.23:-.17,0,arm?.1:.115,arm?.46:.34,arm?.1:.12);worldMesh(limb,'ball',arm?'#edbf92':'#4a352b',0,arm?-.46:-.33,.04,.12,.09,.16);w.limbs.push(limb);}
+  for(let i=0;i<4;i++){const limb=new THREE.Group();const arm=i<2;limb.position.set((i%2?1:-1)*(arm?.4:.19),arm?1:.42,0);w.body.add(limb);worldMesh(limb,'cylinder',arm?'#d77728':'#7b4b30',0,arm?-.23:-.17,0,arm?.1:.115,arm?.46:.34,arm?.1:.12);worldMesh(limb,arm?'head':'ball',arm?'#edbf92':'#4a352b',0,arm?-.46:-.33,.04,.12,.09,.16);w.limbs.push(limb);}
 }
 function worldClear(group){while(group.children.length)group.remove(group.children[0]);}
 function worldSyncYard(){
@@ -1776,30 +1776,31 @@ function worldBlocked(){return switching||$('#modal').classList.contains('show')
 function worldStop(){const w=W3;if(!w)return;w.keys.clear();w.target=null;w.path=[];w.vx=w.vz=0;w.joy.x=w.joy.y=0;w.joyId=null;if(w.pointers)w.pointers.clear();w.action=null;$('#joyKnob').style.transform='';$('#promptBtn').classList.remove('show');}
 function worldEnter(name,previous){
   const w=W3;if(!w||!w.renderer)return;worldStop();w.active=name;Object.entries(w.spaces).forEach(([n,s])=>s.group.visible=n===name);
-  const z=name==='plaza'?(previous==='yard'?-9:11):name==='yard'?(previous==='hall'?-9:11):1.5;
-  w.player.position.set(0,0,z);w.player.rotation.y=z<0?0:Math.PI;w.yaw=z<0?Math.PI:0;w.pitch=name==='hall'?.32:.34;w.radius=name==='hall'?5.8:11.5;
+  const z=name==='plaza'?(previous==='yard'?-9:11):name==='yard'?(previous==='hall'?-9:11):0.2;
+  w.player.position.set(0,0,z);w.player.rotation.y=z<0?0:Math.PI;w.yaw=z<0?Math.PI:0;w.pitch=name==='hall'?.55:.42;w.radius=name==='hall'?9.8:8.8;
   w.follow.copy(w.player.position).y=1.1;w.scene.background=new THREE.Color(name==='hall'?'#32251f':'#87b8d6');w.scene.fog=new THREE.Fog(name==='hall'?'#32251f':'#9ec9e8',name==='hall'?14:24,name==='hall'?35:65);w.hemi.intensity=name==='hall'?1.35:2;w.sun.intensity=name==='hall'?1.1:2.4;w.elapsed=0;worldCamera(1);worldSyncYard();worldSyncHall();
 }
 function worldCamera(a){
   const w=W3,goal=w.player.position.clone();goal.y+=1.1;w.follow.lerp(goal,a);
   const r=w.radius,cp=Math.cos(w.pitch);
   const offset=new THREE.Vector3(Math.sin(w.yaw)*r*cp,Math.sin(w.pitch)*r,Math.cos(w.yaw)*r*cp);
-  if(w.active==='hall'){
-    // 沿视线缩短距离，避免逐轴夹紧把镜头突然推成俯视。
-    let fraction=1;
-    for(const [axis,min,max] of [['x',-5.65,5.65],['y',.4,5.15],['z',-7.65,7.65]]){
-      if(offset[axis]>0)fraction=Math.min(fraction,(max-w.follow[axis])/offset[axis]);
-      else if(offset[axis]<0)fraction=Math.min(fraction,(min-w.follow[axis])/offset[axis]);
-    }
-    offset.multiplyScalar(Math.max(.05,fraction));
-  }
-  // 从人物头部到期望镜头射线检测，并缩短至碰撞面前。
   const desired=w.follow.clone().add(offset),origin=w.player.position.clone();origin.y=1.25;
+  if(w.active==='hall'){
+    desired.x=THREE.MathUtils.clamp(desired.x,-5.65,5.65);
+    desired.z=THREE.MathUtils.clamp(desired.z,-7.65,7.65);
+    desired.y=Math.min(desired.y,5.05);
+  }
   const direction=desired.clone().sub(origin),distance=direction.length();
-  w.cameraRay=w.cameraRay||new THREE.Raycaster();w.cameraRay.set(origin,direction.normalize());w.cameraRay.far=distance;
+  w.cameraRay=w.cameraRay||new THREE.Raycaster();w.cameraRay.set(origin,direction.clone().normalize());w.cameraRay.far=distance;
   const obstacles=w.spaces[w.active].group.children.filter(m=>m.isMesh&&m!==w.spaces[w.active].floor);
   const hit=w.cameraRay.intersectObjects(obstacles,true).find(h=>h.distance>.55);
-  if(hit)desired.copy(origin).addScaledVector(direction,Math.max(.65,hit.distance-.22));
+  const minDist=7.2;
+  if(hit)desired.copy(origin).addScaledVector(direction.normalize(),Math.min(distance,Math.max(minDist,hit.distance-.22)));
+  if(desired.distanceTo(origin)<minDist){
+    const horiz=new THREE.Vector3(desired.x-origin.x,0,desired.z-origin.z);
+    desired.y=Math.max(desired.y,origin.y+Math.sqrt(Math.max(.01,minDist*minDist-horiz.lengthSq())));
+  }
+  if(w.active==='hall') desired.y=Math.min(desired.y,5.05);
   w.camera.position.copy(desired);
   // 视线略向前延伸，让门楼与室内陈设进入竖屏上半部。
   const look=w.follow.clone();const ahead=w.active==='hall'?1.2:2;
@@ -1817,12 +1818,12 @@ function worldInput(){
   c.addEventListener('touchmove',e=>e.preventDefault(),{passive:false});
   c.addEventListener('pointerdown',e=>{if(worldBlocked()||e.button>0)return;e.preventDefault();c.setPointerCapture(e.pointerId);w.pointers.set(e.pointerId,{x:e.clientX,y:e.clientY,startX:e.clientX,startY:e.clientY,moved:false});if(w.pointers.size>1){w.pointers.forEach(p=>p.moved=true);w.pinch=0;}});
   c.addEventListener('pointermove',e=>{const p=w.pointers.get(e.pointerId);if(!p)return;if(worldBlocked()){worldStop();return;}const dx=e.clientX-p.x,dy=e.clientY-p.y;p.x=e.clientX;p.y=e.clientY;if(Math.hypot(p.x-p.startX,p.y-p.startY)>7)p.moved=true;
-    if(w.pointers.size===2){const a=[...w.pointers.values()],d=Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y);if(w.pinch)w.radius=THREE.MathUtils.clamp(w.radius*w.pinch/d,4,16);w.pinch=d;}else if(p.moved){w.yaw-=dx*.008;w.pitch=THREE.MathUtils.clamp(w.pitch+dy*.006,.25,1.2);}});
+    if(w.pointers.size===2){const a=[...w.pointers.values()],d=Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y);if(w.pinch)w.radius=THREE.MathUtils.clamp(w.radius*w.pinch/d,7,24);w.pinch=d;}else if(p.moved){w.yaw-=dx*.008;w.pitch=THREE.MathUtils.clamp(w.pitch+dy*.006,.25,1.2);}});
   c.addEventListener('pointerup',e=>{const p=w.pointers.get(e.pointerId);if(p&&!p.moved&&w.pointers.size===1&&!worldBlocked()){
     const r=c.getBoundingClientRect();w.ndc.set((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1);w.ray.setFromCamera(w.ndc,w.camera);const hits=w.ray.intersectObject(w.spaces[w.active].floor);if(hits.length)worldPath(hits[0].point.clone());
   }w.pointers.delete(e.pointerId);w.pinch=0;});
   for(const event of ['pointercancel','lostpointercapture'])c.addEventListener(event,e=>{w.pointers.delete(e.pointerId);w.pinch=0;});
-  c.addEventListener('wheel',e=>{e.preventDefault();if(!worldBlocked())w.radius=THREE.MathUtils.clamp(w.radius+e.deltaY*.01,4,16);},{passive:false});
+  c.addEventListener('wheel',e=>{e.preventDefault();if(!worldBlocked())w.radius=THREE.MathUtils.clamp(w.radius+e.deltaY*.01,7,24);},{passive:false});
 }
 function worldCanMove(x,z){const s=W3.spaces[W3.active],r=.28;if(Math.abs(x)>s.limit.x-r||Math.abs(z)>s.limit.z-r)return false;return !s.blocks.some(b=>x>b.x-r&&x<b.X+r&&z>b.z-r&&z<b.Z+r);}
 function worldFrame(ts){
@@ -1931,7 +1932,7 @@ function tgDecorate(){
  // 更清楚的僧衣层次、肩膀和眉眼。
  worldMesh(w.body,'ball','#d5812b',0,.98,0,.39,.25,.29);const sash=worldMesh(w.body,'box','#b2672e',-.08,.85,.29,.5,.6,.045);sash.rotation.z=-.3;
  for(const x of [-.105,.105]){const brow=worldMesh(w.body,'box','#80583c',x,1.41,.285,.09,.018,.025);brow.rotation.z=x<0?.12:-.12;}
- for(let i=0;i<7;i++){const a=Math.PI*.18+i/6*Math.PI*.64;worldMesh(w.body,'ball','#a6694d',Math.cos(a)*.065,1.225-Math.sin(a)*.035,.301,.012,.012,.012);}
+ for(let i=0;i<7;i++){const a=Math.PI*.18+i/6*Math.PI*.64;worldMesh(w.body,'head','#a6694d',Math.cos(a)*.065,1.225-Math.sin(a)*.035,.301,.012,.012,.012);}
  // 将同色固定装饰合批，保留地面、作物和供品的独立更新。
  for(const s of Object.values(w.spaces)){const batches=new Map();for(const m of s.group.children){if(!m.isMesh||m.isInstancedMesh||m===s.floor||m.geometry!==w.geometries.box)continue;const k=m.material.uuid;if(!batches.has(k))batches.set(k,[]);batches.get(k).push(m);}for(const arr of batches.values()){if(arr.length<2)continue;const geos=arr.map(m=>{m.updateMatrix();return m.geometry.clone().applyMatrix4(m.matrix);});const mesh=new THREE.Mesh(mergeGeometries(geos),arr[0].material);mesh.castShadow=mesh.receiveShadow=true;s.group.add(mesh);arr.forEach(m=>s.group.remove(m));geos.forEach(g=>g.dispose());}}
 }
