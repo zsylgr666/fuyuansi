@@ -3735,7 +3735,7 @@ function worldResize(){
  new MutationObserver(worldResize).observe($('#modal'),{attributes:true,attributeFilter:['class']});
  // Persistent, tappable direction signs supplement the physical doors at phone size.
  const nav=document.createElement('nav');nav.id='r41Waypoints';nav.setAttribute('aria-label','场景出口');app.append(nav);
- const routes={plaza:[['南 · 山门','gate'],['东 · 集市','market'],['北 · 心田小院','yard'],['西 · 心田小院','yard',true]],hall:[['北 · 莲花池','lotus'],['东 · 禅房','zen'],['西 · 书房','study']],yard:[['北 · 祠堂','hall'],['南 · 大厅','plaza']],gate:[['北 · 大厅','plaza']],market:[['西 · 大厅','plaza']],lotus:[['南 · 祠堂','hall']],zen:[['西 · 祠堂','hall']],study:[['东 · 祠堂','hall']]};
+ const routes={plaza:[['南 · 里门','gate'],['东 · 集市','market'],['北 · 心田小院','yard'],['西 · 心田小院','yard',true]],hall:[['北 · 莲花池','lotus'],['东 · 禅房','zen'],['西 · 书房','study']],yard:[['北 · 祠堂','hall'],['南 · 大厅','plaza']],gate:[['北 · 大厅','plaza']],market:[['西 · 大厅','plaza']],lotus:[['南 · 祠堂','hall']],zen:[['西 · 祠堂','hall']],study:[['东 · 祠堂','hall']]};
  const enter=worldEnter;worldEnter=function(name,previous){enter.apply(this,arguments);nav.innerHTML=(routes[W3.active]||[]).map(([text,to,west])=>`<button data-exit="${to}" data-west="${!!west}">${text} ↗</button>`).join('');nav.querySelectorAll('button').forEach(b=>b.onclick=()=>{if(b.dataset.west==='true')window.r4EastArrival=true;go(b.dataset.exit);});worldResize();requestAnimationFrame(worldResize);};
 })();
 // Billboards that would be cut by the phone edge stay hidden until fully readable.
@@ -4631,7 +4631,7 @@ const hall=renderHall;renderHall=function(){r5ProcessAltar();const legacy=S.offe
 window.r5OfferingShop=function(){if(deny())return;openModal('<h2>供品店</h2><p>选一位小院伙伴，兑换一份供品，献给祠堂。</p>'+S.animals.filter(a=>meats.some(m=>m[3]===a.kind&&a.kind!=='fish')).map(a=>{const m=meats.find(m=>m[3]===a.kind);return `<p>${r3Esc(a.name)}（${r3Esc(R3_ANIMAL_SHOP.find(c=>c.id===a.kind)?.name||a.kind)}） → ${m[2]} ${m[1]} <button class="btn" data-r5-exchange="${r3Esc(a.id)}">兑换</button></p>`;}).join('')+`<p>鲜鱼 ×${S.inventory.fish||0} → 🐟 供鱼 <button class="btn" data-r5-exchange="fish">兑换鲜鱼</button></p>`);$('#sheet').querySelectorAll('[data-r5-exchange]').forEach(b=>b.onclick=()=>confirmExchange(b.dataset.r5Exchange));};
 function confirmExchange(id){if(deny())return;const a=id==='fish'?null:S.animals.find(a=>a.id===id),m=meats.find(m=>m[3]===(a?.kind||id));if(!m)return;openModal(`<h2>确认兑换</h2><p>${a?r3Esc(a.name)+'（'+r3Esc(R3_ANIMAL_SHOP.find(c=>c.id===a.kind)?.name)+'）将离开小院':'将使用 1 份鲜鱼，鱼池保留'}，兑换 ${m[2]} ${m[1]}。</p><button class="btn" id="r5ExchangeConfirm">确认兑换</button><button class="btn ghost" id="r5ExchangeCancel">取消</button>`);$('#r5ExchangeCancel').onclick=r5OfferingShop;$('#r5ExchangeConfirm').onclick=()=>{if(deny())return;const index=a?S.animals.indexOf(a):-1;if(a?index<0:!(S.inventory.fish>0))return toast('这份兑换已不可用');if(!TG_ITEM_INFO('offering',m[0]))return; // Validate before the single synchronous transaction.
 if(a)S.animals.splice(index,1);else S.inventory.fish--;S.backpack[m[0]]=(S.backpack[m[0]]||0)+1;save();renderTop();r3RefreshAnimalHUD();if(a)worldSyncAnimals();closeModal();toast('已兑换 '+m[2]+m[1]);};}
-window.r5BuyMerit=function(id){if(deny())return false;const c=r3Item(id);if(!c?.meritPrice)return false;if(S.merit<c.meritPrice){toast('功德不足');return false;}S.merit-=c.meritPrice;S.backpack[id]=(S.backpack[id]||0)+1;save();renderTop();toast('已请回 '+c.name);return true;};
+window.r5BuyMerit=function(id){if(deny())return false;const c=r3Item(id);if(!c?.meritPrice)return false;if(S.merit<c.meritPrice){toast('善缘不足');return false;}S.merit-=c.meritPrice;S.backpack[id]=(S.backpack[id]||0)+1;save();renderTop();toast('已请回 '+c.name);return true;};
 window.r5MeritCoins=function(){if(deny())return false;r5Daily(S);const n=S.daily.meritCoins||0;if(n>=15){toast('今日兑换已达 15 铜钱');return false;}if(S.merit<20){toast('需要 20 功德');return false;}S.merit-=20;S.coins++;S.daily.meritCoins=n+1;save();renderTop();toast('20 功德兑换 1 铜钱');return true;};
 const shop=openShop;openShop=function(tab){if(deny())return;if(tab==='merit'){r5Daily(S);openModal('<h2>功德阁</h2><p>功德 '+S.merit+' · 请回雅物，长伴修行</p><nav class="r3-tabs"><button class="btn ghost" id="r5RegularShop">集市商铺</button></nav>'+rare.map(([id,name,emoji,cost])=>`<p>${emoji} ${name} <button class="btn" data-merit-buy="${id}">${cost} 功德</button></p>`).join('')+`<p>20 功德 → 1 铜钱 · 今日 ${S.daily.meritCoins||0}/15</p><button class="btn" id="r5MeritCoins">兑换 1 铜钱</button>`);$('#r5RegularShop').onclick=()=>openShop();$('#sheet').querySelectorAll('[data-merit-buy]').forEach(b=>b.onclick=()=>{r5BuyMerit(b.dataset.meritBuy);openShop('merit');});$('#r5MeritCoins').onclick=()=>{r5MeritCoins();openShop('merit');};return;}
 const catalog=TG_CATALOG;try{window.TG_CATALOG=catalog.filter(c=>!c.exchangeOnly&&!c.meritPrice);shop(tab);}finally{window.TG_CATALOG=catalog;}const nav=$('#sheet .r3-tabs');if(nav){const b=document.createElement('button');b.className='btn ghost';b.textContent='功德阁';b.dataset.tab='merit';b.onclick=()=>openShop('merit');nav.append(b);}};
@@ -6715,7 +6715,7 @@ G.TG_MOUNTS={__v:1,
 })();
 
 const r6TitleNames={居士:'雅士',善信:'善友',修行者:'旅人',功德主:'福缘主',title_jushi:'雅士',title_shanxin:'善友',title_xingzhe:'旅人',title_gongdezhu:'福缘主'};
-function r6TitleName(name){return r6TitleNames[name]||name?.replace(/[🌱🎋🧭✨]/gu,'').trim();}
+function r6TitleName(name){const bare=name?.replace(/[🌱🎋🧭✨💠]/gu,'').trim();const extra={beads:'珠串',念珠:'珠串',佛珠:'珠串',珠串:'珠串'};return r6TitleNames[name]||r6TitleNames[bare]||extra[name]||extra[bare]||bare;}
 function r6TitleDisplay(name){const mapped=r6TitleName(name),id={善友:'title_shanxin',雅士:'title_jushi',旅人:'title_xingzhe',福缘主:'title_gongdezhu'}[mapped];return window.TG_AVATAR?.displayTitle?.(mapped,id)||mapped;}
 /* r6 phase 1. Additive state, cap-aware economy and physical travel. */
 (()=>{
@@ -6730,7 +6730,7 @@ const fields=['meritCoins','coinsEarned','stealCoins','meritIncense','meritOffer
 window.r6Daily=function(d=S){const date=new Date(Date.now()+28800000).toISOString().slice(0,10);if(d.daily?.date!==date)d.daily={date,tasks:{feed:0,harvest:0,incense:0,collect:0},claimed:false};d.daily.tasks??={feed:0,harvest:0,incense:0,collect:0};fields.forEach(k=>{if(!Number.isFinite(d.daily[k]))d.daily[k]=0;});return d.daily;};
 // r5's lexical daily helper still rolls the same date; this wrapper fills all fields.
 window.r5Daily=r6Daily;
-const loadedStates=new WeakSet();const sanitize=sanitizeR4;sanitizeR4=function(d){if(d.avatar?.title)d.avatar.title=r6TitleDisplay(d.avatar.title);const rev=d.economyRev,now=Date.now(),progress=(d.plots||[]).map(p=>p&&old[p.crop]?Math.max(0,Math.min(1,(now-p.plantedAt)/old[p.crop]+(p.boost||0))):null);const savedPlots=rev===6?JSON.parse(JSON.stringify(d.plots)):null;if(rev===6)d.economyRev=5;sanitize(d);if(savedPlots)d.plots=savedPlots;if(rev===5)(d.plots||[]).forEach((p,i)=>{if(p&&progress[i]!=null){p.plantedAt=now-progress[i]*CROP_BY_ID[p.crop].growMs;p.boost=0;}});d.economyRev=6;r6Daily(d);d.view=d.view==='fp'?'fp':'tp';d.avatarInv??={accessories:d.avatar?.accessories||[],titles:d.avatar?.titles||[],equipped:d.avatar?.equipped||{}};if(d.avatar){delete d.avatar.accessories;delete d.avatar.titles;delete d.avatar.equipped;}d.avatar=window.TG_AVATAR?.normalize?.(d.avatar||window.TG_AVATAR.defaultConfig?.()||{},{checkOwned:false})||d.avatar||{};d.tea??={messages:[]};d.mounts??={owned:[],riding:null,passenger:null};d.mounts.owned??=[];d.mounts.owned.forEach(m=>{m.location??='yard-post';m.decor??={saddle:false,bell:false,reins:false,saddle_bell:false};});if(!loadedStates.has(d)){loadedStates.add(d);for(const m of d.mounts.owned)if(m.location==='following')m.location='yard-post';d.mounts.riding=null;d.mounts.passenger=null;}};
+const loadedStates=new WeakSet();const sanitize=sanitizeR4;sanitizeR4=function(d){if(d.avatar?.title)d.avatar.title=r6TitleName(d.avatar.title);const rev=d.economyRev,now=Date.now(),progress=(d.plots||[]).map(p=>p&&old[p.crop]?Math.max(0,Math.min(1,(now-p.plantedAt)/old[p.crop]+(p.boost||0))):null);const savedPlots=rev===6?JSON.parse(JSON.stringify(d.plots)):null;if(rev===6)d.economyRev=5;sanitize(d);if(savedPlots)d.plots=savedPlots;if(rev===5)(d.plots||[]).forEach((p,i)=>{if(p&&progress[i]!=null){p.plantedAt=now-progress[i]*CROP_BY_ID[p.crop].growMs;p.boost=0;}});d.economyRev=6;r6Daily(d);d.view=d.view==='fp'?'fp':'tp';d.avatarInv??={accessories:d.avatar?.accessories||[],titles:d.avatar?.titles||[],equipped:d.avatar?.equipped||{}};if(d.avatar){delete d.avatar.accessories;delete d.avatar.titles;delete d.avatar.equipped;}d.avatar=window.TG_AVATAR?.normalize?.(d.avatar||window.TG_AVATAR.defaultConfig?.()||{},{checkOwned:false})||d.avatar||{};d.tea??={messages:[]};d.mounts??={owned:[],riding:null,passenger:null};d.mounts.owned??=[];d.mounts.owned.forEach(m=>{m.location??='yard-post';m.decor??={saddle:false,bell:false,reins:false,saddle_bell:false};});if(!loadedStates.has(d)){loadedStates.add(d);for(const m of d.mounts.owned)if(m.location==='following')m.location='yard-post';d.mounts.riding=null;d.mounts.passenger=null;}};
 const caps={incense:['meritIncense',5,1],offer:['meritOffer',40,0],muyu:['meritMuyu',5,1],sutra:['meritSutra',3,3],zen:['meritZen',2,4],koi:['meritKoi',3,2]};
 window.r6GrantMerit=function(source,amount){if(!r3CanEdit())return 0;const d=r6Daily(),[k,cap,per]=caps[source]||[];if(!k)return 0;const n=source==='offer'?Math.min(Math.max(0,amount||0),Math.max(0,cap-d[k])):d[k]<cap?per:0;if(n){d[k]+=source==='offer'?n:1;addMerit(n);}else toast('今日回向已完成');save();return n;};
 window.r6EarnCoins=function(n){if(!r3CanEdit()||!Number.isSafeInteger(n)||n<0)return false;const d=r6Daily();if(d.coinsEarned+n>40){toast('今日铜钱已达上限');return false;}d.coinsEarned+=n;S.coins+=n;save();renderTop();return true;};
@@ -6841,7 +6841,7 @@ window.r6OpenAvatar=function(){
   const A=window.TG_AVATAR;if(!A?.openPanel)return toast('捏脸即将开放');
   if(r3DenyVisit())return;
   window.TG_NPC?.hideBubbles?.();
-  A.openPanel({config:S.avatar||A.defaultConfig(),onSave:async(cfg,wire)=>{S.avatar=A.normalize({...cfg,title:r6TitleDisplay(cfg.title)});S.avatarWire=A.serialize(S.avatar);S.avatarInv??={accessories:[],titles:[],equipped:{}};S.avatarInv.equipped??={};const rows=window.r6OwnedTitleRows?.()||[],mapped=r6TitleName(cfg.title),official=r6TitleDisplay(mapped);S.avatarInv.equipped.title=(rows.find(t=>t.id===cfg.title)||rows.find(t=>t.name===mapped)||rows.find(t=>(window.TG_AVATAR?.displayTitle?.(t.name,t.id)||t.name)===official))?.id||null;save();r6ApplyAvatar();try{const r=await window.TG_AVATAR_NET?.save?.(S.avatarWire||S.avatar,S.avatarInv.equipped.title);if(r?.ok===false){toast(r6ToastReason(r));return;}toast('已保存容貌');}catch(e){toast(r6ToastReason('error'));}}});
+  A.openPanel({config:S.avatar||A.defaultConfig(),onSave:async(cfg,wire)=>{S.avatar=A.normalize({...cfg,title:r6TitleName(cfg.title)||''});S.avatarWire=A.serialize(S.avatar);S.avatarInv??={accessories:[],titles:[],equipped:{}};S.avatarInv.equipped??={};const rows=window.r6OwnedTitleRows?.()||[],mapped=r6TitleName(cfg.title),official=r6TitleDisplay(mapped);S.avatarInv.equipped.title=(rows.find(t=>t.id===cfg.title)||rows.find(t=>t.name===mapped)||rows.find(t=>(window.TG_AVATAR?.displayTitle?.(t.name,t.id)||t.name)===official))?.id||null;save();r6ApplyAvatar();try{const r=await window.TG_AVATAR_NET?.save?.(S.avatarWire||S.avatar,S.avatarInv.equipped.title);if(r?.ok===false){toast(r6ToastReason(r));return;}toast('已保存容貌');}catch(e){toast(r6ToastReason('error'));}}});
 };
 function r6HookNpcTap(){
   const c=W3?.canvas;if(!c||c.dataset.r6NpcTap)return;c.dataset.r6NpcTap='1';
@@ -7343,7 +7343,7 @@ function r6GrantMeritItem(id){
   if(title){const list=S.avatarInv.titles??=[]; if(!list.includes(id))list.push(id); return;}
   S.backpack[id]=(S.backpack[id]||0)+1;
 }
-const R6_REASON={poor:'功德不足',offline:'需联网才能供奉',unknown:'暂未开放',rate:'今日次数已用完',daily:'今日次数已用完',error:'网络异常，请重试',owned:'已经拥有了',busy:'正在处理，请稍候',free:'免费，无需购买',bad_req:'请求无效，请重试',not_owned:'尚未拥有该装扮',title_not_owned:'尚未获得该称号',bad_name:'名称不可用',bad_title:'称号无效',bad_acc:'配饰无效',bad_avatar:'容貌数据无效',too_big:'数据过大',bad_value:'数据无效',bad_key:'数据无效',no_hooks:'暂不可用',unauthorized:'请先登录',auth:'请先登录'};
+const R6_REASON={poor:'善缘不足',offline:'需联网才能点灯',unknown:'暂未开放',rate:'今日次数已用完',daily:'今日次数已用完',error:'网络异常，请重试',owned:'已经拥有了',busy:'正在处理，请稍候',free:'免费，无需购买',bad_req:'请求无效，请重试',not_owned:'尚未拥有该装扮',title_not_owned:'尚未获得该称号',bad_name:'名称不可用',bad_title:'称号无效',bad_acc:'配饰无效',bad_avatar:'容貌数据无效',too_big:'数据过大',bad_value:'数据无效',bad_key:'数据无效',no_hooks:'暂不可用',unauthorized:'请先登录',auth:'请先登录'};
 if(!window.TG_MERIT){
   const inflight=new Set(),bought={};
   const catalog=()=>({items:[...(window.TG_CATALOG||[]).filter(c=>c.meritPrice!=null).map(c=>({...c,kind:'decor',price:c.meritPrice})),...R6_ACC,...R6_TITLES,...Object.entries({white_horse:5000,white_deer:9000,green_ox:9000,saddle_bell:2000}).map(([id,price])=>({id,price,kind:id==='saddle_bell'?'mount_decor':'mount'}))],aliases:{...R6_ALIAS},bought:{...bought},owned:TG_AVATAR_NET.owned()});
@@ -8801,8 +8801,8 @@ window.TG_MANUAL={
 'use strict';
 const TH=typeof THREE!=='undefined'&&THREE||window.THREE;
 const pairs=[["列祖列宗之位", "家和业兴"], ["供鱼", "鲜鱼"], ["填写先人的真实姓名，上传一张画像，陪伴每一次追思。", "可填写家风文字，或上传一张全家福。"], ["功德主", "福缘主✨"], ["福缘祠堂", "福缘堂"], ["今日回向已完成，仍可随喜观鱼", "今日善缘已满，仍可在池边看鱼"], ["功德尚不足或今日不可购", "善缘不足"], ["功德尚不足", "善缘不足"], ["观自在菩萨　行深般若波罗蜜多时", "采菊东篱下，悠然见南山"], ["心无挂碍，无有恐怖。", "采菊东篱下，悠然见南山。"], ["色即是空，空即是色。", "明月松间照，清泉石上流。"], ["一花一世界，一叶一菩提。", "草长莺飞二月天，拂堤杨柳醉春烟。"], ["应无所住而生其心。", "行到水穷处，坐看云起时。"], ["时时勤拂拭，莫使惹尘埃。", "绿树村边合，青山郭外斜。"], ["诸恶莫作，众善奉行。", "海内存知己，天涯若比邻。"], ["福缘寺灵签", "福缘心笺"], ["福缘寺", "福缘里"], ["静坐听木鱼", "静室听风铃"], ["听一声木鱼，观一息起落。", "听庭铃轻响，看花影疏疏。"], ["书房抄经", "书房临帖"], ["上香一炷", "点一盏灯"], ["清香一炷，功德 +3", "灯光一盏，善缘 +1"], ["香炉已插满三炷", "灯台已满"], ["香炉已满", "灯台已满"], ["金身佛像", "石灯"], ["石灯笼", "石灯"], ["禅意素雅", "竹石素雅"], ["香烛铺", "灯彩铺"], ["香烛套装", "灯组"], ["供奉祖师", "缘堂陈设"], ["供品店", "点心铺"], ["选一位小院伙伴，兑换一份供品，献给祠堂。", "换一份时令点心，送到缘堂摆放。"], ["上供 · 献上心意", "摆放心意"], ["先人牌匾", "家风匾额"], ["先人真实姓名", "家风文字"], ["先人", "家人"], ["追思", "相聚"], ["供果盘", "果盘"], ["香案", "条案"], ["蒲团", "坐垫"], ["僧袍", "广袖长袍"], ["袈裟", "色织长袍"], ["佛珠", "珠串💠"], ["念珠", "珠串💠"], ["道袍", "直裰"], ["线香", "花枝"], ["居士", "雅士🎋"], ["小沙弥", "园丁"], ["善信", "善友🌱"], ["修行者", "旅人🧭"], ["同行僧人", "同行访客"], ["云游僧", "游方客"], ["小和尚", "角色"], ["僧人", "邻人"], ["佛祖看着呢", "今天先歇一歇吧"], ["香客名册", "福缘名册"], ["香客", "访客"], ["被偷也算布施", "也被记作一份心意"], ["用功德获得", "用善缘兑换"], ["请回一份心意", "换一份雅物"], ["请回雅物，长伴修行", "换一份雅物，长伴小院"], ["请回", "兑换"], ["今日功课", "今日待办"], ["功课完成 · 回向", "获得"], ["今日放生回向", "今日归水"], ["放生随喜", "锦鲤归水"], ["放生", "锦鲤归水"], ["不回向功德", "不增加善缘"], ["随喜观鱼", "在池边看鱼"], ["采莲供心", "采一枚莲蓬"], ["莲花池", "荷塘"], ["山门", "里门"], ["灵签", "福缘心笺"], ["心诚则灵", "今日一句"], ["求下次抽签上上签！", "明日去茶会坐坐。"], ["求签", "读心笺"], ["算卦", "读心笺"], ["看风水", "赏园景"], ["罗汉榻", "卧榻"], ["多积德", "多积善"], ["静坐观心", "静坐歇心"], ["随缘自在", "心安即是家"], ["祠堂", "缘堂"], ["禅房", "静室"], ["功德", "善缘"], ["敲木鱼", "摇风铃"], ["木鱼", "庭铃"], ["上香", "点灯"], ["上供", "摆放"], ["供台", "陈列台"], ["供奉", "陈列"], ["供品", "陈列"], ["供上", "摆上"], ["献上", "摆上"], ["献给", "送到"], ["香炉", "铜灯"], ["香烛", "灯彩"], ["抄经", "临帖"], ["临经", "临帖"], ["回向上限", "最多"], ["回向", "获得"], ["功课", "待办"], ["禅", "闲"], ["🕯️", "🏮"], ["🪘", "🎐"], ["🙏", "🌿"], ["🛕", "🏡"], ["🪷", "✨"], ["📿", "💛"], ["🧘", "🌿"], ["屠宰", "照料"]];
-pairs.push(["福缘客","福缘主✨"],["金币","铜钱"],["需联网才能供奉","此操作需联网，请稍后重试"]);
-pairs.unshift(["需联网才能供奉","此操作需联网，请稍后重试"]);
+pairs.push(["福缘客","福缘主✨"],["金币","铜钱"],["需联网才能供奉","需联网才能点灯"]);
+pairs.unshift(["需联网才能供奉","需联网才能点灯"]);
 function rewrite(s){if(typeof s!=='string')return s;for(const [a,b]of pairs)s=s.split(a).join(b);return s.replace(/今日获得已完成/g,'今日善缘已满').replace(/([✓○]) 点灯/g,'$1 点一盏灯').replace(/完成获得/g,'获得').replace(/敬上第\s*(\d+)\s*炷香/g,'点亮第 $1 盏灯，善缘 +1').replace(/点灯 (\d+) 炷/g,'点灯 $1 盏').replace(/铜灯已插满三炷[^。]*/g,'灯台已满，请稍候').replace(/待办完成 · 获得\s*(\d+)\s*善缘/g,'获得 $1 善缘').replace(/陈列台最多五份，每日最多上限 40 善缘/g,'陈列台最多五份，每日最多 40 善缘').replace(/今日锦鲤归水获得/g,'今日归水').replace(/祠/g,'缘').replace(/^供$/g,'陈');}
 window.r7Rewrite=rewrite;
 const fill=CanvasRenderingContext2D.prototype.fillText;CanvasRenderingContext2D.prototype.fillText=function(text,...args){return fill.call(this,rewrite(text),...args);};
@@ -9013,7 +9013,7 @@ if(F){for(const key of ['info','refresh']){const fn=F[key];if(fn)F[key]=async fu
 function rows(root){if(!root)return;for(const [id,label,run]of [['r7Family','家庭',()=>F?.open()],['r7Feedback','意见箱',()=>window.TG_FEEDBACK?.open()],['r7Manual','游戏手册',()=>window.TG_MANUAL?.open()]]){let b=root.querySelector('#'+id);if(!b){b=document.createElement('button');b.id=id;b.className='btn ghost';root.append(b);}b.textContent=label;b.onclick=()=>{closeModal();document.getElementById('tgsMenu')?.classList.remove('show');run();};}badge();}
 document.getElementById('btnMenu').addEventListener('click',()=>queueMicrotask(()=>{const s=$('#sheet');for(const c of s.querySelectorAll('.card'))if(c.querySelector('b')?.textContent==='玩法说明'){c.innerHTML='<b>游戏手册</b><p>从大厅「北 · 心田小院」开始种植，成熟后收获。场景、家庭与装扮操作请查阅游戏手册。</p><button class="btn" id="r7Help">打开游戏手册</button>';c.querySelector('button').onclick=()=>TG_MANUAL.open();}const seen=new Set();for(const b of s.querySelectorAll('[data-go]')){if(seen.has(b.dataset.go))b.remove();else seen.add(b.dataset.go);}for(const el of s.querySelectorAll('small,p'))if(/版本 v1|进度保存在本机浏览器里/.test(el.textContent))el.textContent='存档状态：'+(window.TG_STORAGE?.status||'本地存档');rows(s);}));
 document.addEventListener('click',e=>{if(e.target.closest?.('#btnMore')){rows($('#tgsMenu'));F?.refresh?.();}const b=e.target.closest?.('.tgfb-btn');if(b&&/送\s*出/.test(b.textContent)){const ta=document.querySelector('.tgfb-ta');if(ta&&ta.value.trim().length<10){e.preventDefault();e.stopImmediatePropagation();toast('至少 10 个字');let error=document.getElementById('r7FeedbackError');if(!error){error=document.createElement('p');error.id='r7FeedbackError';error.setAttribute('role','alert');ta.after(error);}error.textContent='至少 10 个字';}}},true);
-let avatarOfflineNotice=false;const toast0=toast;toast=function(s,...args){if(avatarOfflineNotice||(/需联网才能供奉|需联网后操作/.test(s)&&document.querySelector('.tgav-mask')))s='已保存在本机，联网后自动同步';avatarOfflineNotice=false;return toast0(s,...args);};
+let avatarOfflineNotice=false;const toast0=toast;toast=function(s,...args){if(avatarOfflineNotice||(/需联网才能供奉|需联网才能点灯|需联网后操作/.test(s)&&document.querySelector('.tgav-mask')))s='已保存在本机，联网后自动同步';avatarOfflineNotice=false;return toast0(s,...args);};
 // Avatar save callback closes its panel before the asynchronous offline response.
 if(N?.__offline&&!N.save)N.save=async()=>{avatarOfflineNotice=true;return {ok:true,local:true};};
 if(N?.save){const save=N.save;N.save=async function(){const r=await save.apply(this,arguments);if(r?.reason==='offline')avatarOfflineNotice=true;return r;};}
@@ -9978,6 +9978,1060 @@ const camera=worldCamera;worldCamera=function(){
 
 const iw=typeof initWorld==='function'?initWorld:null;
 if(iw)initWorld=function(){const r=iw.apply(this,arguments);try{r7eDress();}catch(e){console.warn('r7e',e);}return r;};
+})();
+
+/* r7f: public wish tags on the plaza tree, title-id matching, flower-bed / gardener fixes. */
+(()=>{'use strict';
+const T=typeof THREE!=='undefined'&&THREE||window.THREE;
+const merge=typeof mergeGeometries==='function'?mergeGeometries:(T.BufferGeometryUtils&&T.BufferGeometryUtils.mergeGeometries);
+const GARDENER=[-11.2,13.2];
+const MAX_TAGS=60;
+
+/* ---------- official title names (panel + HUD must agree) ---------- */
+const TITLE_OFF={
+  title_shanxin:'善友🌱',善信:'善友🌱',善友:'善友🌱',
+  title_jushi:'雅士🎋',居士:'雅士🎋',雅士:'雅士🎋',
+  title_xingzhe:'旅人🧭',修行者:'旅人🧭',旅人:'旅人🧭',
+  title_gongdezhu:'福缘主✨',功德主:'福缘主✨',福缘主:'福缘主✨',福缘客:'福缘主✨',
+  beads:'珠串💠',念珠:'珠串💠',佛珠:'珠串💠',珠串:'珠串💠'
+};
+function stripTitle(s){return String(s==null?'':s).replace(/[🌱🎋🧭✨💠]/gu,'').trim();}
+function titleIdOf(s){
+  const raw=String(s==null?'':s).trim(), bare=stripTitle(raw);
+  const ids={title_shanxin:1,title_jushi:1,title_xingzhe:1,title_gongdezhu:1,beads:1};
+  if(ids[raw])return raw;
+  const map={善信:'title_shanxin',善友:'title_shanxin',居士:'title_jushi',雅士:'title_jushi',修行者:'title_xingzhe',旅人:'title_xingzhe',功德主:'title_gongdezhu',福缘主:'title_gongdezhu',福缘客:'title_gongdezhu',念珠:'beads',佛珠:'beads',珠串:'beads'};
+  return map[bare]||map[raw]||null;
+}
+function displayTitle(s,id){return TITLE_OFF[id]||TITLE_OFF[s]||TITLE_OFF[stripTitle(s)]||(s==null||s===''?'':String(s));}
+function matchTitleRow(rows,val){
+  const id=titleIdOf(val), official=displayTitle(val,id), bare=stripTitle(val);
+  return (rows||[]).find(t=>t&&(t.id===val||t.id===id||displayTitle(t.name,t.id)===official||stripTitle(t.name)===bare||t.name===val));
+}
+
+function hookTitles(){
+  const A=window.TG_AVATAR;
+  if(A){
+    A.displayTitle=function(s,id){return displayTitle(s,id);};
+    A.titleMatches=function(s,t){return displayTitle(s,t&&t.id)===displayTitle(t&&t.name,t&&t.id)||titleIdOf(s)===titleIdOf(t&&(t.id||t.name));};
+    const norm=A.normalize;
+    if(typeof norm==='function'&&!norm._r7f){
+      A.normalize=function(c,opts){
+        const o=c?Object.assign({},c):{};
+        if(o.title)o.title=displayTitle(o.title,o.title);
+        return norm.call(this,o,opts);
+      };
+      A.normalize._r7f=true;
+    }
+  }
+  const N=window.TG_AVATAR_NET;
+  if(N&&N.titles&&!N.titles._r7f){
+    const fn=N.titles;
+    N.titles=function(){
+      const seen=new Set(), out=[];
+      (fn.apply(this,arguments)||[]).forEach(t=>{
+        if(!t||t.r7Alias||t.r7DisplayOnly)return;
+        const id=t.id||t.key||titleIdOf(t.name), name=displayTitle(t.name,id);
+        const key=id||name;if(!name||seen.has(key))return;seen.add(key);
+        out.push(Object.assign({},t,{id,name,emoji:TITLE_OFF[id]?'':(t.emoji||'')}));
+      });
+      return out;
+    };
+    N.titles._r7f=true;
+  }
+  if(typeof r6PickTitle==='function'&&!r6PickTitle._r7f){
+    const prev=r6PickTitle;
+    window.r6PickTitle=function(idOrName){
+      if(!idOrName)return prev.apply(this,arguments);
+      const rows=(window.r6OwnedTitleRows||function(){return[];})();
+      const row=matchTitleRow(rows,idOrName);
+      return prev.call(this,row?row.id:idOrName);
+    };
+    window.r6PickTitle._r7f=true;
+  }
+  if(typeof r6TitlePickerHtml==='function'&&!r6TitlePickerHtml._r7f){
+    window.r6TitlePickerHtml=function(){
+      const owned=(window.r6OwnedTitleRows||function(){return[];})();
+      if(!owned.length)return '<p class="muted">尚未获得称号</p>';
+      const cur=displayTitle(S.avatar?.title||'',S.avatarInv?.equipped?.title||'');
+      const curId=titleIdOf(S.avatar?.title||S.avatarInv?.equipped?.title||'');
+      return '<p>称号</p><select id="r6TitlePick"><option value="">（不佩戴）</option>'+owned.map(t=>{
+        const name=displayTitle(t.name,t.id);
+        const sel=(t.id===curId||name===cur||t.id===(S.avatarInv?.equipped?.title||''))?' selected':'';
+        return '<option value="'+r3Esc(t.id)+'"'+sel+'>'+r3Esc(name)+'</option>';
+      }).join('')+'</select>';
+    };
+    window.r6TitlePickerHtml._r7f=true;
+  }
+  if(typeof r6OpenAvatar==='function'&&!r6OpenAvatar._r7f){
+    const prev=r6OpenAvatar;
+    window.r6OpenAvatar=function(){
+      const A=window.TG_AVATAR;if(!A?.openPanel)return typeof toast==='function'&&toast('捏脸即将开放');
+      if(typeof r3DenyVisit==='function'&&r3DenyVisit())return;
+      window.TG_NPC?.hideBubbles?.();
+      const cfg0=S.avatar||A.defaultConfig();
+      if(cfg0&&cfg0.title)cfg0.title=displayTitle(cfg0.title,cfg0.title);
+      A.openPanel({config:cfg0,onSave:async(cfg,wire)=>{
+        const official=displayTitle(cfg.title,cfg.title);
+        S.avatar=A.normalize({...cfg,title:official});
+        S.avatarWire=A.serialize(S.avatar);
+        S.avatarInv??={accessories:[],titles:[],equipped:{}};
+        S.avatarInv.equipped??={};
+        const rows=window.r6OwnedTitleRows?.()||[];
+        const row=matchTitleRow(rows,cfg.title||official);
+        S.avatarInv.equipped.title=row?row.id:null;
+        save();r6ApplyAvatar();
+        try{
+          const r=await window.TG_AVATAR_NET?.save?.(S.avatarWire||S.avatar,S.avatarInv.equipped.title);
+          if(r?.ok===false){toast(r6ToastReason(r));return;}
+          toast('已保存容貌');
+        }catch(e){toast(r6ToastReason('error'));}
+      }});
+    };
+    window.r6OpenAvatar._r7f=true;
+  }
+}
+
+/* ---------- TG_WISH: use real client, else a local graceful fallback ---------- */
+const LOCAL={items:[],cbs:[]};
+const REASON={empty:'写一句心愿吧',too_long:'心愿最多 40 个字',link:'不能附带链接',number:'不能留联系方式',blocked:'换个说法吧',
+  slow:'慢一点，稍等几秒再挂',daily:'今天已经挂了 5 块祈愿牌，明天再来',offline:'未联网：这块祈愿牌只有你自己看得到',error:'网络异常，祈愿牌暂未公开'};
+function makeStub(){
+  const W={
+    _r7fStub:true,
+    limits:{perDay:5,max:40,gapS:10},
+    reasonText(r){const k=typeof r==='string'?r:r&&r.reason;return REASON[k]||'祈愿牌暂时挂不上';},
+    async hang(text){
+      const t=String(text==null?'':text).replace(/\s+/g,' ').trim();
+      if(!t)return {ok:false,reason:'empty'};
+      if(t.length>40)return {ok:false,reason:'too_long',max:40};
+      return {ok:false,reason:'offline'};
+    },
+    async recent(limit){return {ok:true,items:LOCAL.items.slice(0,Math.max(1,Math.min(100,Number(limit)||60)))};},
+    cached(){return LOCAL.items.slice();},
+    onChange(cb){if(typeof cb==='function'){LOCAL.cbs.push(cb);try{cb(LOCAL.items.slice());}catch(e){}}}
+  };
+  return W;
+}
+function wishApi(){return (window.TG_WISH&&!window.TG_WISH._r7fStub)?window.TG_WISH:(window.TG_WISH=window.TG_WISH||makeStub());}
+
+/* ---------- flower bed: solid soil, clustered plants, no ring/spokes ---------- */
+function hideSpokesAndInlay(){
+  const p=W3.spaces.plaza, box=new T.Box3(), m4=new T.Matrix4(), pos=new T.Vector3(), q=new T.Quaternion(), s=new T.Vector3();
+  p.group.traverse(m=>{
+    if(!m.isMesh)return;
+    if(m.parent&&(m.parent.name==='r7e-flower-bed'||m.parent.name==='r7f-flower-bed'||m.parent.name==='r7e-gardener'))return;
+    if(m.isInstancedMesh){
+      let changed=false;
+      if(!m.geometry.boundingBox)m.geometry.computeBoundingBox();
+      for(let i=0;i<m.count;i++){
+        m.getMatrixAt(i,m4);m4.decompose(pos,q,s);
+        const r=Math.hypot(pos.x,pos.z+15.2), xz=Math.max(Math.abs(s.x),Math.abs(s.z)), yz=Math.abs(s.y);
+        // leftover lotus inlay (large flat disc)
+        const inlay=r<1.2&&pos.y<0.35&&xz>=2;
+        // six radial pots around the lamp (r≈0.7)
+        const spoke=r>0.45&&r<1.15&&pos.y>0.28&&pos.y<0.95&&xz<0.28;
+        // octagonal stone bases of the copper lamp (the 'wheel hub' from above)
+        const hub=r<0.4&&pos.y<0.55&&xz>=0.9&&xz<=1.6&&yz<=0.45;
+        // four bronze posts + 4-sided lathe roof that read as spokes from above
+        const posts=r>0.12&&r<0.5&&pos.y>1.15&&pos.y<2.15&&xz<0.12;
+        const roof=r<0.9&&pos.y>1.55&&pos.y<2.4&&xz>0.25&&xz<0.9;
+        if(inlay||spoke||hub||posts||roof){s.set(0.001,0.001,0.001);m4.compose(pos,q,s);m.setMatrixAt(i,m4);changed=true;}
+      }
+      if(changed){m.instanceMatrix.needsUpdate=true;if(m.computeBoundingSphere)m.computeBoundingSphere();}
+      return;
+    }
+    box.setFromObject(m);
+    const cx=(box.min.x+box.max.x)/2, cz=(box.min.z+box.max.z)/2, cy=(box.min.y+box.max.y)/2;
+    const tall=box.max.y-box.min.y, wide=Math.max(box.max.x-box.min.x,box.max.z-box.min.z);
+    const r=Math.hypot(cx,cz+15.2);
+    const hub=(r<0.5&&cy<0.55&&wide>1.6&&wide<3.2&&tall<0.7);
+    const posts=r>0.12&&r<0.5&&cy>1.15&&cy<2.15&&wide<0.3;
+    const roof=r<0.9&&cy>1.55&&cy<2.4&&wide>0.4&&wide<1.8;
+    if((r<1.6&&cy<0.4&&tall<0.4&&wide>2.8)||(r>0.45&&r<1.15&&cy>0.28&&cy<0.95&&wide<0.4&&tall<0.5)||hub||posts||roof){
+      m.visible=false;
+    }
+  });
+}
+function mergeGroup(g){
+  if(!merge)return;
+  g.updateMatrixWorld(true);
+  const inv=g.matrixWorld.clone().invert(), geos=[], colors=[];
+  g.traverse(m=>{
+    if(!m.isMesh||m.isInstancedMesh||m.userData.skipMerge)return;
+    const geo=(m.geometry.index?m.geometry.toNonIndexed():m.geometry.clone()).applyMatrix4(new T.Matrix4().multiplyMatrices(inv,m.matrixWorld));
+    geos.push(geo);
+    const c=m.material.color;
+    for(let i=0;i<geo.attributes.position.count;i++)colors.push(c.r,c.g,c.b);
+  });
+  if(!geos.length)return;
+  const geo=merge(geos);
+  geo.setAttribute('color',new T.Float32BufferAttribute(colors,3));
+  [...g.children].forEach(ch=>{if(ch.isMesh&&!ch.userData.skipMerge){g.remove(ch);if(ch.geometry)ch.geometry.dispose();if(ch.material&&ch.material.dispose)ch.material.dispose();}});
+  const mesh=new T.Mesh(geo,new T.MeshLambertMaterial({vertexColors:true}));
+  mesh.castShadow=true;mesh.receiveShadow=true;mesh.userData.tgRealSkip=true;mesh.name='r7f-merged';
+  g.add(mesh);
+  geos.forEach(o=>o.dispose());
+}
+function addMesh(g,geo,color,x,y,z,sx,sy,sz,rx,ry,rz){
+  const mesh=new T.Mesh(geo,new T.MeshLambertMaterial({color}));
+  mesh.position.set(x,y,z);if(sx!=null)mesh.scale.set(sx,sy,sz);if(rx||ry||rz)mesh.rotation.set(rx||0,ry||0,rz||0);
+  g.add(mesh);return mesh;
+}
+function rebuildFlowerBed(){
+  const p=W3.spaces.plaza;
+  hideSpokesAndInlay();
+  ['r7e-flower-bed','r7f-flower-bed'].forEach(n=>{const o=p.group.getObjectByName(n);if(o)p.group.remove(o);});
+  const g=new T.Group();g.name='r7f-flower-bed';g.position.set(0,0,-15.2);p.group.add(g);
+  // solid soil, no pattern, slightly irregular edge via overlapping discs
+  const soilMat=new T.MeshLambertMaterial({color:'#5e4630'});
+  const soil=new T.Mesh(new T.CircleGeometry(2.15,32).rotateX(-Math.PI/2),soilMat);
+  soil.position.y=0.13;soil.receiveShadow=true;g.add(soil);
+  // a few offset soil patches so the outline is not a perfect ring
+  [[0.7,0.55],[ -0.85,0.4],[0.15,-0.9]].forEach(([x,z],i)=>{
+    const d=new T.Mesh(new T.CircleGeometry(0.7+i*0.08,16).rotateX(-Math.PI/2),new T.MeshLambertMaterial({color:i===1?'#655034':'#58432c'}));
+    d.position.set(x,0.135,z);d.receiveShadow=true;g.add(d);
+  });
+  const boxG=new T.BoxGeometry(1,1,1), cyl=new T.CylinderGeometry(.5,.5,1,5), ball=new T.SphereGeometry(1,6,5), cone=new T.ConeGeometry(.5,1,6);
+  // irregular stones (not a circle)
+  [[-1.4,0.6,0.22],[1.55,0.35,0.2],[0.2,1.7,0.18],[-0.55,-1.55,0.2],[1.15,-1.15,0.16]].forEach(([x,z,s],i)=>{
+    addMesh(g,boxG,'#8f8a7a',x,0.12,z,s,0.14+i*0.02,s*0.85,0,(i*1.3)%3,0.1);
+  });
+  // three clusters of shrubs + flowers, offset from the lamp, not radial
+  const clusters=[
+    {x:-1.15,z:0.85,n:7,cols:['#c45b5b','#d986b3','#e8d36a']},
+    {x:1.2,z:0.55,n:6,cols:['#e9eef2','#c45b5b','#f2a65a']},
+    {x:0.15,z:-1.25,n:8,cols:['#e8d36a','#6f9a52','#d986b3']}
+  ];
+  let seed=41;const rand=()=>((seed=(seed*1664525+1013904223)>>>0)/4294967296);
+  clusters.forEach(cl=>{
+    // a shrub mound
+    addMesh(g,ball,'#4a6e38',cl.x,0.22,cl.z,.42,.22,.38);
+    addMesh(g,ball,'#5d8a4a',cl.x+0.18,0.28,cl.z-0.1,.28,.2,.26);
+    for(let i=0;i<cl.n;i++){
+      const ox=(rand()-0.5)*0.7, oz=(rand()-0.5)*0.7, h=0.16+rand()*0.22;
+      const x=cl.x+ox, z=cl.z+oz;
+      addMesh(g,cyl,'#3f6a32',x,0.14+h/2,z,.028,h,.028);
+      addMesh(g,ball,cl.cols[i%cl.cols.length],x,0.16+h+.05,z,.1+rand()*.04,.08,.1);
+    }
+  });
+  // simple box lantern on the remaining copper post — no radial roof or spokes
+  const cap=new T.Mesh(new T.BoxGeometry(0.32,0.28,0.32),new T.MeshLambertMaterial({color:'#6a5840'}));
+  cap.position.set(0,1.62,0);g.add(cap);
+  const glow=new T.Mesh(new T.SphereGeometry(0.1,8,6),new T.MeshBasicMaterial({color:'#ffd27a'}));
+  glow.position.set(0,1.62,0);g.add(glow);
+  mergeGroup(g);
+  p.blocks=p.blocks.filter(b=>!b.r7eBed&&!b.r7fBed);
+  p.blocks.push({x:-2.2,X:2.2,z:-15.2-2.2,Z:-15.2+2.2,r7fBed:true});
+}
+
+/* ---------- move 园丁阿禾 clear of the 今日心语 stall fence ---------- */
+function moveGardener(){
+  const p=W3.spaces.plaza, g=p.group.getObjectByName('r7e-gardener');
+  if(!g)return;
+  g.position.set(GARDENER[0],0,GARDENER[1]);
+  // face the tree
+  g.rotation.y=Math.atan2(-GARDENER[0],-GARDENER[1]);
+  const item=p.items.find(it=>it.label==='园丁阿禾');
+  if(item){item.x=GARDENER[0];item.z=GARDENER[1];}
+  else if(typeof worldInteract==='function'){
+    worldInteract(p,GARDENER[0],GARDENER[1],'园丁阿禾',()=>{
+      const lines=['花要勤浇，土要松一松。','这圈花坛是新铺的，坐下来歇歇也行。','松土之后再浇水，根才站得稳。'];
+      if(typeof toast==='function')toast('园丁阿禾：'+lines[Math.floor(Math.random()*lines.length)]);
+    },2.2);
+  }
+}
+
+/* ---------- wish tags ---------- */
+function hash32(s){let h=2166136261;s=String(s);for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619);}return h>>>0;}
+function hookPoints(){
+  const pts=[];
+  for(let i=0;i<60;i++){
+    // lower outer rim of the canopy (canopy r=7.1, y 5.6–11.4) so tags are visible from above
+    const a=i*2.399+0.11, r=7.72+(i%3)*0.18, hookR=r-0.12;
+    const x=Math.cos(a)*r, z=Math.sin(a)*r;
+    const y=5.28+(i%5)*0.16;
+    const hx=Math.cos(a)*hookR, hz=Math.sin(a)*hookR, hy=6.62+(i%3)*0.12;
+    pts.push({x,y,z,a,hx,hy,hz});
+  }
+  return pts;
+}
+let HOOKS=null, tagState={items:[],group:null,tagMesh:null,cordMesh:null,outlineMesh:null,slots:[]};
+
+function reservedBox(x,y,z,hx,hy,hz){
+  // 祈愿古树 plaque (rest + overview)
+  const plaques=[[0,3.15,2.4,2.5,0.7,0.5],[0,12.55,3.2,2.5,0.8,0.6]];
+  for(const [px,py,pz,phx,phy,phz] of plaques){
+    if(Math.abs(x-px)<hx+phx&&Math.abs(y-py)<hy+phy&&Math.abs(z-pz)<hz+phz)return 'plaque';
+  }
+  const rr=Math.hypot(x,z);
+  if(y<1.1&&rr>9.15&&rr<10.85)return 'ring';
+  if(Math.abs(x-GARDENER[0])<hx+0.8&&y<hy+2.5&&Math.abs(z-GARDENER[1])<hz+0.8)return 'gardener';
+  return null;
+}
+
+function placeForId(id, used){
+  if(!HOOKS)HOOKS=hookPoints();
+  const n=HOOKS.length;if(!n)return {x:0,y:7.5,z:2,a:0,len:.55};
+  let i=hash32(id)%n;
+  for(let k=0;k<n;k++){
+    const h=HOOKS[(i+k)%n];
+    if(used.has((i+k)%n))continue;
+    const hx=h.hx!=null?h.hx:h.x, hy=h.hy!=null?h.hy:h.y+1.4, hz=h.hz!=null?h.hz:h.z;
+    const x=h.x, y=h.y, z=h.z, len=Math.max(0.35,hy-y);
+    if(reservedBox(x,y,z,0.30,0.40,0.14))continue;
+    used.add((i+k)%n);
+    return {x,y,z,hx,hy,hz,a:h.a,len,phase:(hash32(id+'P')%1000)/1000};
+  }
+  const h=HOOKS[i];
+  return {x:h.x,y:h.y,z:h.z,hx:h.hx||h.x,hy:h.hy||h.y+1.4,hz:h.hz||h.z,a:h.a,len:1.4,phase:0};
+}
+
+function ensureTagGroup(){
+  const p=W3.spaces.plaza;if(!p)return null;
+  let g=p.group.getObjectByName('r7f-wish-tags');
+  if(g)return g;
+  g=new T.Group();g.name='r7f-wish-tags';p.group.add(g);
+  const dummy=new T.Object3D();
+  const tagGeo=new T.BoxGeometry(0.52,0.74,0.08);
+  const tagMat=new T.MeshLambertMaterial({color:'#f3cc86',emissive:'#6a4a18',emissiveIntensity:.22});
+  const tagMesh=new T.InstancedMesh(tagGeo,tagMat,MAX_TAGS);
+  tagMesh.name='r7f-tag-mesh';tagMesh.frustumCulled=false;tagMesh.instanceMatrix.setUsage(T.DynamicDrawUsage);
+  tagMesh.userData.tgRealSkip=true;tagMesh.count=0;g.add(tagMesh);
+  const cordGeo=new T.CylinderGeometry(0.012,0.012,1,5);
+  const cordMat=new T.MeshLambertMaterial({color:'#6b4a2e'});
+  const cordMesh=new T.InstancedMesh(cordGeo,cordMat,MAX_TAGS);
+  cordMesh.name='r7f-cord-mesh';cordMesh.frustumCulled=false;cordMesh.instanceMatrix.setUsage(T.DynamicDrawUsage);
+  cordMesh.userData.tgRealSkip=true;cordMesh.count=0;g.add(cordMesh);
+  const outGeo=new T.BoxGeometry(0.60,0.84,0.11);
+  const outMat=new T.MeshLambertMaterial({color:'#e6b35a',emissive:'#7a4a18',emissiveIntensity:.35});
+  const outlineMesh=new T.InstancedMesh(outGeo,outMat,MAX_TAGS);
+  outlineMesh.name='r7f-tag-outline';outlineMesh.frustumCulled=false;outlineMesh.instanceMatrix.setUsage(T.DynamicDrawUsage);
+  outlineMesh.userData.tgRealSkip=true;outlineMesh.count=0;g.add(outlineMesh);
+  // hide unused
+  dummy.scale.set(0,0,0);dummy.updateMatrix();
+  for(let i=0;i<MAX_TAGS;i++){tagMesh.setMatrixAt(i,dummy.matrix);cordMesh.setMatrixAt(i,dummy.matrix);outlineMesh.setMatrixAt(i,dummy.matrix);}
+  tagMesh.instanceMatrix.needsUpdate=true;cordMesh.instanceMatrix.needsUpdate=true;outlineMesh.instanceMatrix.needsUpdate=true;
+  tagState.group=g;tagState.tagMesh=tagMesh;tagState.cordMesh=cordMesh;tagState.outlineMesh=outlineMesh;
+  return g;
+}
+
+function renderTags(items){
+  if(!W3?.spaces?.plaza)return;
+  ensureTagGroup();
+  const list=(items||[]).slice(0,MAX_TAGS);
+  tagState.items=list;
+  const used=new Set(), slots=[];
+  const dummy=new T.Object3D();
+  let mineN=0;
+  list.forEach((it,i)=>{
+    const pl=placeForId(it.id||('t'+i), used);
+    slots[i]=Object.assign({item:it},pl);
+    dummy.position.set(pl.x,pl.y,pl.z);
+    dummy.rotation.set(1.18,pl.a+Math.PI/2,0.04);
+    dummy.scale.set(1,1,1);
+    dummy.updateMatrix();
+    tagState.tagMesh.setMatrixAt(i,dummy.matrix);
+    dummy.position.set(pl.hx,(pl.hy+pl.y)/2,pl.hz);
+    dummy.rotation.set(0,0,0);
+    dummy.scale.set(1,pl.len,1);
+    dummy.updateMatrix();
+    tagState.cordMesh.setMatrixAt(i,dummy.matrix);
+    if(it.mine){
+      dummy.position.set(pl.x,pl.y,pl.z);
+      dummy.rotation.set(1.18,pl.a+Math.PI/2,0.04);
+      dummy.scale.set(1,1,1);
+      dummy.updateMatrix();
+      tagState.outlineMesh.setMatrixAt(mineN,dummy.matrix);
+      slots[i].outline=mineN;
+      mineN++;
+    }
+  });
+  const hide=new T.Object3D();hide.scale.set(0,0,0);hide.updateMatrix();
+  for(let i=list.length;i<MAX_TAGS;i++){tagState.tagMesh.setMatrixAt(i,hide.matrix);tagState.cordMesh.setMatrixAt(i,hide.matrix);}
+  for(let i=mineN;i<MAX_TAGS;i++)tagState.outlineMesh.setMatrixAt(i,hide.matrix);
+  tagState.tagMesh.count=list.length;tagState.cordMesh.count=list.length;tagState.outlineMesh.count=mineN;
+  tagState.tagMesh.instanceMatrix.needsUpdate=true;
+  tagState.cordMesh.instanceMatrix.needsUpdate=true;
+  tagState.outlineMesh.instanceMatrix.needsUpdate=true;
+  tagState.tagMesh.computeBoundingSphere();tagState.cordMesh.computeBoundingSphere();tagState.outlineMesh.computeBoundingSphere();
+  if(tagState.tagMesh.boundingSphere)tagState.tagMesh.boundingSphere.radius=Math.max(14,tagState.tagMesh.boundingSphere.radius);
+  tagState.slots=slots;
+  tagState.mineN=mineN;
+}
+
+function swayTags(ts){
+  if(!tagState.tagMesh||!tagState.slots.length)return;
+  const t=(ts||performance.now())*0.001, dummy=new T.Object3D();
+  let mineN=0;
+  tagState.slots.forEach((pl,i)=>{
+    const sw=Math.sin(t*1.15+pl.phase*6.28)*0.09, sw2=Math.cos(t*0.9+pl.phase*4)*0.04;
+    dummy.position.set(pl.x+Math.sin(sw)*pl.len*0.15,pl.y,pl.z+Math.cos(sw2)*pl.len*0.08);
+    dummy.rotation.set(1.18+sw2,pl.a+Math.PI/2,0.04+sw);
+    dummy.scale.set(1,1,1);
+    dummy.updateMatrix();
+    tagState.tagMesh.setMatrixAt(i,dummy.matrix);
+    if(pl.item&&pl.item.mine){
+      dummy.position.z+=0.002;
+      dummy.updateMatrix();
+      tagState.outlineMesh.setMatrixAt(mineN,dummy.matrix);
+      mineN++;
+    }
+    dummy.position.set(pl.hx,(pl.hy+dummy.position.y)/2,pl.hz);
+    dummy.rotation.set(sw2*0.5,0,sw);
+    dummy.scale.set(1,pl.len,1);
+    dummy.updateMatrix();
+    tagState.cordMesh.setMatrixAt(i,dummy.matrix);
+  });
+  tagState.tagMesh.instanceMatrix.needsUpdate=true;
+  tagState.cordMesh.instanceMatrix.needsUpdate=true;
+  tagState.outlineMesh.instanceMatrix.needsUpdate=true;
+}
+
+function relTime(iso){
+  const t=Date.parse(iso);
+  const d=Math.max(0,Date.now()-(Number.isFinite(t)?t:Date.now()));
+  if(d<45e3)return '刚刚';
+  if(d<3600e3)return Math.max(1,Math.floor(d/60e3))+'分钟前';
+  if(d<86400e3)return Math.max(1,Math.floor(d/3600e3))+'小时前';
+  return Math.max(1,Math.floor(d/86400e3))+'天前';
+}
+
+function ensureStyle(){
+  if(document.getElementById('r7f-style'))return;
+  const s=document.createElement('style');s.id='r7f-style';
+  s.textContent='#r7fWishCard,#r7fWishInput{position:absolute;left:50%;bottom:22%;transform:translateX(-50%);width:min(86vw,320px);background:#f7efd9;border:2px solid #c9a15b;border-radius:14px;box-shadow:0 8px 24px rgba(40,24,8,.28);padding:14px 16px 16px;z-index:40;color:#3a2a18;font-family:serif;}'+
+    '#r7fWishCard .r7f-nick,#r7fWishInput .r7f-h{font-weight:700;font-size:16px;color:#6b3f1e;margin-bottom:6px;}'+
+    '#r7fWishCard .r7f-text{font-size:15px;line-height:1.55;white-space:pre-wrap;word-break:break-word;}'+
+    '#r7fWishCard .r7f-time{margin-top:8px;font-size:12px;color:#8a6a45;}'+
+    '#r7fWishInput p{margin:0 0 8px;font-size:14px;}'+
+    '#r7fWishInput input{width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid #c9a15b;border-radius:8px;background:#fffaf0;font-size:15px;font-family:serif;color:#3a2a18;}'+
+    '#r7fWishInput .r7f-row{display:flex;gap:8px;margin-top:10px;justify-content:flex-end;}'+
+    '#r7fWishInput button{font-family:serif;background:#8a5a2e;color:#fff8e8;border:0;border-radius:8px;padding:6px 12px;font-size:14px;}'+
+    '#r7fWishInput button.ghost{background:transparent;color:#6b3f1e;border:1px solid #c9a15b;}';
+  document.head.appendChild(s);
+}
+function closeWishCard(){const el=document.getElementById('r7fWishCard');if(el)el.remove();}
+function closeWishInput(){const el=document.getElementById('r7fWishInput');if(el)el.remove();}
+window.TG_R7F_OPEN=function(item){openWishCard(item||{nickname:'阿禾',text:'愿家人平安顺遂',created_at:new Date(Date.now()-7*60000).toISOString(),mine:true});};
+function openWishCard(item,ev){
+  closeWishCard();ensureStyle();
+  const card=document.createElement('div');card.id='r7fWishCard';
+  const nick=document.createElement('div');nick.className='r7f-nick';nick.textContent=String(item.nickname||'访客');
+  const text=document.createElement('div');text.className='r7f-text';text.textContent=String(item.text||'');
+  const time=document.createElement('div');time.className='r7f-time';time.textContent=relTime(item.created_at);
+  card.appendChild(nick);card.appendChild(text);card.appendChild(time);
+  (document.getElementById('app')||document.body).appendChild(card);
+  if(ev&&ev.stopImmediatePropagation)ev.stopImmediatePropagation();
+}
+function onDocPointer(e){
+  const card=document.getElementById('r7fWishCard');
+  if(card&&!card.contains(e.target))closeWishCard();
+  const inp=document.getElementById('r7fWishInput');
+  // input closes only via buttons, not accidental world taps? user didn't specify; keep until action.
+}
+
+function hookTagTaps(){
+  const c=W3?.canvas;if(!c||c.dataset.r7fTagTap)return;c.dataset.r7fTagTap='1';
+  let down=null;
+  c.addEventListener('pointerdown',e=>{down=[e.clientX,e.clientY];},true);
+  c.addEventListener('pointerup',e=>{
+    if(!down||e.button>0)return;
+    if(Math.hypot(e.clientX-down[0],e.clientY-down[1])>8)return;
+    if(W3.active!=='plaza'||typeof worldBlocked==='function'&&worldBlocked())return;
+    if(!tagState.tagMesh||!tagState.slots.length)return;
+    const r=c.getBoundingClientRect(), ray=new T.Raycaster();
+    ray.camera=W3.camera;
+    ray.setFromCamera(new T.Vector2((e.clientX-r.left)/r.width*2-1,1-(e.clientY-r.top)/r.height*2),W3.camera);
+    const hits=ray.intersectObject(tagState.tagMesh,false);
+    if(!hits.length)return;
+    const id=hits[0].instanceId;
+    const slot=tagState.slots[id];
+    if(!slot||!slot.item)return;
+    e.stopImmediatePropagation();e.stopPropagation();e.preventDefault();
+    if(typeof worldStop==='function')worldStop();
+    if(W3){W3.target=null;W3.path=[];}
+    openWishCard(slot.item,e);
+  },true);
+  document.addEventListener('pointerdown',onDocPointer,true);
+}
+
+function addLocalTag(text){
+  const nick=(window.TG_AUTH&&(TG_AUTH.nickname||TG_AUTH.name))||(S&&S.avatar&&S.avatar.name)||'访客';
+  const item={id:'local-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,6),nickname:String(nick).slice(0,20),text,created_at:new Date().toISOString(),mine:true,_local:true};
+  LOCAL.items=[item].concat(LOCAL.items.filter(x=>x.id!==item.id)).slice(0,MAX_TAGS);
+  const merged=mergeLists(wishApi().cached?wishApi().cached():[],LOCAL.items);
+  renderTags(merged);
+  return item;
+}
+function mergeLists(remote,local){
+  const seen=new Set(), out=[];
+  (local||[]).concat(remote||[]).forEach(it=>{if(it&&it.id&&!seen.has(it.id)){seen.add(it.id);out.push(it);}});
+  return out.slice(0,MAX_TAGS);
+}
+
+async function fetchWishes(){
+  const api=wishApi();
+  if(!api||typeof api.recent!=='function')return;
+  try{
+    const r=await api.recent(60);
+    if(r&&r.ok&&Array.isArray(r.items))renderTags(mergeLists(r.items,LOCAL.items.filter(x=>x._local)));
+    else if(api.cached)renderTags(mergeLists(api.cached(),LOCAL.items.filter(x=>x._local)));
+  }catch(e){if(api.cached)renderTags(mergeLists(api.cached(),LOCAL.items));}
+}
+
+let pollId=null;
+function startWishPoll(){
+  fetchWishes();
+  if(pollId)return;
+  pollId=setInterval(()=>{if(W3?.active==='plaza')fetchWishes();},60000);
+}
+function stopWishPoll(){/* keep interval; fetchWishes no-ops off plaza */}
+
+function hookWishApi(){
+  const api=wishApi();
+  if(api&&typeof api.onChange==='function'&&!api._r7fBound){
+    api.onChange(items=>renderTags(mergeLists(items,LOCAL.items.filter(x=>x._local))));
+    api._r7fBound=true;
+  }
+}
+
+function showWishInput(){
+  closeWishInput();ensureStyle();
+  const box=document.createElement('div');box.id='r7fWishInput';
+  const h=document.createElement('div');h.className='r7f-h';h.textContent='写一句心愿（可不填）';
+  const p=document.createElement('p');p.textContent='挂在祈愿古树上，最多 40 个字。';
+  const inp=document.createElement('input');inp.type='text';inp.maxLength=40;inp.placeholder='写一句心愿（可不填）';inp.setAttribute('aria-label','写一句心愿（可不填）');
+  const row=document.createElement('div');row.className='r7f-row';
+  const skip=document.createElement('button');skip.type='button';skip.className='ghost';skip.textContent='先不写';
+  const ok=document.createElement('button');ok.type='button';ok.textContent='挂上';
+  skip.onclick=()=>closeWishInput();
+  ok.onclick=async()=>{
+    const text=inp.value.replace(/\s+/g,' ').trim();
+    closeWishInput();
+    if(!text)return;
+    const api=wishApi();
+    try{
+      const r=api&&typeof api.hang==='function'?await api.hang(text):{ok:false,reason:'offline'};
+      if(r&&r.ok){
+        const plaque=r.plaque||{id:r.id,nickname:(window.TG_AUTH&&TG_AUTH.nickname)||'访客',text,created_at:new Date().toISOString(),mine:true};
+        LOCAL.items=LOCAL.items.filter(x=>x.id!==plaque.id);
+        renderTags(mergeLists(api.cached?api.cached():[plaque],LOCAL.items));
+      }else{
+        const reason=r&&r.reason;
+        if(reason==='offline'||!api||api._r7fStub)addLocalTag(text);
+        if(typeof toast==='function')toast((api&&api.reasonText?api.reasonText(r):REASON[reason])||REASON.offline);
+      }
+    }catch(e){
+      addLocalTag(text);
+      if(typeof toast==='function')toast(REASON.offline);
+    }
+    fetchWishes();
+  };
+  row.appendChild(skip);row.appendChild(ok);
+  box.appendChild(h);box.appendChild(p);box.appendChild(inp);box.appendChild(row);
+  (document.getElementById('app')||document.body).appendChild(box);
+  setTimeout(()=>inp.focus(),50);
+}
+
+function hookOffering(){
+  if(typeof r5PlaceOffering!=='function'||r5PlaceOffering._r7f)return;
+  const prev=r5PlaceOffering;
+  window.r5PlaceOffering=function(id){
+    const ok=prev.apply(this,arguments);
+    if(ok){
+      // never block the local flow or the network; prompt after success
+      setTimeout(()=>{try{showWishInput();}catch(e){}},60);
+    }
+    return ok;
+  };
+  window.r5PlaceOffering._r7f=true;
+}
+
+/* ---------- AABB extension ---------- */
+function extendAabb(){
+  const prev=window.TG_R7D_AABB;
+  if(typeof prev!=='function')return;
+  window.TG_R7D_AABB=function(){
+    const r=prev();
+    const p=W3.spaces.plaza, box=new T.Box3();
+    function add(name,obj){
+      if(!obj)return;
+      box.setFromObject(obj);
+      const b={x:box.min.x,X:box.max.x,y:box.min.y,Y:box.max.y,z:box.min.z,Z:box.max.z};
+      const cx=(b.x+b.X)/2,cz=(b.z+b.Z)/2,hx=(b.X-b.x)/2,hz=(b.Z-b.z)/2;
+      const row={object:name,box:[+b.x.toFixed(2),+b.X.toFixed(2),+b.y.toFixed(2),+b.Y.toFixed(2),+b.z.toFixed(2),+b.Z.toFixed(2)],
+        trunk:+(Math.hypot(cx,cz)-1.5-Math.max(hx,hz)).toFixed(2),
+        roots:+(Math.hypot(cx,cz)-2.9-Math.max(hx,hz)).toFixed(2),
+        canopy:+(Math.hypot(cx,cz)-7.1-Math.max(hx,hz)).toFixed(2),
+        min:0,nearest:'canopy',overlap:false};
+      row.min=Math.min(row.trunk,row.roots,row.canopy);
+      row.nearest=row.min===row.trunk?'trunk':row.min===row.roots?'roots':'canopy';
+      row.overlap=row.min<0;
+      const existing=r.rows.find(o=>o.object===name);
+      if(existing)Object.assign(existing,row);else r.rows.push(row);
+    }
+    add('花坛',p.group.getObjectByName('r7f-flower-bed')||p.group.getObjectByName('r7e-flower-bed'));
+    add('园丁阿禾',p.group.getObjectByName('r7e-gardener'));
+    if(tagState.slots&&tagState.slots.length){
+      const xs=tagState.slots.map(s=>s.x), ys=tagState.slots.map(s=>s.y), zs=tagState.slots.map(s=>s.z);
+      const pad=0.30;
+      const b={x:Math.min(...xs)-pad,X:Math.max(...xs)+pad,y:Math.min(...ys)-.38,Y:Math.max(...ys)+.38,z:Math.min(...zs)-pad,Z:Math.max(...zs)+pad};
+      const gap=(R,h)=>Math.min(...tagState.slots.map(s=>Math.hypot(s.x,s.z)-R-h));
+      const row={object:'祈愿牌',box:[+b.x.toFixed(2),+b.X.toFixed(2),+b.y.toFixed(2),+b.Y.toFixed(2),+b.z.toFixed(2),+b.Z.toFixed(2)],
+        trunk:+gap(1.5,pad).toFixed(2),
+        roots:+gap(2.9,pad).toFixed(2),
+        canopy:+gap(7.1,pad).toFixed(2),
+        min:0,nearest:'canopy',overlap:false};
+      row.min=Math.min(row.trunk,row.roots,row.canopy);
+      row.nearest=row.min===row.trunk?'trunk':row.min===row.roots?'roots':'canopy';
+      row.overlap=row.min<0;
+      const existing=r.rows.find(o=>o.object==='祈愿牌');
+      if(existing)Object.assign(existing,row);else r.rows.push(row);
+    }
+    // tag vs named props
+    const tagBoxes=(tagState.slots||[]).map(pl=>({name:'祈愿牌:'+(pl.item&&pl.item.id||''),box:{x:pl.x-0.30,X:pl.x+0.30,y:pl.y-0.38,Y:pl.y+0.38,z:pl.z-0.30,Z:pl.z+0.30}}));
+    const pairs=[...(r.pairs||[])].filter(pr=>!(pr.includes('铜灯')&&pr.includes('花坛')));
+    const named=r.rows.filter(o=>o.object!=='石环'&&o.object!=='祈愿牌');
+    function overlap(a,b){return a.x<b.X&&a.X>b.x&&a.z<b.Z&&a.Z>b.z&&(a.y??0)<(b.Y??3)&&(a.Y??3)>(b.y??0);}
+    tagBoxes.forEach(tb=>{
+      named.forEach(n=>{
+        const b={x:n.box[0],X:n.box[1],y:n.box[2],Y:n.box[3],z:n.box[4],Z:n.box[5]};
+        if(overlap(tb.box,b))pairs.push([tb.name,n.object]);
+      });
+      // plaque / ring / gardener already in reservedBox; report if any slipped through
+      const hit=reservedBox((tb.box.x+tb.box.X)/2,(tb.box.y+tb.box.Y)/2,(tb.box.z+tb.box.Z)/2,0.18,0.25,0.08);
+      if(hit)pairs.push([tb.name,hit]);
+    });
+    r.pairs=pairs;
+    return r;
+  };
+}
+
+/* ---------- dress + hooks ---------- */
+function r7fDress(){
+  if(!W3?.spaces?.plaza)return;
+  rebuildFlowerBed();
+  moveGardener();
+  ensureTagGroup();
+  hookTagTaps();
+  hookWishApi();
+  hookOffering();
+  extendAabb();
+  startWishPoll();
+  const cached=wishApi().cached?wishApi().cached():[];
+  if(cached.length||LOCAL.items.length)renderTags(mergeLists(cached,LOCAL.items));
+}
+
+
+const spawn=typeof r3Spawn==='function'?r3Spawn:null;
+if(spawn&&!r3Spawn._r7f){
+  r3Spawn=function(n,prev){
+    // Stand far enough inside the south ceremonial gate that the follow camera stays north of the lintel at z=14.
+    if(n==='yard'&&(!prev||prev==='plaza'))return [0,5.2,0];
+    return spawn.apply(this,arguments);
+  };
+  r3Spawn._r7f=true;
+}
+
+hookTitles();
+
+let yardEntry=null;
+const enter=typeof worldEnter==='function'?worldEnter:null;
+if(enter&&!enter._r7f){
+  worldEnter=function(name){
+    yardEntry=null;
+    const r=enter.apply(this,arguments);
+    try{
+      if(W3?.active==='plaza'){hookWishApi();startWishPoll();}
+      if(W3?.active==='yard'&&W3.player){
+        yardEntry=W3.player.position.clone();
+        // keep default follow constants; the entry shot + z clamp handle the lintel
+      }
+    }catch(e){}
+    return r;
+  };
+  worldEnter._r7f=true;
+}
+
+const animate=typeof tgAnimate==='function'?tgAnimate:null;
+if(animate&&!animate._r7f){
+  tgAnimate=function(ts,dt){
+    const out=animate.apply(this,arguments);
+    try{if(W3?.active==='plaza')swayTags(ts);}catch(e){}
+    return out;
+  };
+  tgAnimate._r7f=true;
+}
+
+const iw=typeof initWorld==='function'?initWorld:null;
+if(iw&&!iw._r7f){
+  initWorld=function(){const r=iw.apply(this,arguments);try{r7fDress();}catch(e){console.warn('r7f',e);}return r;};
+  initWorld._r7f=true;
+}
+
+window.TG_R7F_SEED=function(items){
+  LOCAL.items=(items||[]).map(it=>Object.assign({mine:!!it.mine,_local:!!it._local},it));
+  renderTags(mergeLists(wishApi().cached?wishApi().cached():[],LOCAL.items));
+  return tagState.slots.length;
+};
+window.TG_R7F_GARDENER=GARDENER;
+window.TG_R7E_SHOT=window.TG_R7E_SHOT; // keep r7e shot hook
+const cam=typeof worldCamera==='function'?worldCamera:null;
+if(cam&&!worldCamera._r7f){
+  worldCamera=function(){
+    const w=W3;
+    if(w?.active==='yard'&&S.view!=='fp'&&!w.r6Plan&&yardEntry&&w.player&&w.player.position.distanceTo(yardEntry)<.18){
+      const land=w.camera.aspect>1;
+      w.camera.up.set(0,1,0);
+      // inside the south ceremonial gate (lintel at z=14, y≈3.1)
+      if(land)w.camera.position.set(0,7.6,11.4);
+      else w.camera.position.set(0,8.4,11.6);
+      w.camera.lookAt(0,1.8,0);
+      if(w.scene.fog){w.scene.fog.near=28;w.scene.fog.far=80;}
+      return;
+    }
+    if(yardEntry&&w?.player&&w.player.position.distanceTo(yardEntry)>=.18)yardEntry=null;
+    if(window.TG_R7F_SHOT==='gardener'&&w?.camera){
+      // 3/4 front, east of the new position, looking toward the gardener, clear of the stall fence
+      w.camera.up.set(0,1,0);
+      w.camera.position.set(-8.2,1.7,15.6);
+      w.camera.lookAt(GARDENER[0],1.18,GARDENER[1]);
+      if(w.scene.fog){w.scene.fog.near=20;w.scene.fog.far=64;}
+      return;
+    }
+    if(window.TG_R7F_SHOT==='bed'&&w?.camera){
+      w.camera.up.set(0,0,-1);
+      w.camera.position.set(0,22,-15.2);
+      w.camera.lookAt(0,0,-15.2);
+      if(w.scene.fog){w.scene.fog.near=40;w.scene.fog.far=80;}
+      return;
+    }
+    const out=cam.apply(this,arguments);
+    if(w?.active==='yard'&&S.view!=='fp'&&w.camera&&w.player){
+      const origin=w.player.position.clone().add(new T.Vector3(0,1.4,0));
+      // Keep the camera on the yard side of the red ceremonial gate (lintel z=14).
+      if(w.camera.position.z>13){
+        const boom=w.camera.position.clone().sub(origin);
+        if(boom.z>0&&origin.z<13)w.camera.position.copy(origin).addScaledVector(boom,(13-origin.z)/boom.z);
+        else w.camera.position.z=13;
+        w.camera.lookAt(origin);
+      }
+    }
+    return out;
+  };
+  worldCamera._r7f=true;
+}
+})();
+
+/* r7g: keep stored/wire title names clean; ownership by id; wish-tag rim tweak lives in r7f.js. */
+(()=>{ 'use strict';
+
+const TITLE_OFF={
+  title_shanxin:'善友🌱',善信:'善友🌱',善友:'善友🌱',
+  title_jushi:'雅士🎋',居士:'雅士🎋',雅士:'雅士🎋',
+  title_xingzhe:'旅人🧭',修行者:'旅人🧭',旅人:'旅人🧭',
+  title_gongdezhu:'福缘主✨',功德主:'福缘主✨',福缘主:'福缘主✨',福缘客:'福缘主✨',
+  beads:'珠串💠',念珠:'珠串💠',佛珠:'珠串💠',珠串:'珠串💠'
+};
+const STORED={
+  title_shanxin:'善友',善信:'善友',善友:'善友',
+  title_jushi:'雅士',居士:'雅士',雅士:'雅士',
+  title_xingzhe:'旅人',修行者:'旅人',旅人:'旅人',
+  title_gongdezhu:'福缘主',功德主:'福缘主',福缘主:'福缘主',福缘客:'福缘主',
+  beads:'珠串',念珠:'珠串',佛珠:'珠串',珠串:'珠串'
+};
+const IDS={title_shanxin:1,title_jushi:1,title_xingzhe:1,title_gongdezhu:1,beads:1};
+
+function stripTitle(s){return String(s==null?'':s).replace(/[🌱🎋🧭✨💠]/gu,'').trim();}
+function titleIdOf(s){
+  const raw=String(s==null?'':s).trim(), bare=stripTitle(raw);
+  if(IDS[raw])return raw;
+  const map={善信:'title_shanxin',善友:'title_shanxin',居士:'title_jushi',雅士:'title_jushi',修行者:'title_xingzhe',旅人:'title_xingzhe',功德主:'title_gongdezhu',福缘主:'title_gongdezhu',福缘客:'title_gongdezhu',念珠:'beads',佛珠:'beads',珠串:'beads'};
+  return map[bare]||map[raw]||null;
+}
+function displayTitle(s,id){
+  const key=id||s;
+  return TITLE_OFF[key]||TITLE_OFF[s]||TITLE_OFF[stripTitle(s)]||(s==null||s===''?'':String(s));
+}
+function canonicalStoredTitle(s){
+  if(s==null||s==='')return '';
+  const raw=String(s).trim(), id=titleIdOf(raw), bare=stripTitle(raw);
+  if(id&&STORED[id])return STORED[id];
+  return STORED[bare]||STORED[raw]||bare||raw;
+}
+function titleEquals(a,b){
+  if(a==null||b==null||a===''||b==='')return a===b;
+  if(a===b)return true;
+  const ia=titleIdOf(a), ib=titleIdOf(b);
+  if(ia&&ib)return ia===ib;
+  return stripTitle(a)===stripTitle(b)||canonicalStoredTitle(a)===canonicalStoredTitle(b);
+}
+function matchTitleRow(rows,val){
+  const id=titleIdOf(val), bare=stripTitle(val);
+  return (rows||[]).find(t=>t&&(t.id===val||t.id===id||titleIdOf(t.id||t.name)===id||stripTitle(t.name)===bare||titleEquals(t.name,val)));
+}
+function netReady(N){return !!(N&&(typeof N.titles==='function'||typeof N.catalog==='function'||N.__offline||N.mine));}
+function ownedRows(){
+  try{
+    const rows=window.r6OwnedTitleRows?.();
+    if(Array.isArray(rows)&&rows.length)return rows;
+  }catch(e){}
+  const N=window.TG_AVATAR_NET;
+  try{
+    if(N?.titles)return (N.titles()||[]).filter(t=>t&&(t.owned===true||t.owned===1||t.have));
+  }catch(e){}
+  return (S?.avatarInv?.titles||[]).map(id=>({id,name:canonicalStoredTitle(id)}));
+}
+function isFreeTitle(s){
+  const pal=window.TG_AVATAR?.palette?.title;
+  if(!Array.isArray(pal)||!s)return false;
+  return pal.includes(s)||pal.includes(stripTitle(s))||pal.includes(canonicalStoredTitle(s));
+}
+function ownsTitle(val){
+  if(!val)return true;
+  if(isFreeTitle(val))return true;
+  const id=titleIdOf(val), bare=canonicalStoredTitle(val);
+  const rows=ownedRows();
+  if(rows.some(t=>t&&(t.id===val||t.id===id||titleIdOf(t.id||t.name)===id||titleEquals(t.name,val)||stripTitle(t.name)===bare)))return true;
+  const inv=S?.avatarInv?.titles||[];
+  return inv.some(x=>x===val||x===id||titleIdOf(x)===id);
+}
+
+function hookNormalize(){
+  const A=window.TG_AVATAR;if(!A)return;
+  A.displayTitle=function(s,id){return displayTitle(s,id);};
+  A.titleMatches=function(s,t){return titleEquals(s,t&&(t.id||t.name))||titleEquals(s,t&&t.name);};
+  A.titleIdOf=titleIdOf;
+  A.canonicalTitle=canonicalStoredTitle;
+  const norm=A.normalize;
+  if(typeof norm==='function'&&!norm._r7g){
+    A.normalize=function(c,opts){
+      const incoming=c&&c.title;
+      const stored=incoming?canonicalStoredTitle(incoming):incoming;
+      const input=c&&typeof c==='object'?Object.assign({},c,stored!==undefined&&stored!==incoming?{title:stored}:{}):c;
+      const o=norm.call(this,input,Object.assign({},opts,{checkOwned:false}));
+      if(o&&o.title)o.title=canonicalStoredTitle(o.title);
+      if(incoming&&!(opts&&opts.checkOwned===false)){
+        const N=window.TG_AVATAR_NET;
+        if(N&&netReady(N)&&!ownsTitle(o.title||stored||incoming))o.title='';
+        else if(o)o.title=canonicalStoredTitle(o.title||stored||incoming);
+      }
+      return o;
+    };
+    A.normalize._r7g=true;
+  }
+}
+
+function wrapTitles(N){
+  if(!N||typeof N.titles!=='function'||N.titles._r7g)return;
+  const fn=N.titles;
+  N.titles=function(){
+    const seen=new Set(), out=[];
+    (fn.apply(this,arguments)||[]).forEach(t=>{
+      if(!t||t.r7Alias||t.r7DisplayOnly)return;
+      const id=t.id||t.key||titleIdOf(t.name);
+      const name=canonicalStoredTitle(t.name||(id&&STORED[id])||'');
+      const key=id||name;if(!name||seen.has(key))return;seen.add(key);
+      // keep catalog name (no emoji) so avatar.js chips/dropLocked compare stored names
+      out.push(Object.assign({},t,{id,name,emoji:''}));
+    });
+    return out;
+  };
+  N.titles._r7g=true;
+}
+
+function fixWire(avatar, stored, titleId){
+  const id=titleIdOf(titleId)||titleIdOf(stored)||null;
+  let cfg=avatar;
+  if(typeof avatar==='string'){
+    try{cfg=window.TG_AVATAR?.deserialize?.(avatar);}catch(e){cfg=null;}
+  }
+  if(cfg&&typeof cfg==='object'){
+    cfg=Object.assign({},cfg,{title:stored||canonicalStoredTitle(cfg.title)});
+    const wire=window.TG_AVATAR?.serialize?.(cfg)||cfg;
+    return {wire, cfg, id};
+  }
+  return {wire:avatar, cfg, id};
+}
+
+function wrapSave(N){
+  if(!N||typeof N.save!=='function'||N.save._r7g){
+    // offline stub may lack save; install a passthrough so intercepts still work
+    if(N&&typeof N.save!=='function'){
+      N.save=async function(avatar,titleId){return {ok:true,offline:true,avatar,title:titleId};};
+      N.save._r7g=true;N.save._r7gStub=true;
+    }
+    return;
+  }
+  const prev=N.save;
+  N.save=async function(avatar,titleId){
+    applyNet(N);
+    const stored=canonicalStoredTitle(typeof avatar==='string'
+      ?(function(){try{return window.TG_AVATAR?.deserialize?.(avatar)?.title;}catch(e){return '';}})()
+      :(avatar&&avatar.title)||'');
+    const fixed=fixWire(avatar, stored||canonicalStoredTitle(titleId), titleId);
+    return prev.call(this, fixed.wire, fixed.id||titleId||null);
+  };
+  N.save._r7g=true;
+}
+
+function applyNet(N){
+  if(!N||typeof N!=='object')return N;
+  wrapTitles(N);
+  wrapSave(N);
+  return N;
+}
+
+let netRef=window.TG_AVATAR_NET;
+netRef=applyNet(netRef);
+try{
+  const desc=Object.getOwnPropertyDescriptor(window,'TG_AVATAR_NET');
+  if(!desc||desc.configurable!==false){
+    Object.defineProperty(window,'TG_AVATAR_NET',{
+      configurable:true,enumerable:true,
+      get(){return netRef;},
+      set(v){netRef=applyNet(v);}
+    });
+  }
+}catch(e){}
+setInterval(()=>{const n=window.TG_AVATAR_NET;if(n&&(!n.titles||!n.titles._r7g||!n.save||!n.save._r7g))applyNet(n);},1000);
+
+function relabelTitleChips(root){
+  const host=root||document.querySelector('.tgav-root');
+  if(!host)return;
+  host.querySelectorAll('.tgav-chip').forEach(b=>{
+    const id=b.getAttribute('data-id');
+    if(!id)return;
+    const d=displayTitle(id);
+    if(!d||d===id)return;
+    if(!(titleIdOf(id)||TITLE_OFF[stripTitle(id)]))return;
+    const lock=b.querySelector('.tgav-lock');
+    const text=[...b.childNodes].find(n=>n.nodeType===3);
+    if(text)text.textContent=d;
+    else if(!lock)b.textContent=d;
+    else b.insertBefore(document.createTextNode(d),lock);
+  });
+  const hud=host.querySelector('.tgav-plate, .tgav-hud, canvas');
+  // plate is a canvas, fillText hook handles it
+}
+
+function hookOpenPanel(){
+  const A=window.TG_AVATAR;if(!A?.openPanel||A.openPanel._r7g)return;
+  const prev=A.openPanel;
+  A.openPanel=function(opts){
+    applyNet(window.TG_AVATAR_NET);
+    opts=opts||{};
+    const cfg0=opts.config?Object.assign({},opts.config):{};
+    if(cfg0.title)cfg0.title=canonicalStoredTitle(cfg0.title);
+    const userSave=opts.onSave;
+    const ret=prev.call(this,Object.assign({},opts,{
+      config:Object.assign({},opts.config||{},cfg0),
+      onSave:function(c,wire){
+        const stored=canonicalStoredTitle(c&&c.title);
+        const c2=Object.assign({},c,{title:stored});
+        const w2=window.TG_AVATAR?.serialize?.(c2)||wire;
+        if(typeof userSave==='function')return userSave(c2,w2);
+      }
+    }));
+    const hookPanel=()=>{
+      const p=A.panel;
+      if(p&&!p._r7g){
+        const st=p.setTab, rd=p.render;
+        if(typeof st==='function')p.setTab=function(){const r=st.apply(this,arguments);relabelTitleChips(p.root);return r;};
+        if(typeof rd==='function')p.render=function(){const r=rd.apply(this,arguments);relabelTitleChips(p.root);return r;};
+        p._r7g=true;
+      }
+      relabelTitleChips(p&&p.root);
+    };
+    hookPanel();
+    requestAnimationFrame(hookPanel);
+    const body=document.querySelector('.tgav-body');
+    if(body&&!body._r7gMo){
+      const mo=new MutationObserver(()=>relabelTitleChips());
+      mo.observe(body,{childList:true,subtree:true});
+      body._r7gMo=mo;
+    }
+    return ret;
+  };
+  A.openPanel._r7g=true;
+}
+
+function hookR6(){
+  if(typeof r6PickTitle==='function'&&!r6PickTitle._r7g){
+    const prev=r6PickTitle;
+    window.r6PickTitle=function(idOrName){
+      if(!idOrName)return prev.apply(this,arguments);
+      const row=matchTitleRow(ownedRows(),idOrName);
+      const r=prev.call(this,row?row.id:idOrName);
+      if(S?.avatar)S.avatar.title=row?canonicalStoredTitle(row.name||row.id):'';
+      return r;
+    };
+    window.r6PickTitle._r7g=true;
+  }
+  if(typeof r6TitlePickerHtml==='function'&&!r6TitlePickerHtml._r7g){
+    window.r6TitlePickerHtml=function(){
+      const owned=ownedRows();
+      if(!owned.length)return '<p class="muted">尚未获得称号</p>';
+      const cur=canonicalStoredTitle(S.avatar?.title||'');
+      const curId=titleIdOf(S.avatar?.title||S.avatarInv?.equipped?.title||'');
+      return '<p>称号</p><select id="r6TitlePick"><option value="">（不佩戴）</option>'+owned.map(t=>{
+        const name=displayTitle(t.name,t.id);
+        const sel=(t.id===curId||canonicalStoredTitle(t.name)===cur||t.id===(S.avatarInv?.equipped?.title||''))?' selected':'';
+        return '<option value="'+r3Esc(t.id)+'"'+sel+'>'+r3Esc(name)+'</option>';
+      }).join('')+'</select>';
+    };
+    window.r6TitlePickerHtml._r7g=true;
+  }
+  if(typeof r6OpenAvatar==='function'&&!r6OpenAvatar._r7g){
+    window.r6OpenAvatar=function(){
+      const A=window.TG_AVATAR;if(!A?.openPanel)return typeof toast==='function'&&toast('捏脸即将开放');
+      if(typeof r3DenyVisit==='function'&&r3DenyVisit())return;
+      window.TG_NPC?.hideBubbles?.();
+      applyNet(window.TG_AVATAR_NET);
+      const cfg0=Object.assign({},S.avatar||A.defaultConfig());
+      if(cfg0.title)cfg0.title=canonicalStoredTitle(cfg0.title);
+      A.openPanel({config:cfg0,onSave:async(cfg,wire)=>{
+        const stored=canonicalStoredTitle(cfg.title);
+        S.avatar=A.normalize(Object.assign({},cfg,{title:stored}),{checkOwned:false});
+        if(S.avatar)S.avatar.title=stored;
+        S.avatarWire=A.serialize(S.avatar);
+        S.avatarInv??={accessories:[],titles:[],equipped:{}};
+        S.avatarInv.equipped??={};
+        const row=matchTitleRow(ownedRows(),cfg.title||stored);
+        S.avatarInv.equipped.title=row?row.id:(stored?titleIdOf(stored):null);
+        save();r6ApplyAvatar();
+        try{
+          const r=await window.TG_AVATAR_NET?.save?.(S.avatarWire||S.avatar,S.avatarInv.equipped.title);
+          if(r?.ok===false){toast(r6ToastReason(r));return;}
+          toast('已保存容貌');
+        }catch(e){toast(r6ToastReason('error'));}
+      }});
+    };
+    window.r6OpenAvatar._r7g=true;
+  }
+}
+
+// Display layer only: HUD / plate canvas shows official names with emoji.
+(function hookFillText(){
+  const fill=CanvasRenderingContext2D.prototype.fillText;
+  if(fill._r7g)return;
+  function wrapped(text,...args){
+    if(typeof text==='string'){
+      const d=displayTitle(text);
+      if(d&&d!==text&&(titleIdOf(text)||TITLE_OFF[stripTitle(text)]))text=d;
+    }
+    return fill.call(this,text,...args);
+  }
+  wrapped._r7g=true;
+  CanvasRenderingContext2D.prototype.fillText=wrapped;
+})();
+
+hookNormalize();
+hookOpenPanel();
+hookR6();
+window.TG_R7G={titleIdOf,displayTitle,canonicalStoredTitle,titleEquals,ownsTitle,applyNet};
+
 })();
 
 </script>
