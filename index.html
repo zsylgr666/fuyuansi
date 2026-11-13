@@ -6434,22 +6434,34 @@ worldMesh(g,'box','#8a9483',6,.7,-6,2.5,.22,2.5);worldMesh(g,'box','#aaa581',6,.
 worldMesh(g,'box','#6d9d9c',0,.025,9,16,.05,3);for(let i=0;i<6;i++)worldMesh(g,'ball','#e4b961',-6+i*2.4,.2,9,.3,.2,.3);worldInteract(t,0,6.5,'河灯寄愿 · 3 铜钱',()=>{if(r3DenyVisit())return;if(S.coins<3)return toast('需要 3 铜钱');S.coins-=3;save();renderTop();toast('一盏河灯，寄愿平安');});
 for(const x of [-11,11])for(const z of [-10,10]){worldMesh(g,'box','#71543c',x,1.3,z,.15,2.6,.15);worldMesh(g,'ball','#eac48b',x,2.5,z,.35,.5,.35);}merge(g);door(t,'plaza',14,0,Math.PI/2);}
 const post=new THREE.Group();y.group.add(post);post.position.set(8,0,12);worldMesh(post,'box','#795438',0,.8,0,.25,1.6,.25);worldMesh(post,'box','#795438',0,1.4,0,2,.2,.2);merge(post);worldLabel(post,'拴马桩',0,2,.15,2);worldLabel(post,'拴马桩',0,2,-.15,2);post.children.at(-1).rotation.y=Math.PI;worldInteract(y,8,12,'拴马桩 · 牵出/骑上',r6PostOpen,3);y.blocks.push({x:7.8,X:8.2,z:11.8,Z:12.2});
-for(const id of ['hall','zen','study'])W3.spaces[id].group.traverse(m=>{if(!m.isMesh)return;const box=new THREE.Box3().setFromObject(m),size=box.getSize(new THREE.Vector3()),c=box.getCenter(new THREE.Vector3());if(c.y>3.5||(size.y>2.5&&(Math.abs(c.x)>5.5||Math.abs(c.z)>7.5))){m.userData.r6Fade=true;m.userData.r6Visible=m.visible;}});
+for(const id of ['hall','zen','study'])W3.spaces[id].group.traverse(m=>{if(!m.isMesh)return;const box=new THREE.Box3().setFromObject(m),size=box.getSize(new THREE.Vector3()),c=box.getCenter(new THREE.Vector3());if(c.y>3.5||(id==='hall'&&size.y>2.5&&(Math.abs(c.x)>5.5||Math.abs(c.z)>7.5))){m.userData.r6Fade=true;m.userData.r6Visible=m.visible;}});
 };
 const mounts={donkey:['小毛驴','coins',480,1.15],ox_cart:['黄牛车','coins',960,1.1],chestnut_horse:['枣红马','coins',2400,1.3],white_horse:['白马','merit',5000,1.35],white_deer:['白鹿','merit',9000,1.4],green_ox:['青牛','merit',9000,1.4]},decor={saddle:['鞍具','coins',600],reins:['缰绳','coins',400],bell:['铜铃','coins',500],saddle_bell:['鞍铃','merit',2000]};
 const owned=()=>S.mounts.owned,ride=()=>owned().find(m=>m.id===S.mounts.riding),changed=()=>{save();renderTop();r6SyncMounts();if(W3)W3.netLast=null;};
 window.r6HitchPos=()=>({x:8,z:12});window.r6MountedKind=()=>ride()?.kind||null;window.r6IsRiding=()=>!!ride();window.r6MountSpeed=()=>mounts[ride()?.kind]?.[3]||1;window.r6MountNet=()=>{const m=ride();return m?{id:m.id,kind:m.kind,decor:{...m.decor},passenger:S.mounts.passenger}:null;};
-window.r6BuyMount=function(kind){if(r3DenyVisit())return false;const c=mounts[kind];if(!c||S[c[1]]<c[2])return toast('余额不足'),false;S[c[1]]-=c[2];owned().push({id:kind+'_'+Date.now().toString(36).slice(-6),kind,decor:{saddle:false,bell:false,reins:false,saddle_bell:false},location:'yard-post'});changed();return true;};
-window.r6BuyMountDecor=function(id,mountId){if(r3DenyVisit())return false;const m=owned().find(m=>m.id===mountId),c=decor[id];if(!m||!c||m.decor[id]||id==='saddle_bell'&&m.kind!=='white_horse'||S[c[1]]<c[2])return false;S[c[1]]-=c[2];m.decor[id]=true;changed();return true;};
+async function buyMountItem(id,c,grant){
+  if(r3DenyVisit()||!c)return false;
+  return r6Purchase(id,async()=>{try{
+    let r;
+    if(c[1]==='merit')r=window.TG_MOUNT_NET?.buy?await TG_MOUNT_NET.buy(id):await TG_MERIT.spend(id);
+    else{if(S.coins<c[2]){toast('铜钱不足');return false;}S.coins-=c[2];r={ok:true};}
+    if(r?.ok!==true){toast(r6ToastReason(r));return false;}
+    grant(c[1]==='merit'?r.item:id);changed();
+    try{await window.TG_MOUNT_NET?.save?.(S.mounts);}catch(e){toast(r6ToastReason('error'));}
+    return true;
+  }catch(e){toast(r6ToastReason('error'));return false;}});
+}
+window.r6BuyMount=async function(kind){kind=r6CatalogId(kind);return buyMountItem(kind,mounts[kind],canonical=>owned().push({id:canonical+'_'+Date.now().toString(36).slice(-6),kind:canonical,decor:{saddle:false,bell:false,reins:false,saddle_bell:false},location:'yard-post'}));};
+window.r6BuyMountDecor=async function(id,mountId){id=r6CatalogId(id);const m=owned().find(m=>m.id===mountId),c=decor[id];if(!m||!c||m.decor[id]||id==='saddle_bell'&&m.kind!=='white_horse')return false;return buyMountItem(id,c,canonical=>{m.decor[canonical]=true;});};
 window.r6LeadOut=window.r6Mount=function(id){if(r3DenyVisit()||r3Indoor(W3.active))return false;const m=owned().find(m=>m.id===id);if(!m)return false;const p=m.location==='yard-post'?{scene:'yard',...r6HitchPos()}:m.location;if(!p||p.scene!==W3.active||Math.hypot(W3.player.position.x-p.x,W3.player.position.z-p.z)>3.5)return toast('请走到坐骑身旁'),false;if(ride()&&ride()!==m)r6Dismount();S.mounts.riding=id;m.location='following';changed();return true;};
-window.r6Dismount=function(options={}){const m=ride();if(!m)return false;m.location=W3.active==='yard'||options.park==='post'?'yard-post':{scene:W3.active,x:W3.player.position.x,z:W3.player.position.z};S.mounts.riding=null;S.mounts.passenger=null;if(W3?.body){window.TG_MOUNTS?.unposeRider?.(W3.body);W3.body.position.z=0;}changed();return true;};window.r6Tether=()=>r6Dismount({park:'post'});
+window.r6Dismount=function(options={}){const m=ride();if(!m)return false;m.location=options.park==='post'?'yard-post':{scene:W3.active,x:W3.player.position.x,z:W3.player.position.z};S.mounts.riding=null;S.mounts.passenger=null;if(W3?.body){window.TG_MOUNTS?.unposeRider?.(W3.body);W3.body.position.z=0;}changed();return true;};window.r6Tether=()=>r6Dismount({park:'post'});
 window.r6Passenger=function(userId,name){if(!r3CanEdit()||!window.TG_FAMILY||r6MountedKind()!=='ox_cart')return false;S.mounts.passenger=userId?{userId:String(userId),name:String(name||'家人').slice(0,20)}:null;changed();return true;};
 window.r6PostOpen=function(){openModal('<h2>拴马桩 · 牵出/骑上</h2>'+owned().filter(m=>m.location==='yard-post').map(m=>`<p>${mounts[m.kind][0]} <button class="btn" data-lead="${m.id}">牵出/骑上</button></p>`).join('')+'<button class="btn" onclick="openShop(\'mounts\')">坐骑商铺</button>');$('#sheet').querySelectorAll('[data-lead]').forEach(b=>b.onclick=()=>{if(r6LeadOut(b.dataset.lead))closeModal();});};
-window.r6MountShop=function(){if(r3DenyVisit())return;openModal('<h2>坐骑</h2><p>买后拴在小院，走到拴马桩牵出。坐骑与装饰不回售。</p>'+Object.entries(mounts).map(([id,c])=>`<p>${c[0]} · 速度 +${Math.round((c[3]-1)*100)}% <button class="btn" data-mount-buy="${id}">${c[2]} ${c[1]==='coins'?'铜钱':'功德'}</button></p>`).join('')+owned().map(m=>`<p>${mounts[m.kind][0]}</p>`+Object.entries(decor).map(([id,c])=>`<button class="btn ghost" data-decor="${id}" data-owned="${m.id}">${c[0]} ${m.decor[id]?'已装配':c[2]+(c[1]==='coins'?'铜钱':'功德')}</button>`).join('')).join('')+(r6MountedKind()==='ox_cart'?'<input id="r6FamilyId" placeholder="家人 ID"><input id="r6FamilyName" placeholder="称呼"><button class="btn" id="r6Passenger">邀请家人同乘</button>':''));$('#sheet').querySelectorAll('[data-mount-buy]').forEach(b=>b.onclick=()=>{r6BuyMount(b.dataset.mountBuy);r6MountShop();});$('#sheet').querySelectorAll('[data-decor]').forEach(b=>b.onclick=()=>{r6BuyMountDecor(b.dataset.decor,b.dataset.owned);r6MountShop();});if($('#r6Passenger'))$('#r6Passenger').onclick=()=>{if(r6Passenger($('#r6FamilyId').value,$('#r6FamilyName').value))toast('家人已同乘（本地）');};};
+window.r6MountShop=function(){if(r3DenyVisit())return;openModal('<h2>坐骑</h2><p>买后拴在小院，走到拴马桩牵出。坐骑与装饰不回售。</p>'+Object.entries(mounts).map(([id,c])=>`<p>${c[0]} · 速度 +${Math.round((c[3]-1)*100)}% <button class="btn" data-mount-buy="${id}">${c[2]} ${c[1]==='coins'?'铜钱':'功德'}</button></p>`).join('')+owned().map(m=>`<p>${mounts[m.kind][0]}</p>`+Object.entries(decor).map(([id,c])=>`<button class="btn ghost" data-decor="${id}" data-owned="${m.id}">${c[0]} ${m.decor[id]?'已装配':c[2]+(c[1]==='coins'?'铜钱':'功德')}</button>`).join('')).join('')+(r6MountedKind()==='ox_cart'?'<input id="r6FamilyId" placeholder="家人 ID"><input id="r6FamilyName" placeholder="称呼"><button class="btn" id="r6Passenger">邀请家人同乘</button>':''));$('#sheet').querySelectorAll('[data-mount-buy],[data-decor]').forEach(b=>{b.disabled=!!TG_MERIT.busy?.(b.dataset.mountBuy||b.dataset.decor);b.style.opacity=b.disabled?'0.5':'';});$('#sheet').querySelectorAll('[data-mount-buy]').forEach(b=>b.onclick=async()=>{if(b.dataset.busy)return;b.dataset.busy='1';b.disabled=true;try{await r6BuyMount(b.dataset.mountBuy);r6MountShop();}finally{delete b.dataset.busy;b.disabled=false;}});$('#sheet').querySelectorAll('[data-decor]').forEach(b=>b.onclick=async()=>{if(b.dataset.busy)return;b.dataset.busy='1';b.disabled=true;try{await r6BuyMountDecor(b.dataset.decor,b.dataset.owned);r6MountShop();}finally{delete b.dataset.busy;b.disabled=false;}});if($('#r6Passenger'))$('#r6Passenger').onclick=()=>{if(r6Passenger($('#r6FamilyId').value,$('#r6FamilyName').value))toast('家人已同乘（本地）');};};
 function mountModel(kind,flags={}){if(typeof window.TG_MOUNTS?.build==='function'){const mk=window.r6MountKind?.(kind)||kind;const m=TG_MOUNTS.build(mk,{saddle:flags.saddle?(kind==='ox_cart'?'cushion':'blanket'):(kind==='ox_cart'?'bench':'none'),bridle:flags.reins?'rope':'none',bells:flags.saddle_bell&&kind==='white_horse'?'silver':flags.bell?'bronze':'none'});if(m?.isObject3D)return m;if(m?.root)return m.root;}const g=new THREE.Group(),color=kind.includes('white')?'#e1ddc9':kind==='green_ox'?'#6c8275':kind==='chestnut_horse'?'#915039':'#9c9485';worldMesh(g,'ball',color,0,.9,0,.4,.42,.85);worldMesh(g,'ball',color,0,1.35,.65,.24,.35,.3);for(const x of [-.25,.25])for(const z of [-.5,.5])worldMesh(g,'cylinder',color,x,.4,z,.09,.8,.09);for(const x of [-.16,.16])worldMesh(g,'cone',color,x,1.8,.65,.08,.45,.08);if(flags.saddle)worldMesh(g,'box','#754735',0,1.27,-.1,.55,.12,.6);if(flags.bell||flags.saddle_bell)worldMesh(g,'ball','#cba34f',0,1.1,.9,.08,.1,.08);if(flags.reins)for(const x of [-.25,.25])worldMesh(g,'box','#584235',x,1.25,.4,.025,.025,.7);if(kind==='ox_cart'){worldMesh(g,'box','#9c7345',0,.55,-1.6,1.5,.2,1.6);for(const x of [-.85,.85])worldMesh(g,'ball','#60472e',x,.4,-1.6,.18,.5,.5);}merge(g);return g;}
 function passengerModel(model,passenger){if(!passenger)return;const A=window.TG_AVATAR;let cfg=passenger.avatar||null;if(!cfg){const list=window.TG_NET?.players?.()||window.TG_FAMILY?.members?.()||[];const p=(Array.isArray(list)?list:[]).find(u=>String(u.id||u.userId)===String(passenger.userId));if(p?.avatar)cfg=p.avatar;else if(p?.avatarWire&&A?.deserialize)cfg=A.deserialize(p.avatarWire);}let g;if(A?.build){g=A.build(A.normalize(cfg||A.randomConfig?.(String(passenger.userId||passenger.name||'p'))||A.defaultConfig(),{checkOwned:false}),{plate:true});if(passenger.name){g.userData=g.userData||{};}A.setPose?.(g,'sit');}else{g=new THREE.Group();worldMesh(g,'cone','#bc7837',0,.3,0,.3,.6,.25);worldMesh(g,'ball','#edc69d',0,.85,0,.22,.25,.22);for(const x of [-.16,.16]){worldMesh(g,'box','#7a5334',x,-.05,.2,.14,.18,.5);worldMesh(g,'box','#7a5334',x,-.25,.4,.14,.4,.14);}merge(g);}g.userData.r6Passenger=true;if(window.TG_MOUNTS?.mount){try{TG_MOUNTS.mount(model,g,1,g===W3?.body?{limbs:W3.limbs}:{});return;}catch(e){}}const seat=window.TG_MOUNTS?.getSeats?.(model)?.[1];if(seat)seat.add(g);else{g.position.set(-.35,.8,-1.6);model.add(g);}}
 window.r6DisposeRide=function(obj){if(!obj)return;try{if(window.TG_MOUNTS?.dispose){TG_MOUNTS.dispose(obj);return;}}catch(e){}obj.parent?.remove(obj);};
-window.r6SyncMounts=function(){if(!W3?.spaces||!S.mounts)return;for(const s of Object.values(W3.spaces)){s.items=s.items.filter(i=>!i.r6Mount);if(s.r6MountGroup)s.group.remove(s.r6MountGroup);s.r6MountGroup=new THREE.Group();s.group.add(s.r6MountGroup);}owned().forEach((m,i)=>{if(m.location==='following')return;const p=m.location==='yard-post'?{scene:'yard',x:8.8+(i%2)*1.4,z:12+Math.floor(i/2)*2}:m.location,s=W3.spaces[p?.scene];if(!s)return;const model=mountModel(m.kind,m.decor);model.position.set(p.x,0,p.z);s.r6MountGroup.add(model);worldInteract(s,p.x,p.z,'骑上 · '+mounts[m.kind][0],()=>r6Mount(m.id),2.8);s.items.at(-1).r6Mount=true;});r6DisposeRide(W3.r6RideModel);W3.r6RideModel=null;if(W3.player)W3.player.children.slice().forEach(ch=>{if(ch.userData?.r6Ride)r6DisposeRide(ch);});W3.r6RideModel=ride()?mountModel(ride().kind,ride().decor):null;if(W3.r6RideModel){W3.r6RideModel.userData.r6Ride=true;W3.scene.add(W3.r6RideModel);passengerModel(W3.r6RideModel,S.mounts.passenger);}};
+window.r6SyncMounts=function(){if(!W3?.spaces||!S.mounts)return;for(const s of Object.values(W3.spaces)){s.items=s.items.filter(i=>!i.r6Mount);if(s.r6MountGroup)s.group.remove(s.r6MountGroup);s.r6MountGroup=new THREE.Group();s.group.add(s.r6MountGroup);}let hitchIndex=0,cartZ=10.2;owned().forEach((m,i)=>{if(m.location==='following')return;let hitch;if(m.kind==='ox_cart'){hitch={scene:'yard',x:12.8,z:cartZ};cartZ-=5;}else{hitch={scene:'yard',x:8.8+(hitchIndex%2)*2,z:12.6-Math.floor(hitchIndex/2)*3.2};hitchIndex++;}const p=m.location==='yard-post'?hitch:m.location,s=W3.spaces[p?.scene];if(!s)return;const model=mountModel(m.kind,m.decor);model.position.set(p.x,0,p.z);s.r6MountGroup.add(model);worldInteract(s,p.x,p.z,'骑上 · '+mounts[m.kind][0],()=>r6Mount(m.id),2.8);s.items.at(-1).r6Mount=true;});r6DisposeRide(W3.r6RideModel);W3.r6RideModel=null;if(W3.player)W3.player.children.slice().forEach(ch=>{if(ch.userData?.r6Ride)r6DisposeRide(ch);});W3.r6RideModel=ride()?mountModel(ride().kind,ride().decor):null;if(W3.r6RideModel){W3.r6RideModel.userData.r6Ride=true;W3.scene.add(W3.r6RideModel);passengerModel(W3.r6RideModel,S.mounts.passenger);}};
 window.r6SetView=function(view){if(!['fp','tp'].includes(view))return false;S.view=view;save();if(W3?.active)worldCamera(1);$('#r6View').textContent=view==='fp'?'第三人称':'第一人称';return true;};window.r6ToggleView=()=>r6SetView(S.view==='fp'?'tp':'fp');
 const button=document.createElement('button');button.id='r6View';button.textContent='第一人称';button.onclick=r6ToggleView;button.style.cssText='position:absolute;right:12px;top:112px;z-index:40;background:#f3e3bc;color:#503b28;border:1px solid #9d8155;border-radius:20px;padding:9px 12px;font-size:13px';$('#app').append(button);
 const camera=worldCamera;worldCamera=function(a){const w=W3;if(!w?.active)return;w.player.visible=S.view!=='fp';for(const [id,s]of Object.entries(w.spaces))s.group.traverse(m=>{if(m.userData.r6Fade)m.visible=!(S.view==='fp'&&id===w.active)&&m.userData.r6Visible;});if(S.view!=='fp')return camera.apply(this,arguments);w.camera.position.copy(w.player.position);w.camera.position.y+=1.5;const L=w.spaces[w.active].limit;w.camera.position.x=THREE.MathUtils.clamp(w.camera.position.x,-L.x+.4,L.x-.4);w.camera.position.z=THREE.MathUtils.clamp(w.camera.position.z,-L.z+.4,L.z-.4);w.camera.lookAt(w.camera.position.clone().add(new THREE.Vector3(-Math.sin(w.yaw),-.08,-Math.cos(w.yaw))));if(w.ray)w.ray.camera=w.camera;if(w.cameraRay)w.cameraRay.camera=w.camera;};
@@ -6479,7 +6491,7 @@ window.r6OpenAvatar=function(){
   const A=window.TG_AVATAR;if(!A?.openPanel)return toast('捏脸即将开放');
   if(r3DenyVisit())return;
   window.TG_NPC?.hideBubbles?.();
-  A.openPanel({config:S.avatar||A.defaultConfig(),onSave:(cfg,wire)=>{S.avatar=A.normalize(cfg);S.avatarWire=wire;save();r6ApplyAvatar();toast('已保存容貌');}});
+  A.openPanel({config:S.avatar||A.defaultConfig(),onSave:async(cfg,wire)=>{S.avatar=A.normalize(cfg);S.avatarWire=wire;S.avatarInv??={accessories:[],titles:[],equipped:{}};S.avatarInv.equipped??={};S.avatarInv.equipped.title=(window.r6OwnedTitleRows?.()||[]).find(t=>t.name===cfg.title||t.id===cfg.title)?.id||null;save();r6ApplyAvatar();try{const r=await window.TG_AVATAR_NET?.save?.(wire||cfg,S.avatarInv.equipped.title);if(r?.ok===false){toast(r6ToastReason(r));return;}toast('已保存容貌');}catch(e){toast(r6ToastReason('error'));}}});
 };
 function r6HookNpcTap(){
   const c=W3?.canvas;if(!c||c.dataset.r6NpcTap)return;c.dataset.r6NpcTap='1';
@@ -6529,9 +6541,9 @@ const cam=worldCamera;
 worldCamera=function(a){
   const w=W3;if(!w?.active)return cam.apply(this,arguments);
   const riding=typeof r6IsRiding==='function'&&r6IsRiding()&&S.view!=='fp';
-  const pos=w.player.position,savedY=pos.y,prevR=w.radius;
-  if(riding){pos.y+=.9;w.radius=Math.min(24,prevR+1.6);}
-  try{return cam.apply(this,arguments);}finally{pos.y=savedY;w.radius=prevR;}
+  const pos=w.player.position,savedY=pos.y,prevR=w.radius,prevPitch=w.pitch;
+  if(riding){pos.y+=.9;w.radius=Math.min(24,prevR+1.6);w.pitch=Math.max(.55,w.pitch);}
+  try{return cam.apply(this,arguments);}finally{pos.y=savedY;w.radius=prevR;w.pitch=prevPitch;}
 };
 
 const enter=worldEnter;
@@ -6569,7 +6581,7 @@ tgAnimate=function(ts,dt){
 };
 
 if(!document.getElementById('r6AvatarBtn')){
-  const b=document.createElement('button');b.id='r6AvatarBtn';b.textContent='捏脸';b.onclick=r6OpenAvatar;
+  const b=document.createElement('button');b.id='r6AvatarBtn';b.textContent='捏脸';b.onclick=()=>window.r6OpenAvatar();
   b.style.cssText='position:absolute;right:12px;top:156px;z-index:40;background:#f3e3bc;color:#503b28;border:1px solid #9d8155;border-radius:20px;padding:9px 12px;font-size:13px';
   document.getElementById('app')?.append(b);
 }
@@ -6604,7 +6616,7 @@ window.r6PondOpen=function(tab='koi'){if(r3DenyVisit())return;const h=new Date(D
 window.r6PondEffect=function(kind){const s=W3.spaces.lotus,g=new THREE.Group();g.position.set(0,.2,3);s.group.add(g);if(kind==='koi'){worldMesh(g,'ball','#edb469',0,0,0,.38,.13,.15);worldMesh(g,'cone','#cf7046',.4,0,0,.2,.25,.18);}else{box(g,0,0,0,.4,.12,.4,'#d8b678');worldMesh(g,'ball',kind==='wish'?'#dfbd53':'#ffd486',0,.2,0,.18,.22,.18);}merge(g);(W3.r6PondEffects??=[]).push({g,start:performance.now(),kind});};
 // Both merit lists include avatar unlocks, with ownership in avatarInv.
 const wear={beads:['念珠',400,'accessories'],hairpin:['发簪',500,'accessories'],cape:['云肩',700,'accessories'],jade_pendant:['玉佩',600,'accessories'],title_shanxin:['善信',150,'titles'],title_jushi:['居士',300,'titles'],title_xingzhe:['修行者',600,'titles'],title_gongdezhu:['功德主',1200,'titles']};
-const shop=openShop;openShop=function(tab){if(tab!=='merit')return shop.apply(this,arguments);if(r3DenyVisit())return;S.avatarInv??={accessories:[],titles:[],equipped:{}};const rows=[...TG_CATALOG.filter(c=>c.meritPrice).map(c=>({...c,owned:(S.backpack[c.id]||0)>0||Object.values(S.decor).some(a=>a.some(v=>v.id===c.id))})),...Object.entries(wear).map(([id,[name,meritPrice,type]])=>({id,name,meritPrice,type,owned:S.avatarInv[type]?.includes(id)}))];openModal('<h2>功德阁</h2><p>请回一份心意 · 功德 '+S.merit+'</p><div class="r6-merit-columns">'+[true,false].map(owned=>`<section><h3>${owned?'已请回':'尚未请回'}</h3>${rows.filter(c=>!!c.owned===owned).map(c=>`<article><b>${c.name}</b><small>${c.meritPrice} 功德</small>${owned?'<span>已珍藏</span>':`<button class="btn" data-r6-buy="${c.id}">请回</button>`}</article>`).join('')||'<p>尚无珍藏</p>'}</section>`).join('')+'</div><hr><p>25 功德 → 1 铜钱 · 今日 '+r6Daily().meritCoins+'/8</p><button class="btn ghost" id="r6Exchange">兑换</button>');$('#r6Exchange').onclick=()=>{r5MeritCoins();openShop('merit');};$('#sheet').querySelectorAll('[data-r6-buy]').forEach(b=>b.onclick=()=>{if(r3DenyVisit())return;const c=rows.find(c=>c.id===b.dataset.r6Buy);if(S.merit<c.meritPrice)return toast('功德尚不足');S.merit-=c.meritPrice;if(c.type)(S.avatarInv[c.type]??=[]).push(c.id);else S.backpack[c.id]=(S.backpack[c.id]||0)+1;save();renderTop();openShop('merit');});};
+const shop=openShop;openShop=function(tab){if(tab!=='merit')return shop.apply(this,arguments);if(r3DenyVisit())return;S.avatarInv??={accessories:[],titles:[],equipped:{}};const rows=[...TG_CATALOG.filter(c=>c.meritPrice).map(c=>({...c,owned:(S.backpack[c.id]||0)>0||Object.values(S.decor).some(a=>a.some(v=>v.id===c.id))})),...Object.entries(wear).map(([id,[name,meritPrice,type]])=>({id,name,meritPrice,type,owned:S.avatarInv[type]?.includes(id)}))];openModal('<h2>功德阁</h2><p>请回一份心意 · 功德 '+S.merit+'</p><div class="r6-merit-columns">'+[true,false].map(owned=>`<section><h3>${owned?'已请回':'尚未请回'}</h3>${rows.filter(c=>!!c.owned===owned).map(c=>`<article><b>${c.name}</b><small>${c.meritPrice} 功德</small>${owned?'<span>已珍藏</span>':`<button class="btn" data-r6-buy="${c.id}">请回</button>`}</article>`).join('')||'<p>尚无珍藏</p>'}</section>`).join('')+'</div><hr><p>25 功德 → 1 铜钱 · 今日 '+r6Daily().meritCoins+'/8</p><button class="btn ghost" id="r6Exchange">兑换</button>');$('#r6Exchange').onclick=()=>{r5MeritCoins();openShop('merit');};};
 const style=document.createElement('style');style.textContent=`.r6-merit-columns{display:grid;grid-template-columns:1fr 1fr;gap:10px}.r6-merit-columns section{min-width:0;background:#ede3ca;padding:9px;border-radius:12px}.r6-merit-columns h3{font-size:17px;margin:5px 0 14px}.r6-merit-columns article{display:flex;flex-direction:column;gap:5px;border-bottom:1px solid #c7b995;padding:10px 0}.r6-merit-columns small{font-size:12px}.r6-script{background:#e9d7ac;color:#665139;padding:20px;line-height:2.3;letter-spacing:3px}#r6PracticeProgress{width:100%}body.r6-placing #app>:not(#view):not(#r6Placement):not(#webglFail){visibility:hidden!important;pointer-events:none!important}#r6Placement{position:absolute;inset:0;z-index:90;pointer-events:none;display:flex;flex-direction:column;justify-content:space-between}#r6Placement header,#r6Placement footer{pointer-events:auto;background:rgba(243,229,205,.98);color:#503c2d;box-shadow:0 2px 14px rgba(60,40,20,.22)}#r6Placement header{display:grid;grid-template-columns:1fr auto;grid-template-rows:auto auto;gap:4px 8px;align-items:center;padding:10px 12px;padding-top:max(10px,env(safe-area-inset-top))}#r6Placement header b{grid-column:1;font-size:15px;line-height:1.3}#r6Placement header p{grid-column:1;margin:0;font-size:11px;line-height:1.4;opacity:.88}#r6Placement header .btn,#r6Placement header #r6PlaceDone{grid-column:2;grid-row:1/span 2;min-height:40px;padding:8px 14px}#r6Placement footer{padding:10px 12px;padding-bottom:max(10px,env(safe-area-inset-bottom))}#r6Placement .r6-tray{display:flex;overflow:auto;gap:8px;max-height:64px}#r6Placement button{white-space:nowrap}#r6Placement .r6-controls{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin:8px 0}#r6Placement .r6-controls button{min-height:40px;width:100%;padding:8px 2px;font-size:13px}.r6-pond-tabs{display:flex;gap:6px}`;document.head.append(style);
 function itemBox(item){const g=new THREE.Group();r3Furniture(g,{...item,rot:0,x:0,z:0,y:0});g.updateMatrixWorld(true);const b=new THREE.Box3().setFromObject(g);b.applyMatrix4(new THREE.Matrix4().makeRotationY(item.rot||0));b.translate(new THREE.Vector3(item.x,item.y||0,item.z));return b;}
 window.r6PlacementError=function(scene,item,ignore=-1){const s=W3.spaces[scene],b=r3Bounds(item),y=item.y||0;if(!s||!b||![item.x,y,item.z,item.rot].every(Number.isFinite))return '无效位置';if(y<0||y>5||b.x< -s.limit.x+.2||b.X>s.limit.x-.2||b.z< -s.limit.z+.2||b.Z>s.limit.z-.2)return '请放在房间内';if(r3DoorZones(s).some(z=>r3Overlap(b,z)))return '门前通道需要留空';if(scene==='yard'&&[{x:-1.8,X:1.8,z:-21,Z:15},{x:0,X:16,z:-1.8,Z:1.8},...R3_PENS].some(z=>r3Overlap(b,z)))return '田地、牧栏和通道需要留空';const a=itemBox(item);a.min.addScalar(.015);a.max.addScalar(-.015);for(const [i,v]of (S.decor[scene]||[]).entries())if(i!==ignore&&a.intersectsBox(itemBox(v)))return '与家具碰撞，请调整高度或位置';if(y<.05&&s.blocks.some(z=>!z.r3Decor&&r3Overlap(b,z)))return '固定设施需要留空';return '';};
@@ -6658,6 +6670,69 @@ const enter=worldEnter;worldEnter=function(){const out=enter.apply(this,argument
 const animate=tgAnimate;tgAnimate=function(){const out=animate.apply(this,arguments);smokeBatch();return out;};const enter=worldEnter;worldEnter=function(){const out=enter.apply(this,arguments);smokeBatch();const w=W3;if(window.TG_REAL&&['study','zen'].includes(w.active))w.spaces[w.active].floor.material=TG_REAL.material('wood',{worldUV:true,tint:w.active==='study'?'#94744e':'#9b936d',quality:(typeof phone==='function'&&phone()?'low':'high')});return out;};})();
 /* The new offering has a recognizable seed head on its altar dish. */
 (()=>{const sync=worldSyncHall;worldSyncHall=function(){const out=sync.apply(this,arguments);if(!W3?.fruits)return out;(S.shrine?.altar||[]).slice(0,5).forEach((row,i)=>{if(row.item!=='lotus_pod')return;const g=W3.fruits.children[i];if(!g||g.userData.r6Pod)return;g.userData.r6Pod=true;worldClear(g);worldMesh(g,'cylinder','#d6bb81',0,0,0,.34,.04,.3);worldMesh(g,'cylinder','#7c985e',0,.2,0,.19,.3,.19);for(let k=0;k<6;k++)worldMesh(g,'ball','#455b36',Math.cos(k*Math.PI/3)*.11,.36,Math.sin(k*Math.PI/3)*.11,.035,.025,.035);g.updateMatrixWorld(true);r3BatchDecor(g);});return out;};})();
+/* r6c: low-cost courtyard vegetation, preserving dynamic and interactive objects. */
+(()=>{
+const build=r3Build;r3Build=function(){const out=build.apply(this,arguments),s=W3.spaces.tea,c=s?.r6Tea;if(!c||s.r6cLite)return out;s.r6cLite=true;
+const specs=[{from:[-12.7,-12.7],to:[12.7,-12.7],seed:11},{from:[-12.7,12.7],to:[-12.7,-12.7],seed:12},{from:[9,12.9],to:[-12.7,12.9],seed:13,height:[2.6,4.2]}];
+c.parts.bamboo.forEach(g=>g.removeFromParent());c.parts.bamboo=specs.map(o=>{const g=TG_TEA.bambooFence({...o,density:1,depth:1,fence:false});c.group.add(g);return g;});
+// Thin low-poly pickets keep the courtyard enclosure readable.
+const poles=new THREE.InstancedMesh(new THREE.CylinderGeometry(.025,.03,1,4,1,true),new THREE.MeshLambertMaterial({color:'#a8935a'}),180),dummy=new THREE.Object3D();let n=0;
+for(const o of specs){const dx=o.to[0]-o.from[0],dz=o.to[1]-o.from[1],len=Math.hypot(dx,dz);for(let d=0;d<len;d+=.45){dummy.position.set(o.from[0]+dx*d/len,.45,o.from[1]+dz*d/len);dummy.updateMatrix();poles.setMatrixAt(n++,dummy.matrix);}}poles.count=n;c.group.add(poles);
+const flowers=c.parts.plants.children.find(m=>m.isInstancedMesh&&m.count===60);if(flowers){const g=new THREE.CircleGeometry(.09,5);g.rotateX(-Math.PI/2);g.setAttribute('color',new THREE.Float32BufferAttribute(new Array(g.attributes.position.count*3).fill(1),3));flowers.geometry=g;}
+// River animation still updates its existing instance matrices.
+c.parts.river.traverse(m=>{if(m.isInstancedMesh&&(m.geometry.index?.count||m.geometry.attributes.position.count)/3>500)m.geometry=new THREE.CylinderGeometry(.13,.1,.06,8,1);});
+// Consolidate only static same-material meshes; never move live or interactive subtrees.
+s.group.updateMatrixWorld(true);const inv=s.group.matrixWorld.clone().invert(),buckets=new Map();s.group.traverse(m=>{
+ if(!m.isMesh||m.isInstancedMesh||m.isSkinnedMesh||Array.isArray(m.material)||m.material.transparent||m.material.map||m.userData.r41Label||m.userData.wallSign)return;
+ for(let p=m;p&&p!==s.group;p=p.parent)if(p===c.parts.river||p===c.parts.wall||p===s.decorGroup||p.userData.update||p.userData.interact||p.userData.tgAvatar||p.userData.r6Mount)return;
+ const key=m.material.uuid;if(!buckets.has(key))buckets.set(key,[]);buckets.get(key).push(m);
+});for(const arr of buckets.values()){if(arr.length<2)continue;const geos=arr.map(m=>(m.geometry.index?m.geometry.toNonIndexed():m.geometry.clone()).applyMatrix4(new THREE.Matrix4().multiplyMatrices(inv,m.matrixWorld)));const geo=mergeGeometries(geos);if(geo){const m=new THREE.Mesh(geo,arr[0].material);m.castShadow=arr.some(v=>v.castShadow);m.receiveShadow=true;s.group.add(m);arr.forEach(v=>v.removeFromParent());}geos.forEach(g=>g.dispose());}return out;};
+})();
+/* r6c: active dialogue skips occlusion, retaining projection/distance checks. */
+(()=>{const N=window.TG_NPC;if(!N)return;const update=N.update;N.update=function(){const list=N.list(),talking=list.filter(n=>n.talkLeft>0&&n.bubbleLeft>0);if(talking.length){N.setView({occlude:false});talking.forEach(n=>n.occ=false);}try{return update.apply(this,arguments);}finally{if(talking.length)N.setView({occlude:true});}};})();
+/* r6c: accessible riding control and final camera clearance, walking unchanged. */
+(()=>{
+const b=document.createElement('button');b.id='r6DismountBtn';b.className='btn';b.textContent='下马';b.hidden=true;b.style.cssText='position:absolute;right:12px;top:202px;z-index:40;min-width:60px;min-height:42px;border-radius:20px';b.onclick=()=>r6Dismount();$('#app').append(b);
+const animate=tgAnimate;tgAnimate=function(){const out=animate.apply(this,arguments);b.hidden=!r6IsRiding()||!!W3?.r6Plan;return out;};
+const camera=worldCamera;worldCamera=function(){const out=camera.apply(this,arguments),w=W3;if(!w?.active)return out;
+if(S.view!=='fp'&&r6IsRiding()){
+ const target=w.player.position.clone().add(new THREE.Vector3(0,1.9,0)),dir=new THREE.Vector3(Math.sin(w.yaw),0,Math.cos(w.yaw));
+ const behind=w.camera.position.clone().sub(target).dot(dir);if(behind<2.8){w.camera.position.addScaledVector(dir,2.8-behind);w.camera.position.y=Math.max(w.camera.position.y,target.y+1.6);w.camera.lookAt(target);}
+}
+return out;};
+})();
+/* r6c: cut only camera-adjacent outdoor canopy fragments in first person.
+   World-space clipping keeps merged trees/decor batched and never hides a scene. */
+(()=>{
+const eye={value:new THREE.Vector3()},enabled={value:0},patched=new WeakSet();
+function patch(s){s.group.traverse(m=>{
+ if(!m.isMesh||m.isSkinnedMesh||Array.isArray(m.material)||m===s.floor||m.userData.r6Hk||m.userData.r41Label||m.userData.wallSign||m.material.map||m.material.transparent)return;
+ let art=false;for(let p=m;p&&p!==s.group;p=p.parent)if(p===s.art3Group)art=true;
+ if(!art&&!m.geometry.attributes.color)return;
+ if(patched.has(m))return;patched.add(m);const mat=m.material.clone(),old=m.material.onBeforeCompile,key=m.material.customProgramCacheKey?.();
+ mat.onBeforeCompile=function(shader,renderer){old?.call(this,shader,renderer);shader.uniforms.r6cEye=eye;shader.uniforms.r6cCut=enabled;
+ shader.vertexShader='varying vec3 r6cWorld;\n'+shader.vertexShader;
+ shader.vertexShader=shader.vertexShader.replace('#include <project_vertex>',`vec4 r6cP=vec4(transformed,1.0);
+ #ifdef USE_INSTANCING
+ r6cP=instanceMatrix*r6cP;
+ #endif
+ r6cWorld=(modelMatrix*r6cP).xyz;
+ #include <project_vertex>`);
+ shader.fragmentShader='uniform vec3 r6cEye;uniform float r6cCut;varying vec3 r6cWorld;\n'+shader.fragmentShader;
+ shader.fragmentShader=shader.fragmentShader.replace('#include <clipping_planes_fragment>','#include <clipping_planes_fragment>\nif(r6cCut>0.5 && distance(r6cWorld.xz,r6cEye.xz)<1.1 && r6cWorld.y>r6cEye.y-0.2 && r6cWorld.y<r6cEye.y+2.0)discard;');};
+ mat.customProgramCacheKey=()=>String(key)+'r6cCanopy';m.material=mat;
+ });}
+const camera=worldCamera;worldCamera=function(){const out=camera.apply(this,arguments),w=W3;enabled.value=w&&S.view==='fp'&&['gate','lotus'].includes(w.active)?1:0;if(w){eye.value.copy(w.camera.position);if(['gate','lotus'].includes(w.active))patch(w.spaces[w.active]);}return out;};
+})();
+/* r6c: close unused legacy room openings in FP; keep the actual hall doorway. */
+(()=>{
+const build=r3Build;r3Build=function(){const out=build.apply(this,arguments);for(const id of ['zen','study']){const s=W3.spaces[id],g=new THREE.Group(),mat=new THREE.MeshLambertMaterial({color:'#c5b593'}),geos=[];
+const wall=(x,z,w,d)=>{const geo=new THREE.BoxGeometry(w,4.2,d);geo.translate(x,2.1,z);geos.push(geo);};
+wall(0,-7.87,11.8,.08);wall(0,7.87,11.8,.08);
+for(const side of [-1,1]){const exit=side===(id==='zen'?-1:1);if(exit){wall(side*5.87,-4.7,.08,6.3);wall(side*5.87,4.7,.08,6.3);}else wall(side*5.87,0,.08,15.8);}
+const ceiling=new THREE.BoxGeometry(11.8,.08,15.8);ceiling.translate(0,4.18,0);geos.push(ceiling);g.add(new THREE.Mesh(mergeGeometries(geos),mat));geos.forEach(v=>v.dispose());g.name='r6c-room-lining';g.visible=false;s.group.add(g);s.r6cRoomLining=g;}return out;};
+const camera=worldCamera;worldCamera=function(){const out=camera.apply(this,arguments);for(const id of ['zen','study']){const s=W3?.spaces?.[id];if(s?.r6cRoomLining)s.r6cRoomLining.visible=S.view==='fp'&&W3.active===id;}return out;};
+})();
 
 /* r6-art.js — TG_REAL install, shader warm-up, tea interact fix, teahouse wall sync. */
 (()=>{
@@ -6898,7 +6973,11 @@ if(!window.TG_AVATAR_NET){
 }
 
 
+const R6_ALIAS={jade:"jade_pendant",whitehorse:"white_horse",whitedeer:"white_deer",greenox:"green_ox",bells:"saddle_bell"};
+const canonical=id=>R6_ALIAS[id]||id;
 function r6MeritPrice(id){
+  id=canonical(id);
+  if(window.TG_MERIT&&!TG_MERIT.__offline){const price=TG_MERIT.price?.(id);if(price!=null)return price;}
   const cat=(window.TG_CATALOG||[]).find(c=>c.id===id);
   if(cat&&cat.meritPrice!=null)return cat.meritPrice|0;
   const acc=R6_ACC.find(a=>a.id===id); if(acc)return acc.price|0;
@@ -6914,14 +6993,30 @@ function r6GrantMeritItem(id){
   if(title){const list=S.avatarInv.titles??=[]; if(!list.includes(id))list.push(id); return;}
   S.backpack[id]=(S.backpack[id]||0)+1;
 }
+const R6_REASON={poor:'功德不足',offline:'需联网才能供奉',unknown:'暂未开放',rate:'今日次数已用完',daily:'今日次数已用完',error:'网络异常，请重试',owned:'已经拥有了',busy:'正在处理，请稍候',free:'免费，无需购买',bad_req:'请求无效，请重试',not_owned:'尚未拥有该装扮',title_not_owned:'尚未获得该称号',bad_name:'名称不可用',bad_title:'称号无效',bad_acc:'配饰无效',bad_avatar:'容貌数据无效',too_big:'数据过大',bad_value:'数据无效',bad_key:'数据无效',no_hooks:'暂不可用',unauthorized:'请先登录',auth:'请先登录'};
 if(!window.TG_MERIT){
+  const inflight=new Set(),bought={};
+  const catalog=()=>({items:[...(window.TG_CATALOG||[]).filter(c=>c.meritPrice!=null).map(c=>({...c,kind:'decor',price:c.meritPrice})),...R6_ACC,...R6_TITLES,...Object.entries({white_horse:5000,white_deer:9000,green_ox:9000,saddle_bell:2000}).map(([id,price])=>({id,price,kind:id==='saddle_bell'?'mount_decor':'mount'}))],aliases:{...R6_ALIAS},bought:{...bought},owned:TG_AVATAR_NET.owned()});
   window.TG_MERIT={
-    __offline:true,
+    __offline:true,id:canonical,price:r6MeritPrice,busy:id=>inflight.has(canonical(id)),bought:id=>bought[canonical(id)]||0,
+    catalog,load:async()=>catalog(),reasonText:r=>R6_REASON[typeof r==='string'?r:r?.reason]||'暂时无法购买',
     spend:async function(id){
-      const price=r6MeritPrice(id);
-      if(price==null)return {ok:false,reason:'未知商品'};
-      if(!window.TG_MERIT_ADD(-price))return {ok:false,reason:'功德尚不足'};
-      return {ok:true,price};
+      id=canonical(id);
+      if(inflight.has(id))return {ok:false,reason:'busy',item:id};
+      inflight.add(id);
+      let charged=false,price;
+      try{
+        // Yield with the lock held so simultaneous calls observe busy.
+        await Promise.resolve();
+        const item=catalog().items.find(c=>c.id===id);price=item?.price;
+        if(price==null)return {ok:false,reason:'unknown',item:id};
+        if((item.kind==='accessory'||item.kind==='title')&&TG_AVATAR_NET.owned().includes(id))return {ok:false,reason:'owned',item:id};
+        if(price===0)return {ok:false,reason:'free',item:id};
+        if(!await window.TG_MERIT_ADD(-price))return {ok:false,reason:'poor',item:id};
+        charged=true;bought[id]=(bought[id]||0)+1;
+        return {ok:true,item:id,kind:item.kind,price};
+      }catch(e){if(charged)await window.TG_MERIT_ADD(price);return {ok:false,reason:'error',item:id};}
+      finally{inflight.delete(id);}
     }
   };
 }
@@ -6971,10 +7066,14 @@ sanitizeR4=function(d){
 
 window.r6RevalidateAvatar=function(){
   const A=window.TG_AVATAR;if(!A?.normalize||!S?.avatar)return;
+  const N=window.TG_AVATAR_NET;if(!N?.catalog?.()?.length)return;
   S.avatar=A.normalize(S.avatar);
+  for(const [slot,part]of Object.entries(S.avatar.acc||{}))if(part!=='none'&&N.locked?.(slot,part))S.avatar.acc[slot]='none';
+  save();
   r6ApplyAvatar?.();
 };
 addEventListener('tg-avatar',()=>r6RevalidateAvatar());
+setTimeout(()=>{if(window.TG_AVATAR_NET?.catalog?.()?.length)r6RevalidateAvatar();},0);
 
 
 const _water=typeof waterPlot==='function'?waterPlot:null;
@@ -7043,15 +7142,23 @@ window.r6TitlePickerHtml=function(){
   return '<p>称号</p><select id="r6TitlePick"><option value="">（不佩戴）</option>'+owned.map(t=>`<option value="${r3Esc(t.id)}"${(t.id===cur||t.name===cur)?' selected':''}>${r3Esc((t.emoji?t.emoji+' ':'')+t.name)}</option>`).join('')+'</select>';
 };
 
-const _open=window.r6OpenAvatar;
-if(_open)window.r6OpenAvatar=function(){
-  const out=_open.apply(this,arguments);
-  setTimeout(()=>{
-  },0);
-  if(window.TG_AVATAR_NET?.save&&S.avatarWire)try{TG_AVATAR_NET.save(S.avatarWire);}catch(e){}
-  return out;
+window.r6CatalogId=id=>window.TG_MERIT?.id?.(id)||canonical(id);
+window.r6MeritPrice=r6MeritPrice;
+window.r6ToastReason=result=>{
+  const r=typeof result==='string'?{reason:result}:result;
+  // Save validation reasons are not included in the backend merit map.
+  if(['not_owned','title_not_owned','bad_name','bad_title','bad_acc','bad_avatar','too_big','bad_value','bad_key'].includes(r?.reason))return R6_REASON[r.reason];
+  return window.TG_MERIT?.reasonText?.(r)||R6_REASON[r?.reason]||'暂不可用，请稍后重试';
 };
-
+window.r6Purchases=new Set();
+window.r6Purchase=async function(id,fn){id=r6CatalogId(id);if(r6Purchases.has(id))return false;r6Purchases.add(id);try{return await fn();}finally{r6Purchases.delete(id);}};
+if(TG_AVATAR_NET.__offline&&!TG_AVATAR_NET.buy)TG_AVATAR_NET.buy=async function(id){
+  id=r6CatalogId(id);const c=R6_ACC.concat(R6_TITLES).find(c=>c.id===id);
+  if(!c)return {ok:false,reason:'unknown'};
+  if(TG_AVATAR_NET.owned().includes(id))return {ok:false,reason:'owned'};
+  const r=await TG_MERIT.spend(id);if(r?.ok!==true)return r;
+  r6GrantMeritItem(r.item);save();return r;
+};
 const shop=openShop;
 openShop=function(tab){
   const out=shop.apply(this,arguments);
@@ -7063,26 +7170,27 @@ openShop=function(tab){
       if(sel)sel.onchange=()=>r6PickTitle(sel.value||null);
     }
     host?.querySelectorAll('[data-r6-buy],[data-merit-buy]').forEach(b=>{
+      const itemId=r6CatalogId(b.dataset.r6Buy||b.dataset.meritBuy);
+      b.disabled=!!(b.dataset.busy||TG_MERIT.busy?.(itemId));
+      b.style.opacity=b.disabled?'0.5':'';
+      const price=TG_MERIT.price?.(itemId);
+      if(price!=null){const label=b.closest?.('article')?.querySelector('small');if(label)label.textContent=price+' 功德';}
       b.onclick=async ev=>{
         ev?.preventDefault?.(); ev?.stopPropagation?.();
-        if(r3DenyVisit?.())return;
-        const id=b.dataset.r6Buy||b.dataset.meritBuy;
+        if(b.dataset.busy||r3DenyVisit?.())return;
+        const id=r6CatalogId(b.dataset.r6Buy||b.dataset.meritBuy);
         if(!id)return;
-        if(window.TG_MERIT?.spend){
-          const r=await TG_MERIT.spend(id);
-          if(!r||!r.ok){toast(r?.reason||'功德尚不足或今日不可购');return;}
-          /* spend already ran TG_MERIT_ADD(-price); do not deduct again */
-          r6GrantMeritItem(id);
-          save(); renderTop?.(); openShop('merit');
-          return;
-        }
-        /* no spend API: single local deduct */
-        const price=r6MeritPrice(id);
-        if(price==null)return toast('未知商品');
-        if((S.merit|0)<price)return toast('功德尚不足');
-        S.merit=(S.merit|0)-price;
-        r6GrantMeritItem(id);
-        save(); renderTop?.(); openShop('merit');
+        b.dataset.busy='1';b.disabled=true;
+        try{await r6Purchase(id,async()=>{
+          const avatar=R6_ACC.some(a=>a.id===id)||R6_TITLES.some(t=>t.id===id);
+          const r=avatar&&TG_AVATAR_NET.buy?await TG_AVATAR_NET.buy(id):await TG_MERIT.spend(id);
+          if(r?.ok!==true){toast(r6ToastReason(r));return false;}
+          r6GrantMeritItem(r.item);save();renderTop?.();openShop('merit');
+          if(avatar)Promise.resolve(TG_AVATAR_NET.load?.()).catch(()=>{});
+          return true;
+        });}catch(e){toast(r6ToastReason('error'));}
+        finally{delete b.dataset.busy;b.disabled=!!TG_MERIT.busy?.(id);b.style.opacity=b.disabled?"0.5":"";}
+
       };
     });
   }
@@ -7455,7 +7563,7 @@ if(W3)aliasSpaces();
     const TH=T();
     roofs.forEach(roof=>{
       const b=new TH.Box3().setFromObject(roof);
-      const y=Math.max(2.1,b.min.y-0.08);
+      const y=Math.max(2.6,b.min.y-0.08);
       const step=1.15;
       const edges=[
         [b.min.x, b.min.z, b.max.z, false],
@@ -7480,8 +7588,8 @@ if(W3)aliasSpaces();
     // a few beveled timber brackets at door-height corners
     const br=[];
     (space.exits||[]).forEach(e=>{
-      br.push({x:e.x+(e.x>0?-0.7:e.x<0?0.7:-1.1),y:1.55,z:e.z+(Math.abs(e.z)>Math.abs(e.x)?(e.z>0?-0.4:0.4):0),sx:1});
-      br.push({x:e.x+(e.x>0?-0.7:e.x<0?0.7:1.1),y:1.55,z:e.z+(Math.abs(e.z)>Math.abs(e.x)?(e.z>0?-0.4:0.4):0),sx:1});
+      br.push({x:e.x+(e.x>0?-0.7:e.x<0?0.7:-1.1),y:2.7,z:e.z+(Math.abs(e.z)>Math.abs(e.x)?(e.z>0?-0.4:0.4):0),sx:1});
+      br.push({x:e.x+(e.x>0?-0.7:e.x<0?0.7:1.1),y:2.7,z:e.z+(Math.abs(e.z)>Math.abs(e.x)?(e.z>0?-0.4:0.4):0),sx:1});
     });
     instanced(C.bracket,C.mat.bracket,br,space.group);
     space.r6HkDougong=true;
@@ -9710,15 +9818,19 @@ if(W3)aliasSpaces();
  *        reasons: not_owned | title_not_owned | bad_name | bad_title | bad_acc | bad_value | bad_key | too_big
  *   locked(slot, part) -> null | {id, price, name}   paid part not owned yet (for the 捏脸 panel)
  *   titles() -> [{id, name, emoji, price, owned}]
- *   buy(itemId) -> Promise<{ok, reason?, price}>   pays 功德 with TG_MERIT_ADD(-price) first, refunds on failure
- *        reasons: poor | owned | unknown | rate | offline | no_hooks | error
+ *   buy(itemId) -> Promise<{ok, item, kind, price, replay?} | {ok:false, reason}>   accessories/titles ('jade' = 'jade_pendant');
+ *        same purchase path as TG_MERIT.spend (see there)
  *   of(userId) -> {avatar, title, title_name, title_emoji, mounts} | null   (server-validated; fetched lazily)
  *   TG_NET.players()[i] gains: avatar (trusted config), avatarWire (TG_AVATAR.serialize of it -> deserialize+build/update),
  *        title (display name), titleId, titleEmoji, nameWithTitle, mount (TG_MOUNTS.fromJSON-able {kind,deco,id,passenger}; non-null only while riding)
  *   window event 'tg-avatar' {detail:{type:'loaded'|'saved'|'bought'|'others', ...}}
- * window.TG_MERIT    other 功德 sinks with a server price list (merit decor / white_horse / white_deer / green_ox / saddle_bell)
- *   spend(itemId) -> Promise<{ok, reason?, price}>   same pay-first / refund flow; the game then grants the item
+ * window.TG_MERIT    every 功德 purchase (r6.1): decor, white_horse/white_deer/green_ox, saddle_bell, accessories, titles
+ *   spend(itemId) -> Promise<{ok:true, item(canonical id), kind, price, replay?} | {ok:false, reason, price?}>
+ *        deducts TG_MERIT_ADD(-serverPrice) first, refunds if refused; grant the item ONLY when ok===true.
+ *        reasons: poor | owned | unknown | rate | offline | busy (same item already pending: do NOT grant) | error | bad_req
+ *   reasonText(r) -> Chinese toast text   price(id) / id(alias) / busy(id) / bought(id) / load() / catalog()
  * window.TG_MOUNT_NET
+ *   buy(kindOrId) -> same as TG_MERIT.spend (whitehorse/white_horse, whitedeer, greenox, saddle_bell)
  *   setRiding(payload|null)   payload = TG_MOUNTS.toJSON(m) + {id, passenger?}; presence 'mount' = {id, kind, deco, decor(=deco), passenger?} ONLY while riding (cleared automatically in hall/zen/study)
  *   save(S.mounts)            persist {owned:[{id,kind,deco (TG_MOUNTS.toJSON().deco; 'decor' accepted),location:'yard-post'|'following'|{scene,x,z}}], riding} (debounced)
  *   requestRide(ownerId) -> Promise<bool>   family-only 黄牛车 passenger request (server checks family); owner gets onRideRequest
@@ -9765,17 +9877,48 @@ if(W3)aliasSpaces();
     if (typeof window.TG_MERIT_ADD === 'function') return !!safe(function () { return window.TG_MERIT_ADD(n); });
     return !!safe(function () { if (!(S.merit + n >= 0)) return false; S.merit += n; save(); safe(renderTop); return true; });
   }
-  // pay-first purchase: deduct locally, ask the server, refund if refused
-  async function payMerit(fn, item, price) {
-    if (!online()) return { ok: false, reason: 'offline' };
-    var bal = meritGet();
-    if (price != null && bal < price) return { ok: false, reason: 'poor', price: price };
-    if (price != null && !meritAdd(-price)) return { ok: false, reason: 'poor', price: price };
-    var r; try { r = await rpc(fn, { p_item: item, p_balance: bal }); } catch (e) { r = { ok: false, reason: 'error', message: e && e.message }; }
-    if (!r || !r.ok) { if (price != null) meritAdd(price); return r || { ok: false, reason: 'error' }; }
-    if (price != null && r.price !== price) meritAdd(price - r.price);   // server price wins
-    if (price == null) meritAdd(-r.price);
-    return r;
+  // ---- 功德 purchases (r6.1) ----
+  // One path for every merit sink (TG_MERIT.spend, TG_AVATAR_NET.buy, TG_MOUNT_NET.buy):
+  //  * price from the server list (merit_catalog), aliases jade -> jade_pendant, whitehorse -> white_horse …
+  //  * one purchase per item at a time: a second call while the first is pending gets {ok:false, reason:'busy'} (no grant!)
+  //  * pay first: TG_MERIT_ADD(-price) must succeed, else 'poor'; refunded if the server refuses
+  //  * idempotency key p_req: a network retry can't charge twice (the server replays the first result)
+  var PRICES = null, INFLIGHT = {};
+  var ALIAS = { jade: 'jade_pendant', whitehorse: 'white_horse', whitedeer: 'white_deer', greenox: 'green_ox', bells: 'saddle_bell' };
+  var MERIT_REASON = { poor: '功德不足', offline: '需联网才能供奉', unknown: '暂未开放', rate: '今日次数已用完', error: '网络异常，请重试',
+    owned: '已经拥有了', busy: '正在处理，请稍候', free: '免费，无需购买', bad_req: '请求无效，请重试' };
+  function canon(id) { id = String(id || ''); return (PRICES && PRICES.aliases && PRICES.aliases[id]) || ALIAS[id] || id; }
+  async function loadPrices() { if (!online()) return PRICES; try { PRICES = await rpc('merit_catalog', {}); } catch (e) {} return PRICES; }
+  function priceItem(id) { return PRICES && (PRICES.items || []).find(function (x) { return x.id === id; }) || null; }
+  function newReq() { return 'm' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10); }
+  function payMerit(fn, item) {
+    var id = canon(item);
+    if (INFLIGHT[id]) return Promise.resolve({ ok: false, reason: 'busy', item: id });
+    var p = (async function () {
+      if (!online()) return { ok: false, reason: 'offline', item: id };
+      if (!PRICES) await loadPrices();
+      var it = priceItem(id);
+      if (!it) return { ok: false, reason: 'unknown', item: id };
+      if ((it.kind === 'accessory' || it.kind === 'title') && PRICES.owned && PRICES.owned.indexOf(id) >= 0) return { ok: false, reason: 'owned', item: id };
+      var price = it.price, bal = meritGet();
+      if (bal < price || !meritAdd(-price)) return { ok: false, reason: 'poor', price: price, item: id };
+      var req = newReq(), r = null;
+      for (var t = 0; t < 2; t++) {   // one retry with the same key on a network error
+        try { r = await rpc(fn, { p_item: id, p_balance: bal, p_req: req }); break; } catch (e) { r = { ok: false, reason: 'error', message: e && e.message }; }
+      }
+      if (!r || !r.ok) { meritAdd(price); if (r && r.reason === 'unknown') loadPrices(); return r || { ok: false, reason: 'error', item: id }; }
+      if (r.price !== price) { meritAdd(price - r.price); loadPrices(); }   // server price wins
+      if (r.kind === 'accessory' || r.kind === 'title') {
+        if (PRICES.owned && PRICES.owned.indexOf(r.item) < 0) PRICES.owned.push(r.item);
+        if (MINE && MINE.owned && MINE.owned.indexOf(r.item) < 0) MINE.owned.push(r.item);
+        fire('bought', { item: r.item, price: r.price });
+      }
+      if (PRICES.bought) PRICES.bought[r.item] = (PRICES.bought[r.item] || 0) + (r.replay ? 0 : 1);
+      return r;
+    })();
+    INFLIGHT[id] = p;
+    p.then(function () { delete INFLIGHT[id]; }, function () { delete INFLIGHT[id]; });
+    return p;
   }
 
   /* ---------------- avatars ---------------- */
@@ -9799,14 +9942,10 @@ if(W3)aliasSpaces();
     if (r && r.ok) { MINE = Object.assign(MINE || {}, r); CACHE[me()] = MINE; publish(); fire('saved', { me: MINE }); }
     return r;
   };
-  A.buy = async function (id) {
-    var c = (MINE && MINE.catalog || []).find(function (x) { return x.id === id; });
+  A.buy = async function (id) {   // accessories / titles only (server avatar_buy); same lock / pay-first / idempotency as TG_MERIT.spend
     if (!MINE) await A.load();
-    c = c || (MINE && MINE.catalog || []).find(function (x) { return x.id === id; });
-    if (!c) return { ok: false, reason: 'unknown' };
-    if (A.owned().indexOf(id) >= 0) return { ok: false, reason: 'owned' };
-    var r = await payMerit('avatar_buy', id, c.price);
-    if (r.ok) { MINE.owned.push(id); fire('bought', { item: id, price: r.price }); }
+    var r = await payMerit('avatar_buy', id);
+    if (r.ok && MINE && MINE.owned.indexOf(r.item) < 0) MINE.owned.push(r.item);
     return r;
   };
   A.locked = function (slot, part) {
@@ -9846,7 +9985,16 @@ if(W3)aliasSpaces();
   };
 
   /* ---------------- other merit sinks ---------------- */
-  window.TG_MERIT = { spend: function (id) { return payMerit('merit_spend', id, null); } };
+  window.TG_MERIT = {
+    spend: function (id) { return payMerit('merit_spend', id); },   // any merit item (decor, mount, saddle_bell, accessory, title)
+    load: loadPrices,                                                // -> {items:[{id,kind,price,name,emoji,slot,part}], aliases, bought:{id:n}, owned:[]}
+    catalog: function () { return PRICES; },
+    price: function (id) { var it = priceItem(canon(id)); return it ? it.price : null; },
+    id: canon,
+    busy: function (id) { return !!INFLIGHT[canon(id)]; },
+    bought: function (id) { return (PRICES && PRICES.bought && PRICES.bought[canon(id)]) || 0; },
+    reasonText: function (r) { return MERIT_REASON[r && r.reason] || '暂时无法购买'; }
+  };
 
   /* ---------------- mounts ---------------- */
   var INDOOR = { hall: 1, zen: 1, study: 1 };
@@ -9863,6 +10011,7 @@ if(W3)aliasSpaces();
     return !!riding || payload == null;
   };
   MN.riding = function () { return riding; };
+  MN.buy = function (kindOrId) { return payMerit('merit_spend', kindOrId); };   // merit mounts / saddle_bell; server records ownership (mounts_save drops unbought ones)
   MN.save = function (mounts) {
     clearTimeout(mSaveTimer);
     return new Promise(function (res) {
@@ -10000,7 +10149,7 @@ if(W3)aliasSpaces();
   var started = null;
   function start() {   // once per signed-in user (auth fires several change events); sequential: one probe call if r6.sql is missing
     if (started === me()) return; started = me();
-    A.load().then(function () { refreshMir(); });
+    PRICES = null; A.load().then(function () { refreshMir(); loadPrices(); });
   }
   (function waitAuth(n) { if (online()) return start(); if (n > 240) return; setTimeout(function () { waitAuth(n + 1); }, 500); })(0);
   if (AUTH && AUTH.onChange) safe(function () { AUTH.onChange(function () { if (online()) start(); }); });
