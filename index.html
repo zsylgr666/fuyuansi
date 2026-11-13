@@ -548,12 +548,12 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
   function randNick() { return '访客' + Math.floor(1000 + Math.random() * 9000); }
   function errMsg(e) {
     var m = (e && (e.message || e.error_description || e.msg)) || String(e || '未知错误');
-    if (/already registered|already been registered|already exists/i.test(m)) return '这个邮箱已经注册过了，请直接登录';
-    if (/Invalid login credentials/i.test(m)) return '邮箱或密码不对';
-    if (/Password should be at least/i.test(m)) return '密码至少 6 位';
-    if (/valid email|invalid.*email|Unable to validate email/i.test(m)) return '邮箱格式不对';
-    if (/rate limit|too many/i.test(m)) return '操作太频繁，请稍后再试';
-    if (/Failed to fetch|NetworkError|timeout|network/i.test(m)) return '网络连接不上，已切到本地模式';
+    if (/already registered|already been registered|already exists/i.test(m)) return '这个邮箱已经注册过了，请直接登录。';
+    if (/Invalid login credentials/i.test(m)) return '邮箱或密码不对。';
+    if (/Password should be at least/i.test(m)) return '密码至少 6 位。';
+    if (/valid email|invalid.*email|Unable to validate email/i.test(m)) return '邮箱格式不对。';
+    if (/rate limit|too many/i.test(m)) return '操作太频繁，请稍后再试。';
+    if (/Failed to fetch|NetworkError|timeout|network/i.test(m)) return '连不上网络，已切换到本地模式。';
     return m;
   }
 
@@ -603,7 +603,7 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
     } catch (e) { AUTH.nickname = AUTH.nickname || ls('templeGarden.nickname') || randNick(); }
   }
   async function signInAnon() {
-    if (!SB) throw new Error('离线模式');
+    if (!SB) throw new Error('没有联网。');
     var r = await SB.auth.signInAnonymously();
     if (r.error) throw r.error;
     setUser(r.data.user);
@@ -644,7 +644,7 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
   }
   // Register with email+password+nickname. If currently anonymous, upgrades the SAME user (data kept).
   async function register(email, password, nickname) {
-    if (!SB) throw new Error('离线模式，无法注册');
+    if (!SB) throw new Error('没有联网，暂时不能注册。');
     email = String(email || '').trim(); nickname = String(nickname || '').trim();
     if (AUTH.user && AUTH.isAnonymous) {
       var up = await SB.auth.updateUser({ email: email, password: password, data: { nickname: nickname || AUTH.nickname } });
@@ -663,7 +663,7 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
     if (r.error) throw r.error;
     if (!r.data.session) { // confirm-email was turned on
       var li = await SB.auth.signInWithPassword({ email: email, password: password });
-      if (li.error) throw new Error('注册成功，请先去邮箱确认后再登录');
+      if (li.error) throw new Error('注册成功。请先去邮箱确认，再登录。');
     }
     var u2 = (await SB.auth.getUser()).data.user;
     setUser(u2);
@@ -674,7 +674,7 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
   }
   // Login to an existing account. Its cloud save replaces the current (guest) progress on next TG_STORAGE.load().
   async function login(email, password) {
-    if (!SB) throw new Error('离线模式，无法登录');
+    if (!SB) throw new Error('没有联网，暂时不能登录。');
     await STORAGE.flush();
     var r = await SB.auth.signInWithPassword({ email: String(email || '').trim(), password: password });
     if (r.error) throw r.error;
@@ -696,7 +696,7 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
   }
   async function setNickname(nick, silent) {
     nick = String(nick || '').trim().slice(0, 16);
-    if (!nick) throw new Error('昵称不能为空');
+    if (!nick) throw new Error('昵称不能为空。');
     AUTH.nickname = nick; ls('templeGarden.nickname', nick);
     if (SB && AUTH.user) {
       var r = await SB.from('profiles').upsert({ id: AUTH.user.id, nickname: nick });
@@ -755,9 +755,9 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
   function renderModal(msg) {
     if (!modalEl || !modalEl.parentNode) return;
     var u = AUTH.user, who;
-    if (!AUTH.online || !SB) who = '本地模式（未连上云端），进度只存在这台设备上';
+    if (!AUTH.online || !SB) who = '本地模式（没有连上云端），进度只保存在这台设备上。';
     else if (!u) who = '正在连接…';
-    else if (AUTH.isAnonymous) who = '当前：<b>' + esc(AUTH.nickname) + '</b>（游客）<br><span style="font-size:12px">游客进度已存云端，注册后换设备也能接着玩</span>';
+    else if (AUTH.isAnonymous) who = '当前：<b>' + esc(AUTH.nickname) + '</b>（游客）<br><span style="font-size:12px">游客进度保存在云端。注册后，换设备也能继续玩。</span>';
     else who = '当前：<b>' + esc(AUTH.nickname) + '</b><br><span style="font-size:12px">' + esc(u.email) + ' · 云存档已开启</span>';
     var h = '<div class="tgb-box" role="dialog" aria-label="账号"><div class="tgb-hd"><span>🏮 福缘名册</span><button class="tgb-x" data-a="close" aria-label="关闭">×</button></div><div class="tgb-bd">' +
       '<div class="tgb-who">' + who + '</div>';
@@ -790,14 +790,14 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
       if (a === 'guest') { if (!AUTH.user && SB) { say('进入中…'); await signInAnon(); } closeModal(); }
       else if (a === 'register') {
         var em = val('tgb-email'), pw = val('tgb-pw'), nk = val('tgb-nick');
-        if (!/^\S+@\S+\.\S+$/.test(em)) throw new Error('邮箱格式不对');
-        if (pw.length < 6) throw new Error('密码至少 6 位');
-        if (!nk.trim()) throw new Error('请填个昵称');
-        say('注册中…'); await register(em, pw, nk); renderModal('注册成功，进度已保存到云端');
+        if (!/^\S+@\S+\.\S+$/.test(em)) throw new Error('邮箱格式不对。');
+        if (pw.length < 6) throw new Error('密码至少 6 位。');
+        if (!nk.trim()) throw new Error('请填写昵称。');
+        say('注册中…'); await register(em, pw, nk); renderModal('注册成功，进度已保存到云端。');
       } else if (a === 'login') {
-        say('登录中…'); await login(val('tgb-email'), val('tgb-pw')); renderModal('登录成功');
-      } else if (a === 'logout') { say('退出中…'); await logout(); renderModal('已退出，现在是游客'); }
-      else if (a === 'nick') { await setNickname(val('tgb-nick')); renderModal('昵称已更新'); }
+        say('登录中…'); await login(val('tgb-email'), val('tgb-pw')); renderModal('登录成功。');
+      } else if (a === 'logout') { say('退出中…'); await logout(); renderModal('已退出，现在是游客身份。'); }
+      else if (a === 'nick') { await setNickname(val('tgb-nick')); renderModal('昵称已更新。'); }
     } catch (err) { renderModal(errMsg(err)); }
     finally { busy = false; if (modalEl) modalEl.querySelectorAll('button').forEach(function (b) { b.disabled = false; }); }
   }
@@ -808,7 +808,10 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
   // server = the other device), adopt the result in the running game and write it back. Before r7.2 is live (RPC
   // missing) everything falls back to the old whole-blob upsert, so v14 keeps working against an r7.1 database.
   var saveTimer = null, pending = null, statusCbs = [];
-  var SYNC = { rev: -1, base: null, mode: null, chain: Promise.resolve(), toastAt: 0 };   // rev -1 = unknown ("expect no row")
+  var SYNC = { rev: -1, base: null, mode: null, chain: Promise.resolve(), toastAt: 0, sent: [] };   // rev -1 = unknown ("expect no row")
+  // Late writes: every cloud write carries a write id (_wid) inside the saved state. If a save_put times out on this device
+  // but still commits on the server, the next save sees a "conflict" whose server state has one of OUR unconfirmed _wids:
+  // that is our own (older) write, not another device — we take its rev and write the newer local state over it, unmerged.
   var revKey = CFG.saveKey + '.sync';     // {uid, rev, dirty}
   var baseKey = CFG.saveKey + '.base';    // snapshot at that rev (for merging after a reload)
   var STORAGE = {
@@ -838,16 +841,19 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
       if (AUTH.user) ls(CFG.ownerKey, AUTH.user.id);
     } catch (e) {}
   }
+  function newWid() { return Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10); }
+  function isOwnWrite(st) { return !!(st && typeof st === 'object' && st._wid && SYNC.sent.indexOf(st._wid) >= 0); }
   function readSync() { try { var o = JSON.parse(ls(revKey) || 'null'); return o && AUTH.user && o.uid === AUTH.user.id ? o : null; } catch (e) { return null; } }
   function writeSync(dirty) {
     if (!AUTH.user) return;
-    ls(revKey, JSON.stringify({ uid: AUTH.user.id, rev: SYNC.rev, dirty: !!dirty }));
+    ls(revKey, JSON.stringify({ uid: AUTH.user.id, rev: SYNC.rev, dirty: !!dirty, sent: SYNC.sent.slice(-8) }));
     if (!dirty) { try { ls(baseKey, SYNC.base == null ? null : JSON.stringify(SYNC.base)); } catch (e) { ls(baseKey, null); } }
   }
   function resetSync() { SYNC.rev = -1; SYNC.base = null; ls(revKey, null); ls(baseKey, null); }
   function srpc(fn, args) {
-    if (typeof window.TG_SAVE_RPC === 'function') return Promise.resolve(window.TG_SAVE_RPC(fn, args)).then(function (d) { return { data: d }; }, function (e) { return { error: e }; });
-    return withTimeout(SB.rpc(fn, args), 10000).catch(function (e) { return { error: e }; });
+    var ms = CFG.saveTimeoutMs || 10000;
+    if (typeof window.TG_SAVE_RPC === 'function') return withTimeout(Promise.resolve(window.TG_SAVE_RPC(fn, args)), ms).then(function (d) { return { data: d }; }, function (e) { return { error: e }; });
+    return withTimeout(SB.rpc(fn, args), ms).catch(function (e) { return { error: e }; });
   }
   function missingRpc(err) { var m = String((err && (err.code || '')) + ' ' + (err && (err.message || err))); return /PGRST202|Could not find the function|404/.test(m); }
   function cloudOn() { return !!(AUTH.user && AUTH.online && (typeof window.TG_SAVE_RPC === 'function' || (SB && CFG.cloudSave !== false))); }
@@ -872,7 +878,7 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
     var out = {}, keys = {};
     [base, local, server].forEach(function (o) { Object.keys(o).forEach(function (k) { keys[k] = 1; }); });
     Object.keys(keys).forEach(function (k) {
-      if (k === '_savedAt') return;
+      if (k === '_savedAt' || k === '_wid') return;
       var b = base[k], l = local[k], s = server[k];
       var v = (k === 'plots' && depth === 0) ? merge3(b, l, s, 1) : (same(l, b) ? s : same(s, b) ? l : merge3(b, l, s, depth + 1));
       if (v !== undefined) out[k] = clone(v);
@@ -910,11 +916,17 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
     setStatus('saving');
     if (SYNC.mode !== 'legacy') {
       var base = opts.force ? null : (opts.expectNew ? -1 : SYNC.rev);
+      var wid = newWid(); state = Object.assign({}, state, { _wid: wid });
+      SYNC.sent = SYNC.sent.concat(wid).slice(-8); if (AUTH.user && SYNC.mode === 'rev') writeSync(true);
       var r = await srpc('save_put', { p_state: state, p_base_rev: base });
       if (r.error && missingRpc(r.error)) { SYNC.mode = 'legacy'; console.warn('[TG_STORAGE] save_put missing (r7.2 not applied yet): using the old whole-save upsert'); }
-      else if (r.error || !r.data) { pending = pending || state; setStatus('pending'); console.warn('[TG_STORAGE] cloud save failed:', (r.error && (r.error.message || r.error)) || 'no data'); return false; }
+      else if (r.error || !r.data) {   // maybe it committed anyway (timeout): its _wid stays in SYNC.sent; retry soon
+        pending = pending || state; setStatus('pending'); console.warn('[TG_STORAGE] cloud save failed:', (r.error && (r.error.message || r.error)) || 'no data');
+        if (!saveTimer) saveTimer = setTimeout(flush, 5000);
+        return false;
+      }
       else if (r.data.ok) {
-        SYNC.mode = 'rev'; SYNC.rev = Number(r.data.rev); SYNC.base = clone(state); writeSync(!!pending);
+        SYNC.mode = 'rev'; SYNC.rev = Number(r.data.rev); SYNC.base = clone(state); SYNC.sent = []; writeSync(!!pending);
         setStatus(pending ? 'pending' : 'synced'); return true;
       } else if (r.data.reason === 'conflict') {
         SYNC.mode = 'rev';
@@ -936,13 +948,21 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
       return false;
     }
     var latest = pending || mine; pending = null; clearTimeout(saveTimer); saveTimer = null;
+    if (isOwnWrite(srv.state)) {   // our own timed-out write landed: newer local state wins, no merge, no toast
+      SYNC.rev = Number(srv.rev); SYNC.base = clone(srv.state);
+      var wid2 = newWid(), mine2 = Object.assign({}, latest, { _wid: wid2 }); SYNC.sent = SYNC.sent.concat(wid2).slice(-8); writeSync(true);
+      var r0 = await srpc('save_put', { p_state: mine2, p_base_rev: SYNC.rev });
+      if (r0.data && r0.data.ok) { SYNC.rev = Number(r0.data.rev); SYNC.base = clone(mine2); SYNC.sent = []; writeSync(!!pending); setStatus(pending ? 'pending' : 'synced'); if (pending) { clearTimeout(saveTimer); saveTimer = setTimeout(flush, CFG.debounceMs); } return true; }
+      if (r0.data && r0.data.reason === 'conflict' && tries < 3) return resolveConflict(latest, r0.data, tries + 1);
+      pending = pending || latest; setStatus('pending'); if (!saveTimer) saveTimer = setTimeout(flush, 5000); return false;
+    }
     var merged = merge3(SYNC.base, latest, srv.state);
     var changed = !same(merged, latest);
     SYNC.rev = Number(srv.rev); SYNC.base = clone(srv.state);
     if (changed) {
       var ok = false; try { ok = await adopt(merged); } catch (e) { console.warn('[TG_STORAGE] adopt failed', e); }
       if (!ok) { writeLocal(merged); writeSync(true); setTimeout(function () { location.reload(); }, 300); return false; }
-      note('另一台设备有更新，已同步');
+      note('已同步另一台设备上的进度。');
     }
     writeLocal(merged);
     var r = await srpc('save_put', { p_state: merged, p_base_rev: SYNC.rev });
@@ -956,7 +976,7 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
     var local = STORAGE._localState();
     await AUTH.ready;
     var sync = readSync();
-    if (sync) SYNC.rev = Number(sync.rev);
+    if (sync) { SYNC.rev = Number(sync.rev); SYNC.sent = Array.isArray(sync.sent) ? sync.sent.slice(-8) : []; }
     try { var b = ls(baseKey); SYNC.base = sync && b ? JSON.parse(b) : null; } catch (e) { SYNC.base = null; }
     if (!cloudOn()) { setStatus('local'); return local; }
     var localOwner = ls(CFG.ownerKey);
@@ -973,9 +993,10 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
     }
     if (localIsMine && sync && sync.dirty) {
       if (Number(sync.rev) === crev) { SYNC.rev = crev; SYNC.base = SYNC.base || clone(cloud); await upload(local); return local; }   // nobody else wrote
+      if (isOwnWrite(cloud)) { SYNC.rev = crev; SYNC.base = clone(cloud); await upload(local); return local; }   // our own late write landed
       var merged = merge3(SYNC.base, local, cloud);                 // unsynced edits here + another device's save
       SYNC.rev = crev; SYNC.base = clone(cloud); writeLocal(merged); writeSync(true);
-      if (!same(merged, local)) setTimeout(function () { note('另一台设备有更新，已同步'); }, 2500);
+      if (!same(merged, local)) setTimeout(function () { note('已同步另一台设备上的进度。'); }, 2500);
       await upload(merged); return merged;
     }
     if (localIsMine && !sync && Number(local._savedAt || 0) > Number(cloud._savedAt || 0)) {   // first run after the update: old rule once
@@ -1029,8 +1050,9 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
       if (g.error || !g.data || !g.data.ok || pending || saveTimer || busyElsewhere()) return false;
       var st = g.data.state;
       if (!st) return false;
+      if (isOwnWrite(st)) { SYNC.rev = Number(g.data.rev); SYNC.base = clone(st); SYNC.sent = []; writeSync(false); setStatus('synced'); return false; }   // our late write
       SYNC.rev = Number(g.data.rev); SYNC.base = clone(st); writeLocal(st); writeSync(false);
-      await adopt(st); note('另一台设备有更新，已同步'); setStatus('synced');
+      await adopt(st); note('已同步另一台设备上的进度。'); setStatus('synced');
       return true;
     } finally { checking = false; }
   }
@@ -1337,14 +1359,14 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
   function setUnread(n) { n = n | 0; if (n === unreadN) return; unreadN = n; cbs.forEach(function (cb) { try { cb(n); } catch (e) {} }); }
   var CATS = [{ id: 'decor', name: '装饰' }, { id: 'gameplay', name: '玩法' }, { id: 'ui', name: '界面' }, { id: 'bug', name: '问题反馈' }, { id: 'other', name: '其他' }];
   var STATUS = { pending: '待审阅', need_info: '需要补充', accepted_live: '已上线', rejected: '未采纳', escalated: '已转交' };
-  var REASON = { bad_category: '请选择一个分类', too_short: '再多写几句吧（至少 10 个字）', too_long: '太长了（最多 500 字）', empty: '写点什么吧',
-    link: '不能附带链接', number: '不能留联系方式', blocked: '换个说法吧', daily: '今天已经提了 3 条，明天再来', not_found: '找不到这条建议',
-    not_need_info: '这条建议不需要补充', offline: '需联网才能提交', error: '网络异常，请稍后重试' };
+  var REASON = { bad_category: '请先选一个分类。', too_short: '内容太短，至少 10 个字。', too_long: '内容太长，最多 500 字。', empty: '请先写内容。',
+    link: '不要附带链接。', number: '不要留联系方式。', blocked: '内容含有不合适的词，请修改后再提交。', daily: '今天已经提交 3 条，明天再来。', not_found: '找不到这条建议。',
+    not_need_info: '这条建议不需要补充。', offline: '没有联网，暂时不能提交。', error: '网络出错，请稍后再试。' };
   var S = window.TG_SUGGEST = {
     categories: CATS,
     limits: { perDay: 3, min: 10, max: 500, followMin: 5 },
     statusText: function (s) { return STATUS[s] || s || ''; },
-    reasonText: function (r) { var k = typeof r === 'string' ? r : r && r.reason; if (k === 'too_short' && r && r.min === 5) return '再多写几句吧（至少 5 个字）'; return REASON[k] || '暂时无法提交'; },
+    reasonText: function (r) { var k = typeof r === 'string' ? r : r && r.reason; if (k === 'too_short' && r && r.min === 5) return '内容太短，至少 5 个字。'; return REASON[k] || '暂时不能提交，请稍后再试。'; },
     submit: async function (category, text) {
       var t = clean(text);
       if (!CATS.some(function (c) { return c.id === category; })) return { ok: false, reason: 'bad_category' };
@@ -1418,11 +1440,11 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
   }
   function clean(t) { return String(t == null ? '' : t).replace(/[\u0000-\u001f\u007f\u200b-\u200f\u2028-\u202e\u2060-\u206f\ufeff]/g, ' ').replace(/\s+/g, ' ').trim(); }
   function emit() { var copy = items.slice(); cbs.forEach(function (cb) { try { cb(copy); } catch (e) {} }); }
-  var REASON = { empty: '写一句心愿吧', too_long: '心愿最多 40 个字', link: '不能附带链接', number: '不能留联系方式', blocked: '换个说法吧',
-    slow: '慢一点，稍等几秒再挂', daily: '今天已经挂了 5 块祈愿牌，明天再来', offline: '未联网：这块祈愿牌只有你自己看得到', error: '网络异常，祈愿牌暂未公开' };
+  var REASON = { empty: '请先写心愿。', too_long: '心愿最多 40 个字。', link: '不要附带链接。', number: '不要留联系方式。', blocked: '内容含有不合适的词，请修改后再挂。',
+    slow: '挂得太快了，请等 10 秒再挂。', daily: '今天已经挂了 5 块祈愿牌，明天再来。', offline: '没有联网，这块祈愿牌只有你自己能看到。', error: '网络出错，祈愿牌暂时没有公开。' };
   var W = window.TG_WISH = {
     limits: { perDay: 5, max: 40, gapS: 10 },
-    reasonText: function (r) { var k = typeof r === 'string' ? r : r && r.reason; return REASON[k] || '祈愿牌暂时挂不上'; },
+    reasonText: function (r) { var k = typeof r === 'string' ? r : r && r.reason; return REASON[k] || '暂时挂不上，请稍后再试。'; },
     hang: async function (text) {
       var t = clean(text);
       if (!t) return { ok: false, reason: 'empty' };
@@ -11031,6 +11053,257 @@ hookNormalize();
 hookOpenPanel();
 hookR6();
 window.TG_R7G={titleIdOf,displayTitle,canonicalStoredTitle,titleEquals,ownsTitle,applyNet};
+
+})();
+
+/* r7h: free titles (茶客 etc.) must survive face-editor save and stay visible to others. */
+(()=>{ 'use strict';
+
+const PAID_IDS={title_shanxin:1,title_jushi:1,title_xingzhe:1,title_gongdezhu:1,beads:1};
+const FREE_FALLBACK=['雅士','茶客','园丁','旅人','茶博士','园主','游方客','画师','药师','掌柜'];
+
+function stripTitle(s){return String(s==null?'':s).replace(/[🌱🎋🧭✨💠]/gu,'').trim();}
+function G(){return window.TG_R7G||{};}
+function titleIdOf(s){return G().titleIdOf?G().titleIdOf(s):(PAID_IDS[String(s||'').trim()]?String(s).trim():null);}
+function canonicalStoredTitle(s){return G().canonicalStoredTitle?G().canonicalStoredTitle(s):stripTitle(s);}
+function displayTitle(s,id){return G().displayTitle?G().displayTitle(s,id):(s==null||s===''?'':String(s));}
+
+function catalogItems(){
+  try{
+    const c=window.TG_AVATAR_NET?.catalog?.();
+    if(Array.isArray(c))return c;
+    if(c&&Array.isArray(c.items))return c.items;
+  }catch(e){}
+  return [];
+}
+function paletteFreeNames(){
+  const pal=window.TG_AVATAR?.palette?.title;
+  return Array.isArray(pal)&&pal.length?pal.slice():FREE_FALLBACK.slice();
+}
+/* Free whitelist: palette titles + any catalog title with price 0 / free / default-owned. */
+function freeWhitelist(){
+  const names=new Set();
+  paletteFreeNames().forEach(n=>{if(n)names.add(String(n));});
+  catalogItems().forEach(t=>{
+    if(!t||(t.kind&&t.kind!=='title'))return;
+    const free=t.price===0||t.price==='0'||t.free===true||t.defaultOwned===true;
+    if(!free)return;
+    if(t.name)names.add(String(t.name));
+    if(t.id&&!PAID_IDS[t.id])names.add(String(t.id));
+    (t.legacy_names||t.legacyNames||[]).forEach(n=>{if(n)names.add(String(n));});
+  });
+  return names;
+}
+function isPaidCatalogTitle(s){
+  const id=titleIdOf(s);
+  if(id&&PAID_IDS[id]&&id!=='beads')return true;
+  const bare=canonicalStoredTitle(s);
+  return catalogItems().some(t=>t&&t.kind==='title'&&(t.price>0)&&(t.id===s||t.name===s||t.name===bare||t.id===id));
+}
+function isFreeTitle(s){
+  if(s==null||s==='')return false;
+  const raw=String(s).trim(), bare=canonicalStoredTitle(raw);
+  const free=freeWhitelist();
+  if(free.has(raw)||free.has(bare)||free.has(stripTitle(raw)))return true;
+  /* A paid catalog title that also sits in the palette (雅士/旅人) is free only when not treated as the paid id. */
+  return false;
+}
+
+function freeIdOf(s){
+  const stored=canonicalStoredTitle(s);
+  if(!stored)return null;
+  if(isFreeTitle(stored)&&!isPaidOwned(stored))return stored;
+  return titleIdOf(stored)||(isFreeTitle(stored)?stored:null);
+}
+function isPaidOwned(s){
+  const id=titleIdOf(s);
+  if(!id||!PAID_IDS[id])return false;
+  const inv=S?.avatarInv?.titles||[];
+  if(inv.includes(id))return true;
+  try{
+    const rows=window.TG_AVATAR_NET?.titles?.()||[];
+    return rows.some(t=>t&&(t.id===id||titleIdOf(t.id||t.name)===id)&&(t.owned===true||t.owned===1||t.have));
+  }catch(e){return false;}
+}
+
+function ownsTitle(val){
+  if(!val)return true;
+  if(isFreeTitle(val))return true;
+  if(G().ownsTitle)return G().ownsTitle(val);
+  return false;
+}
+
+function wrapTitles(N){
+  if(!N||typeof N.titles!=='function'||N.titles._r7h)return;
+  const fn=N.titles;
+  N.titles=function(){
+    const rows=fn.apply(this,arguments)||[];
+    const out=[], seen=new Set();
+    rows.forEach(t=>{
+      if(!t||!t.name)return;
+      if(t.r7Alias)return;
+      const key=canonicalStoredTitle(t.name)||t.id||t.name;
+      if(seen.has(key))return;seen.add(key);
+      out.push(t);
+    });
+    freeWhitelist().forEach(name=>{
+      const key=canonicalStoredTitle(name)||name;
+      if(!key||seen.has(key))return;
+      seen.add(key);
+      out.push({id:key,name:key,owned:true,price:0,free:true,kind:'title',emoji:''});
+    });
+    return out;
+  };
+  N.titles._r7h=true;
+}
+
+function wrapSave(N){
+  if(!N||typeof N.save!=='function'||N.save._r7h)return;
+  const prev=N.save;
+  N.save=async function(avatar,titleId){
+    let cfg=avatar;
+    if(typeof avatar==='string'){
+      try{cfg=window.TG_AVATAR?.deserialize?.(avatar);}catch(e){cfg=null;}
+    }
+    const explicit=cfg&&typeof cfg==='object';
+    const stored=canonicalStoredTitle((explicit&&cfg.title)||titleId||'');
+    const id=stored?(titleIdOf(titleId)||titleIdOf(stored)||(isFreeTitle(stored)?stored:null)||titleId||null):null;
+    if(explicit){
+      cfg=Object.assign({},cfg,{title:stored});
+      const wire=window.TG_AVATAR?.serialize?.(cfg)||avatar;
+      return prev.call(this,wire,id);
+    }
+    return prev.call(this,avatar,id);
+  };
+  N.save._r7h=true;
+}
+
+function applyH(N){
+  if(!N||typeof N!=='object')return N;
+  if(typeof G().applyNet==='function'&&G().applyNet!==applyNet)G().applyNet(N);
+  wrapTitles(N);
+  wrapSave(N);
+  return N;
+}
+
+let origR7gApply=G().applyNet;
+function applyNet(N){
+  if(origR7gApply&&origR7gApply!==applyNet)N=origR7gApply(N);
+  return applyH(N);
+}
+if(window.TG_R7G)window.TG_R7G.applyNet=applyNet;
+
+let netRef=window.TG_AVATAR_NET;
+try{
+  Object.defineProperty(window,'TG_AVATAR_NET',{
+    configurable:true,enumerable:true,
+    get(){return netRef;},
+    set(v){netRef=applyNet(v);}
+  });
+}catch(e){}
+netRef=applyNet(netRef);
+setInterval(()=>{const n=window.TG_AVATAR_NET;if(n&&(!n.titles||!n.titles._r7h||!n.save||!n.save._r7h))applyNet(n);},1000);
+
+function hookNormalize(){
+  const A=window.TG_AVATAR;if(!A||!A.normalize||A.normalize._r7h)return;
+  const norm=A.normalize;
+  A.normalize=function(c,opts){
+    const incoming=c&&c.title;
+    const o=norm.call(this,c,incoming&&isFreeTitle(incoming)?Object.assign({},opts,{checkOwned:false}):opts);
+    if(o&&incoming&&isFreeTitle(incoming)&&!o.title)o.title=canonicalStoredTitle(incoming);
+    if(o&&o.title&&isFreeTitle(o.title))o.title=canonicalStoredTitle(o.title);
+    return o;
+  };
+  A.normalize._r7h=true;
+  A.isFreeTitle=isFreeTitle;
+  A.ownsTitle=function(s){return ownsTitle(s);};
+}
+
+function hookOpenPanel(){
+  const A=window.TG_AVATAR;if(!A?.openPanel||A.openPanel._r7h)return;
+  const prev=A.openPanel;
+  A.openPanel=function(opts){
+    applyNet(window.TG_AVATAR_NET);
+    opts=opts||{};
+    const cfg0=opts.config?Object.assign({},opts.config):{};
+    if(cfg0.title&&isFreeTitle(cfg0.title))cfg0.title=canonicalStoredTitle(cfg0.title);
+    const userSave=opts.onSave;
+    const ret=prev.call(this,Object.assign({},opts,{
+      config:Object.assign({},opts.config||{},cfg0),
+      onSave:function(c,wire){
+        const stored=canonicalStoredTitle(c&&c.title);
+        const c2=Object.assign({},c,{title:stored});
+        const w2=window.TG_AVATAR?.serialize?.(c2)||wire;
+        if(typeof userSave==='function')return userSave(c2,w2);
+      }
+    }));
+    /* If dropLocked still raced, restore a free title onto the live panel config after open. */
+    try{
+      const p=A.panel;
+      if(p&&cfg0.title&&isFreeTitle(cfg0.title)&&p.config&&!p.config.title){
+        /* panel.config is a getter of normalize(cfg); we cannot write private cfg. titles() injection is the real fix. */
+      }
+    }catch(e){}
+    return ret;
+  };
+  A.openPanel._r7h=true;
+}
+
+function hookR6(){
+  if(typeof r6OpenAvatar==='function'&&!r6OpenAvatar._r7h){
+    window.r6OpenAvatar=function(){
+      const A=window.TG_AVATAR;if(!A?.openPanel)return typeof toast==='function'&&toast('捏脸即将开放');
+      if(typeof r3DenyVisit==='function'&&r3DenyVisit())return;
+      window.TG_NPC?.hideBubbles?.();
+      applyNet(window.TG_AVATAR_NET);
+      const cfg0=Object.assign({},S.avatar||A.defaultConfig());
+      if(cfg0.title)cfg0.title=canonicalStoredTitle(cfg0.title);
+      A.openPanel({config:cfg0,onSave:async(cfg,wire)=>{
+        const stored=canonicalStoredTitle(cfg.title);
+        S.avatar=A.normalize(Object.assign({},cfg,{title:stored}),{checkOwned:false});
+        if(S.avatar)S.avatar.title=stored;
+        S.avatarWire=A.serialize(S.avatar);
+        S.avatarInv??={accessories:[],titles:[],equipped:{}};
+        S.avatarInv.equipped??={};
+        const rows=(window.r6OwnedTitleRows?.()||[]);
+        const paid=titleIdOf(stored);
+        const row=stored?rows.find(t=>t&&t.id&&(t.id===cfg.title||t.id===stored||canonicalStoredTitle(t.name)===stored||(paid&&titleIdOf(t.id||t.name)===paid))):null;
+        S.avatarInv.equipped.title=stored?(row&&row.id&&PAID_IDS[row.id]?row.id:(paid&&isPaidOwned(stored)?paid:(isFreeTitle(stored)?stored:row?.id||null))):null;
+        save();r6ApplyAvatar();
+        try{
+          const r=await window.TG_AVATAR_NET?.save?.(S.avatarWire||S.avatar,S.avatarInv.equipped.title);
+          if(r?.ok===false){toast(r6ToastReason(r));return;}
+          toast('已保存容貌');
+        }catch(e){toast(r6ToastReason('error'));}
+      }});
+    };
+    window.r6OpenAvatar._r7h=true;
+  }
+}
+
+/* Other players: decorate currently sets o.title from title_name (catalog join). Fall back to avatar JSON. */
+function hookDecorate(){
+  const net=window.TG_NET;if(!net||typeof net.decorate!=='function'||net.decorate._r7h)return;
+  const prev=net.decorate;
+  net.decorate=function(o){
+    const r=prev.apply(this,arguments);
+    if(o&&!o.title&&o.avatar&&o.avatar.title){
+      o.title=o.avatar.title;
+      if(o.name)o.nameWithTitle='【'+o.title+'】'+o.name;
+    }else if(o&&o.avatar&&!o.avatar.title&&o.title){
+      o.avatar=Object.assign({},o.avatar,{title:o.title});
+    }
+    return r;
+  };
+  net.decorate._r7h=true;
+}
+
+hookNormalize();
+hookOpenPanel();
+hookR6();
+hookDecorate();
+setTimeout(hookDecorate,0);
+window.TG_R7H={isFreeTitle,ownsTitle,freeWhitelist,applyNet,freeIdOf};
 
 })();
 
