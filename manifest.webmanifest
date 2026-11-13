@@ -1,0 +1,19 @@
+{
+  "name": "福缘里 · 心田小院",
+  "short_name": "福缘里",
+  "description": "种菜养小动物、布置小院、茶馆闲坐、古树下挂心愿笺的慢节奏线上小院",
+  "lang": "zh-CN",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f6ecd8",
+  "theme_color": "#3b2414",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
