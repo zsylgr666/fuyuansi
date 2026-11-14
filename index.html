@@ -771,7 +771,8 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
         (mode === 'register' ? '<input class="tgb-in" id="tgb-nick" maxlength="16" placeholder="昵称" value="' + esc(AUTH.isAnonymous && AUTH.nickname ? AUTH.nickname : '') + '">' : '') +
         '<button class="tgb-btn" data-a="' + mode + '">' + (mode === 'register' ? '注册并保留当前进度' : '登录') + '</button>' +
         '<button class="tgb-btn alt" data-a="guest">' + (u ? '继续当游客' : '游客进入') + '</button>' +
-        (mode === 'login' ? '<div class="tgb-tip">登录已有账号后，会读取那个账号的云端进度。</div>' : '');
+        (mode === 'login' ? '<div class="tgb-tip">登录已有账号后，会读取那个账号的云端进度。</div>' : '') +
+        '<div class="tgb-tip">登录后换手机、换浏览器都不丢名字和存档</div>';
     }
     h += '<div class="tgb-msg" id="tgb-msg">' + esc(msg || '') + '</div></div></div>';
     modalEl.innerHTML = h;
@@ -1574,102 +1575,66 @@ const INCENSE_SLOTS = 3;       // 香炉最多同时插 3 炷
 const UNLOCK_HARVEST = 3;      // 累计收获 3 份自动解锁祠堂
 const DEMO_PASS = '8888';      // 仅演示用口令，不是真实密码
 
-// 八卦：key 为自下而上三爻（1=阳 0=阴）
-const TRIGRAMS = {
-  '111':{name:'乾',nature:'天'}, '110':{name:'兑',nature:'泽'}, '101':{name:'离',nature:'火'}, '100':{name:'震',nature:'雷'},
-  '011':{name:'巽',nature:'风'}, '010':{name:'坎',nature:'水'}, '001':{name:'艮',nature:'山'}, '000':{name:'坤',nature:'地'},
-};
-// 文王卦序表：KW[上卦][下卦在 TRI_ORDER 中的位置] = 卦序号
-const TRI_ORDER = ['乾','震','坎','艮','坤','巽','离','兑'];
-const KW = {
-  '乾':[1,25,6,33,12,44,13,10],  '震':[34,51,40,62,16,32,55,54],
-  '坎':[5,3,29,39,8,48,63,60],   '艮':[26,27,4,52,23,18,22,41],
-  '坤':[11,24,7,15,2,46,36,19],  '巽':[9,42,59,53,20,57,37,61],
-  '离':[14,21,64,56,35,50,30,38],'兑':[43,17,47,31,45,28,49,58],
-};
-// 六十四卦（文王卦序）：[卦名, 白话释义]
-const HEXAGRAMS = [
- ['乾','刚健向上，自强不息，适合主动出击。'],['坤','柔顺包容，厚德载物，宜配合守成。'],
- ['屯','万事开头难，耐心积累，终会破土而出。'],['蒙','蒙昧初开，虚心求教，适合学习充电。'],
- ['需','等待时机，吃好睡好，不必急躁。'],['讼','容易起争执，退一步海阔天空。'],
- ['师','团队作战，需要章法和靠谱的带头人。'],['比','亲近友善，抱团合作能得到助力。'],
- ['小畜','小有积蓄但力量尚弱，稳步积累。'],['履','如履薄冰，谨慎守礼可保平安。'],
- ['泰','天地交泰，顺风顺水，好运当头。'],['否','闭塞不通，暂且低调，等待转机。'],
- ['同人','志同道合，与人合作事情可成。'],['大有','收获丰盛，富足之象，记得分享。'],
- ['谦','谦虚低调，反而处处受欢迎。'],['豫','心情愉悦，乐中有备，提前规划。'],
- ['随','随机应变，顺势而为，跟对人很重要。'],['蛊','积弊待除，动手整顿正当时。'],
- ['临','好事临近，积极面对，把握机会。'],['观','静观其变，多看多想，以身作则。'],
- ['噬嗑','遇到阻碍，果断处理，把难题咬碎。'],['贲','修饰美化，注重形象，但别只顾表面。'],
- ['剥','根基松动，宜守不宜进，保存实力。'],['复','一阳来复，否极泰来，重新出发。'],
- ['无妄','真诚自然，不要妄想投机取巧。'],['大畜','厚积薄发，蓄势待发，适合进修。'],
- ['颐','注意饮食与言语，养身也养心。'],['大过','压力过重，要找支撑，量力而行。'],
- ['坎','重重险阻，保持信心，诚心可渡难关。'],['离','光明依附，热情外放，找到依靠。'],
- ['咸','心有感应，缘分到来，以真心相待。'],['恒','持之以恒，坚持原则，才是长久之道。'],
- ['遁','适时退让，避开锋芒，以退为进。'],['大壮','声势强大，但莫逞强，守正为要。'],
- ['晋','步步高升，事业上进，前景光明。'],['明夷','光明受损，韬光养晦，暗中努力。'],
- ['家人','家和万事兴，各尽其责就好。'],['睽','意见不合，求同存异，小事可成。'],
- ['蹇','前路艰难，停下反省，寻求帮助。'],['解','困难化解，放下包袱，轻装前行。'],
- ['损','先舍后得，适当付出反而有益。'],['益','增益之时，乐于助人，财运渐旺。'],
- ['夬','当断则断，果决处理，但要讲方法。'],['姤','不期而遇，注意分辨，提防小人。'],
- ['萃','人才汇聚，适合聚会团聚、办大事。'],['升','稳步上升，循序渐进，贵人相助。'],
- ['困','处境困顿，少说多做，坚守待时。'],['井','修身养德，像井水一样滋养他人。'],
- ['革','变革之时，除旧布新，大胆改变。'],['鼎','稳中革新，地位稳固，宜立新规。'],
- ['震','雷声惊动，有惊无险，保持镇定。'],['艮','适可而止，静心安定，不宜妄动。'],
- ['渐','循序渐进，好事慢慢来。'],['归妹','名分未定，宜守本分，不可冒进。'],
- ['丰','盛大丰满，趁势而为，也防盛极而衰。'],['旅','在外奔波，谨言慎行，随遇而安。'],
- ['巽','顺势而入，谦逊柔和，利于沟通。'],['兑','喜悦和乐，口才好运，广结善缘。'],
- ['涣','人心涣散，需要重新凝聚。'],['节','适度节制，量入为出，张弛有度。'],
- ['中孚','诚信为本，以诚待人必得信任。'],['小过','小事可为，大事缓办，略过无妨。'],
- ['既济','事已初成，守成防变，善始善终。'],['未济','尚未完成，充满希望，继续努力。'],
+// r8c-clean（codex2，2026-11-14）：三个摊位原先的旧数据表已删除，换成中性的小院文字。
+// 常量名 HEXAGRAMS / SIGNS / DIRECTIONS / DIR_TEXT / YI / JI 保留，供下方「今日心语 / 每日寄语 / 赏景小记」使用。
+// 今日心语 64 句：[页名, 一句话]（第 n 页 = 摇 6 次铜钱得到的序号）
+const HEART_LINES = [
+ '慢慢走，把眼前这一步走踏实。','心平气和，事情会一件一件清楚起来。','先照顾好自己，再去帮忙别人。','遇到岔路，先停一停，再决定怎么走。',
+ '今天适合读几页书，或把桌子整理一下。','不必着急，给自己留一点空闲。','和朋友说说话，心里会宽敞许多。','把小事做好，大的安排自然会来。',
+ '天气好就出去走走，天气不好就歇一歇。','有人帮一把，记得说一声谢谢。','累了就休息，明天再继续。','守住自己的节奏，不必跟别人比。',
+ '把想做的事写下来，一步一步做。','家里灯亮着，心里就暖。','笑一笑，许多烦恼会轻一些。','路还长，先走好今天这一段。',
+ '喝一口水，再看看窗外。','少说一句气话，多留一点余地。','愿意动手的人，总比空想更踏实。','把窗打开，让风进来。',
+ '选好一条路就认真走，不必反复改。','安静的下午，也值得被记住。','把桌子擦干净，心情也会干净一些。','给自己一点耐心，就像对待一棵树。',
+ '有欢喜就分享，有困难就慢慢想办法。','不必把所有事情一次做完。','友邻近，路也不远。','花开有时，等一等也很好。',
+ '把脚步放轻，把话说软。','今天适合写信，或给家里打个招呼。','看见好事，就学着做一点。','雨停之后，路会更好走。',
+ '把旧的烦恼放下，腾出地方给新的计划。','午饭吃饱，人也有力气。','与人合作，先把各自的事说清楚。','不必完美，认真就很好。',
+ '夜晚早点休息，明天会更清楚。','把花浇一浇，把椅子摆一摆。','听到不同的声音，先听完再说话。','把想去的地方记在本子上。',
+ '小院里的光，够用一天。','对别人宽一点，对自己也宽一点。','做一点家务，心里会踏实。','把今天的收获收进篮子里。',
+ '遇到难题，先把它分成小块。','站在树下，看看叶子怎么动。','把感谢说出来，比放在心里更暖。','走得慢一些，才看得见路边的花。',
+ '有始有终，一件事做完再做下一件。','把温暖留给身边的人。','不必赶路，方向对就好。','把茶泡上，坐一会儿。',
+ '愿意请教的人，进步会快一点。','把乱掉的线理顺，再继续织。','今天不必着急，安静一会儿也好。','把不用的东西收起来，房间会宽敞。',
+ '把好天气用在散步上。','和家人一起吃一顿饭。','把心里的话说清楚，误会就会少。','树在这里，你也在这里，这样就很好。',
+ '听一会儿风铃，再去做事。','给花草换一盆清水。','今天的事今天做完，晚上睡个好觉。','把一句好话送给身边的人。',
 ];
-// 灵签 24 支：[等级 上/中/下, 签诗, 解签]
+const HEXAGRAMS = HEART_LINES.map((t,i)=>['第'+(i+1)+'页', t]);
+// 每日寄语 24 首：[保留字段, 诗句, 小记]（第一项只为兼容旧结构，不显示）
 const SIGNS = [
- ['上','春风得意马蹄轻，一日看尽满城花。\n门前喜鹊声声报，好事临头福到家。','运势正旺，想做的事大胆去做，贵人就在身边。'],
- ['中','云遮明月暂无光，静待风来散雾霜。\n守得本心勤耕作，自然秋后满仓粮。','眼前有点迷茫，别急，踏实做事，成果在后头。'],
- ['下','行舟偏遇逆风时，进退两难费思量。\n不如泊岸修帆楫，来日东风再启航。','近期不顺，暂停比硬冲好，先把准备做足。'],
- ['上','金鸡报晓破天明，万里晴空一色青。\n莫问前程何处是，脚下便是锦程行。','新的开始，方向是对的，坚持走下去就好。'],
- ['中','种豆南山草木深，晨兴理秽带月归。\n辛勤自有回报日，不必焦心问几时。','付出还没见回报，属于正常节奏，继续浇水施肥。'],
- ['上','双燕归来绕画梁，一家和乐满庭芳。\n添丁进口财源广，福寿康宁岁月长。','家运兴旺，家庭和睦，适合团聚和办喜事。'],
- ['下','井底观天天自小，莫将一叶障双眸。\n开门走出三五步，方知世界大无忧。','想法有点钻牛角尖，多出去走走、多听听别人意见。'],
- ['中','一波才动万波随，世事如棋局局新。\n稳坐钓台心不乱，鱼儿自会上钩频。','变化多，沉住气，不要跟风乱动。'],
- ['上','梅花香自苦寒来，宝剑锋从磨砺出。\n十年寒窗终有报，金榜题名在此时。','考试、面试、比赛运佳，前期的努力会被看见。'],
- ['中','半山云雾半山晴，行到中途莫停行。\n回首来时千里路，前方只剩一程平。','事情已过半，最难的部分快过去了，别放弃。'],
- ['下','花开正艳遇狂风，满地残红怨未穷。\n莫叹今朝春已去，明年此日又葱茏。','可能遇到小挫折或失落，调整心态，机会还会再来。'],
- ['上','龙门一跃化飞龙，四海扬名处处通。\n莫负此时天赐运，乘风破浪立奇功。','大好机会，敢想敢做，适合争取升职或开新项目。'],
- ['中','小桥流水绕人家，炊烟袅袅暮云遮。\n平平淡淡才是福，何须远处觅繁华。','运势平稳，珍惜眼前人和事，就是最好的。'],
- ['上','红线一牵缘自来，月下老人笑颜开。\n两心相印同欢喜，百年好合共徘徊。','感情运佳，单身的容易遇到对的人，有伴的感情升温。'],
- ['下','口舌是非莫强争，退让三分得太平。\n闲话由他风里去，清心自在一身轻。','注意口舌之争，少评论别人，多做少说。'],
- ['中','雨后山前路未干，行人且慢莫心烦。\n待到日出风光好，再上高峰看远山。','时机未到，稍等一等，条件成熟再行动。'],
- ['上','财神临门喜气盈，招财进宝聚福星。\n勤俭持家多积德，金银满屋有余庆。','财运不错，正财稳定，偏财也有小惊喜，但别贪心。'],
- ['中','孤雁南飞觅旧群，长空万里少知音。\n终有一日逢伴侣，携手同心度秋云。','暂时觉得孤单，主动联系老朋友，很快会有伙伴。'],
- ['下','贪心不足蛇吞象，到手珍珠却变沙。\n知足常乐心安处，粗茶淡饭也是家。','最近容易因贪心吃亏，投资理财要谨慎。'],
- ['上','松柏长青傲雪霜，身强体健寿而康。\n心宽自有天地阔，笑口常开福满堂。','健康运佳，心情好、身体好，适合开始运动计划。'],
- ['中','出门东望见青山，西去还逢绿水湾。\n各有风光各有路，择定一条莫回还。','面临选择，两条路都不坏，选定了就别反复纠结。'],
- ['上','千里之行始足下，高楼万丈平地起。\n今朝立下凌云志，明日功成天下知。','适合立目标、做规划，现在动手正是好时候。'],
- ['下','夜行无灯路难辨，小心脚下石与泥。\n寻个明灯来指引，切莫独自乱东西。','方向不明时多请教有经验的人，别独自蛮干。'],
- ['中','池中莲叶田田绿，未到花开六月时。\n静养根苗心莫急，清香一放满园知。','还在成长期，安心修炼，等待绽放的那一天。'],
+ ['','春眠不觉晓，处处闻啼鸟。\n夜来风雨声，花落知多少。','睡个好觉，醒来听听窗外的鸟。'],
+ ['','床前明月光，疑是地上霜。\n举头望明月，低头思故乡。','有空给家里打个电话。'],
+ ['','白日依山尽，黄河入海流。\n欲穷千里目，更上一层楼。','想看得远一点，就再往上走一步。'],
+ ['','红豆生南国，春来发几枝。\n愿君多采撷，此物最相思。','把想念说给想念的人听。'],
+ ['','千山鸟飞绝，万径人踪灭。\n孤舟蓑笠翁，独钓寒江雪。','一个人安静一会儿，也很好。'],
+ ['','锄禾日当午，汗滴禾下土。\n谁知盘中餐，粒粒皆辛苦。','好好吃饭，珍惜每一粒米。'],
+ ['','离离原上草，一岁一枯荣。\n野火烧不尽，春风吹又生。','慢慢长，总会再绿起来。'],
+ ['','空山新雨后，天气晚来秋。\n明月松间照，清泉石上流。','雨后出去走走，空气很好。'],
+ ['','移舟泊烟渚，日暮客愁新。\n野旷天低树，江清月近人。','傍晚看看天，心会静下来。'],
+ ['','独坐幽篁里，弹琴复长啸。\n深林人不知，明月来相照。','给自己留一点安静的时间。'],
+ ['','向晚意不适，驱车登古原。\n夕阳无限好，只是近黄昏。','傍晚的光很好看，记得抬头。'],
+ ['','君自故乡来，应知故乡事。\n来日绮窗前，寒梅著花未？','问一问老朋友近来可好。'],
+ ['','松下问童子，言师采药去。\n只在此山中，云深不知处。','找不到答案时，先慢慢走。'],
+ ['','绿蚁新醅酒，红泥小火炉。\n晚来天欲雪，能饮一杯无？','约朋友坐一坐，喝杯热茶。'],
+ ['','月落乌啼霜满天，江枫渔火对愁眠。\n姑苏城外寒山寺，夜半钟声到客船。','夜里早点休息。'],
+ ['','两个黄鹂鸣翠柳，一行白鹭上青天。\n窗含西岭千秋雪，门泊东吴万里船。','开窗看看远处的风景。'],
+ ['','好雨知时节，当春乃发生。\n随风潜入夜，润物细无声。','安静地做好一件小事。'],
+ ['','竹外桃花三两枝，春江水暖鸭先知。\n蒌蒿满地芦芽短，正是河豚欲上时。','留意身边季节的变化。'],
+ ['','小荷才露尖尖角，早有蜻蜓立上头。\n泉眼无声惜细流，树阴照水爱晴柔。','新开始都很小，慢慢来。'],
+ ['','黄四娘家花满蹊，千朵万朵压枝低。\n留连戏蝶时时舞，自在娇莺恰恰啼。','去花多的地方走一走。'],
+ ['','横看成岭侧成峰，远近高低各不同。\n不识庐山真面目，只缘身在此山中。','换个角度看看，也许更清楚。'],
+ ['','山重水复疑无路，柳暗花明又一村。\n箫鼓追随春社近，衣冠简朴古风存。','路走着走着就开阔了。'],
+ ['','毕竟西湖六月中，风光不与四时同。\n接天莲叶无穷碧，映日荷花别样红。','夏天去荷塘看看花。'],
+ ['','人闲桂花落，夜静春山空。\n月出惊山鸟，时鸣春涧中。','闲下来的时候，听听夜里的声音。'],
 ];
-// 风水数据
-const ZODIAC = ['鼠','牛','虎','兔','龙','蛇','马','羊','猴','鸡','狗','猪'];
-const ZODIAC_EMOJI = ['🐭','🐮','🐯','🐰','🐲','🐍','🐴','🐑','🐵','🐔','🐶','🐷'];
-const STEMS = ['庚','辛','壬','癸','甲','乙','丙','丁','戊','己']; // 按公历年份末位取天干
-const ELEMENTS = {'甲':'木','乙':'木','丙':'火','丁':'火','戊':'土','己':'土','庚':'金','辛':'金','壬':'水','癸':'水'};
-const ELEMENT_INFO = {
-  '金':{dirs:['西','西北'],  colors:[['白色','#f5f5f5'],['金色','#e8b64c'],['银灰','#b9bec5']], word:'果断利落'},
-  '木':{dirs:['东','东南'],  colors:[['青绿','#5aa469'],['草绿','#9bd06b'],['青色','#3f8f8a']], word:'生机勃勃'},
-  '水':{dirs:['北','西'],    colors:[['黑色','#333333'],['深蓝','#2d4f8a'],['湖蓝','#4aa3c7']], word:'灵活通透'},
-  '火':{dirs:['南','东'],    colors:[['朱红','#c9433a'],['紫色','#8a4fb0'],['橙色','#f08c2e']], word:'热情洋溢'},
-  '土':{dirs:['东北','西南'],colors:[['土黄','#d4a64a'],['咖啡','#8b5a32'],['米色','#efe0c0']], word:'稳重踏实'},
-};
+// 赏景小记：院子朝向（'中' 为中间的小屋格，不可选）
 const DIRECTIONS = ['西北','北','东北','西','中','东','西南','南','东南'];
 const DIR_TEXT = {
-  '北':'大门朝北，宜静心读书，门口放一盆绿植可以聚气。','南':'大门朝南，光照充足，阳气旺盛，是传统的好朝向。',
-  '东':'大门朝东迎晨光，利健康与新开始，早起运势佳。','西':'大门朝西见晚霞，利收获与人缘，下午记得拉帘防晒。',
-  '东南':'东南为文昌财位，书桌摆这边利学业和财运。','西南':'西南主家庭和睦，适合放全家福或暖色灯光。',
-  '东北':'东北主积累与稳定，适合放书柜、存钱罐。','西北':'西北主贵人运，保持整洁明亮，贵人自来。',
+  '北':'院子朝北，光线比较柔和，门口放一盆绿植很安静。','南':'院子朝南，光照充足，适合晒一晒太阳。',
+  '东':'院子朝东，能见到晨光，适合早起散步。','西':'院子朝西，傍晚能看到晚霞，下午记得拉帘防晒。',
+  '东南':'东南这一侧比较敞亮，适合放一张书桌。','西南':'西南这一侧比较暖，适合放全家福或暖色灯光。',
+  '东北':'东北这一侧比较安静，适合放书柜。','西北':'西北这一侧保持整洁明亮，看着也舒服。',
 };
-const YI = ['出行','会友','学习','理发','整理房间','种花','求职','签约','运动','早睡','喝茶','拜访长辈','读书','做饭','存钱','散步'];
-const JI = ['熬夜','争吵','冲动消费','借钱给人','暴饮暴食','搬家','久坐','背后议论','赌气','拖延','走夜路','乱发脾气'];
+// 赏景小记里随手一句（原 YI/JI 成对列表已取消，只留一句温和的小建议或景色）
+const YI = ['去院子里走一走','给花浇一点水','读几页书','泡一壶茶','和朋友聊聊天','把桌子整理一下','早点休息','看看天上的云'];
+const JI = ['看看树影怎么移动','听一听风铃的声音','数一数今天开了几朵花','看傍晚的晚霞','闻一闻雨后的泥土','看看池塘里的鱼'];
 
 /* =========================================================
    二、状态与持久化（localStorage）
@@ -1731,7 +1696,7 @@ function save(){if(r3SyncOwnSpace())window.TG_RERENDER();if(r3IsVisiting()){if(r
    ========================================================= */
 const $ = (sel, root=document) => root.querySelector(sel);
 const rand = n => Math.floor(Math.random()*n);
-function seededRand(seed){ // 可复现的伪随机（风水结果按 日期+年份+朝向 固定）
+function seededRand(seed){ // 可复现的伪随机（赏景小记按 日期+朝向 固定）
   let s = seed >>> 0;
   return () => { s = (Math.imul(s,1664525) + 1013904223) >>> 0; return s/4294967296; };
 }
@@ -1767,7 +1732,7 @@ window.TG_SCENES = [
   {id:'market',name:'集市',public:true},
   {id:'yard',name:'心田小院',public:false,steal:true,access:'steal-only'},
   {id:'lotus',name:'莲花池',public:true},
-  {id:'hall',name:'祠堂',public:false},
+  {id:'hall',name:'缘堂',public:false},
   {id:'zen',name:'禅房',public:false},
   {id:'study',name:'书房',public:false},
 ];
@@ -1834,13 +1799,13 @@ function inventoryHTML(clickable){
 }
 $('#pillInv').addEventListener('click', ()=>{
   openModal(`<h2>🧺 背包</h2>${inventoryHTML(false)}
-   <p class="center" style="font-size:13px;color:#7a5a3a">收获的作物可以拿到祠堂上供，积攒功德。</p>
+   <p class="center" style="font-size:13px;color:#7a5a3a">收获的作物可以拿到缘堂摆放，积攒善缘。</p>
    <p class="center" style="font-size:13px">累计收获 ${S.harvestTotal} 份 · 已上香 ${S.incense.total} 炷 · 敲木鱼 ${S.muyu} 下</p>`);
 });
 $('#pillMerit').addEventListener('click', ()=>toast(`当前功德 ${S.merit}：上香 +3、上供 +作物值、敲木鱼 +1`));
 $('#btnMenu').addEventListener('click', ()=>{
   openModal(`<h2>⚙️ 菜单</h2>
-   <div class="card"><b>玩法说明</b><p>① 大厅：点摊位算卦、求签、看风水；点山门进入院子。<br>② 院子：先选种子再点空地播种，点作物浇水加速，成熟后点击收获。<br>③ 祠堂：输入口令或累计收获 3 份作物解锁，进去上香、上供、敲木鱼攒功德。</p></div>
+   <div class="card"><b>玩法说明</b><p>① 大厅：点摊位读今日心语、抽每日诗笺、写赏景小记；点山门进入院子。<br>② 院子：先选种子再点空地播种，点作物浇水加速，成熟后点击收获。<br>③ 缘堂：输入口令或累计收获 3 份作物解锁，进去点灯、摆放心意、摇风铃，积攒善缘。</p></div>
    <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
      ${window.TG_SCENES.map(s=>`<button class="btn ghost" data-go="${s.id}">${s.name}${s.public?'':' · 私人'}</button>`).join('')}
    </div>
@@ -1857,36 +1822,35 @@ $('#btnMenu').addEventListener('click', ()=>{
 });
 
 /* =========================================================
-   六、大厅 · 摇卦（三钱法起六爻）
-   每爻掷三枚铜钱：字=3、背=2，合计 6老阴(动) 7少阳 8少阴 9老阳(动)
+   六、大厅 · 今日心语（摇 6 次铜钱，读一句话）
+   r8c-clean：旧模板已改为中性文字；函数名与元素 id 保持不变。
    ========================================================= */
 let guaLines = [], guaTimer = null, shakingCoins = false;
-function hexFromBits(bits){ // bits: 6 位，自下而上
-  const lower = TRIGRAMS[bits.slice(0,3).join('')], upper = TRIGRAMS[bits.slice(3).join('')];
-  const no = KW[upper.name][TRI_ORDER.indexOf(lower.name)];
-  return {no, name:HEXAGRAMS[no-1][0], meaning:HEXAGRAMS[no-1][1], upper, lower};
+function hexFromBits(bits){ // bits: 6 位 → 第 1–64 页
+  let no = 1; for(let i=0;i<6;i++) no += (bits[i]?1:0) << i;
+  return {no, name:HEXAGRAMS[no-1][0], meaning:HEXAGRAMS[no-1][1], upper:{name:'',nature:''}, lower:{name:'',nature:''}};
 }
 function hexLinesHTML(lines){
   let h='<div class="hexa">';
   for(let i=0;i<6;i++){
     const v = lines[i];
     if(v===undefined){ h+='<div class="ln empty"><i></i></div>'; continue; }
-    const yang = (v===7||v===9), chg=(v===6||v===9);
-    h+=`<div class="ln ${yang?'yang':'yin'} ${chg?'chg':''}">${yang?'<i></i>':'<i></i><i></i>'}</div>`;
+    const yang = (v===7||v===9);
+    h+=`<div class="ln ${yang?'yang':'yin'}">${yang?'<i></i>':'<i></i><i></i>'}</div>`;
   }
   return h+'</div>';
 }
 function grid64HTML(hit, hit2){
-  return '<div class="grid64">'+HEXAGRAMS.map((h,i)=>`<div class="${i+1===hit?'hit':''} ${i+1===hit2?'hit2':''}">${h[0]}<small>${i+1}</small></div>`).join('')+'</div>';
+  return '<div class="grid64">'+HEXAGRAMS.map((h,i)=>`<div class="${i+1===hit?'hit':''} ${i+1===hit2?'hit2':''}">${i+1}</div>`).join('')+'</div>';
 }
 function openGua(){
   guaLines = []; shakingCoins = false; clearTimeout(guaTimer);
-  openModal(`<h2>☯️ 六爻起卦</h2>
-    <p class="center" style="font-size:13px;color:#7a5a3a">心中默念所问之事，摇六次铜钱，自下而上成卦。</p>
-    <div class="coins" id="coins"><div class="coin"><span>乾</span></div><div class="coin"><span>隆</span></div><div class="coin"><span>宝</span></div></div>
+  openModal(`<h2>今日心语</h2>
+    <p class="center" style="font-size:13px;color:#7a5a3a">轻轻摇几次铜钱，读一句今天的心语。</p>
+    <div class="coins" id="coins"><div class="coin"><span>字</span></div><div class="coin"><span>背</span></div><div class="coin"><span>字</span></div></div>
     <div id="guaLines">${hexLinesHTML([])}</div>
-    <p class="center" id="guaStep">第 1 / 6 爻</p>
-    <div style="display:flex;gap:10px;justify-content:center"><button class="btn" id="shakeBtn">🪙 摇一次</button><button class="btn ghost" id="autoBtn">一键起卦</button></div>
+    <p class="center" id="guaStep">第 1 / 6 次</p>
+    <div style="display:flex;gap:10px;justify-content:center"><button class="btn" id="shakeBtn">🪙 摇一次</button><button class="btn ghost" id="autoBtn">一次读完</button></div>
     <div id="guaResult"></div>`);
   onModalClose = ()=>clearTimeout(guaTimer);
   $('#shakeBtn').onclick = shakeOnce;
@@ -1906,7 +1870,7 @@ function shakeOnce(){tgFeedback('coin');
     coins.forEach((c,i)=>{ c.querySelector('span').textContent = faces[i]===3?'字':'背'; });
     guaLines.push(faces[0]+faces[1]+faces[2]);
     $('#guaLines').innerHTML = hexLinesHTML(guaLines);
-    $('#guaStep').textContent = guaLines.length<6 ? `第 ${guaLines.length+1} / 6 爻` : '卦已成';
+    $('#guaStep').textContent = guaLines.length<6 ? `第 ${guaLines.length+1} / 6 次` : '心语已备';
     shakingCoins=false;
     if(guaLines.length===6) showGuaResult();
   }, 600);
@@ -1915,34 +1879,28 @@ function showGuaResult(){tgFeedback('result');
   $('#shakeBtn').disabled = true; $('#autoBtn').disabled = true;
   const bits = guaLines.map(v=>(v===7||v===9)?1:0);
   const main = hexFromBits(bits);
-  const changing = guaLines.map((v,i)=>(v===6||v===9)?i:-1).filter(i=>i>=0);
-  const changed = changing.length ? hexFromBits(bits.map((b,i)=>changing.includes(i)?1-b:b)) : null;
-  const posName = ['初','二','三','四','五','上'];
   $('#guaResult').innerHTML = `<div class="card">
-    <div class="gua-name">第${main.no}卦 · ${main.name}</div>
-    <p class="center" style="color:#7a5a3a;margin:2px 0">上${main.upper.name}（${main.upper.nature}）· 下${main.lower.name}（${main.lower.nature}）</p>
-    <p><b>卦意：</b>${main.meaning}</p>
-    ${changed?`<p><b>动爻：</b>${changing.map(i=>posName[i]+'爻').join('、')}<br><b>变卦：</b>第${changed.no}卦 ${changed.name}，${changed.meaning}<br><span style="font-size:12px;color:#7a5a3a">（变卦代表事情后续的走向）</span></p>`:'<p><b>动爻：</b>无，事情比较稳定，看本卦即可。</p>'}
-    <p style="font-size:12px;color:#9a7a50;margin-bottom:0">仅供娱乐，图个好心情 🙏</p></div>
-    <p style="font-size:13px;margin:4px 0"><span class="swatch" style="background:var(--red)"></span>本卦　${changed?'<span class="swatch" style="background:#2a7a6e"></span>变卦　':''}在六十四卦中的位置：</p>
-    ${grid64HTML(main.no, changed&&changed.no)}
-    <p class="center" style="margin-top:12px"><button class="btn" id="againBtn">再起一卦</button></p>`;
+    <div class="gua-name">今日心语 · ${main.name}</div>
+    <p class="center" style="font-size:16px;margin:8px 0">${main.meaning}</p>
+    <p style="font-size:12px;color:#9a7a50;margin-bottom:0">读一句就好，不必当作预测。</p></div>
+    <p class="center" style="margin-top:12px"><button class="btn" id="againBtn">再读一句</button></p>`;
   $('#againBtn').onclick = openGua;
   setTimeout(()=>{ const r=$('#guaResult'); if(r) r.scrollIntoView({behavior:'smooth',block:'start'}); }, 60);
 }
 
 /* =========================================================
-   七、大厅 · 求签
+   七、大厅 · 每日寄语（抽一首诗）
+   r8c-clean：旧模板已改为读诗；S.lastSign 存档字段保留。
    ========================================================= */
 let qianTimers = [];
 function clearQian(){ qianTimers.forEach(clearTimeout); qianTimers=[]; }
 function openQian(){
   clearQian();
   const sticks = Array.from({length:9},()=>`<i style="height:${30+rand(20)}px"></i>`).join('');
-  openModal(`<h2>🎋 灵签</h2>
-    <p class="center" style="font-size:13px;color:#7a5a3a">诚心默念所求之事，然后摇动签筒。</p>
-    <div class="tube-wrap" id="tubeWrap"><div class="tube" id="tube"><div class="sticks">${sticks}</div><div class="body">灵签</div></div></div>
-    <p class="center"><button class="btn" id="qianBtn">🙏 摇签</button></p>
+  openModal(`<h2>每日寄语</h2>
+    <p class="center" style="font-size:13px;color:#7a5a3a">读一句诗，给今天留一点从容。</p>
+    <div class="tube-wrap" id="tubeWrap"><div class="tube" id="tube"><div class="sticks">${sticks}</div><div class="body">诗句</div></div></div>
+    <p class="center"><button class="btn" id="qianBtn">抽一首诗</button></p>
     <div id="qianResult"></div>`);
   onModalClose = clearQian;
   $('#qianBtn').onclick = drawQian;
@@ -1955,18 +1913,16 @@ function drawQian(){tgFeedback('qian');
   const idx = rand(SIGNS.length);
   qianTimers.push(setTimeout(()=>{
     tube.classList.remove('shaking');
-    const st=document.createElement('div'); st.className='outstick'; st.textContent='第'+(idx+1)+'签';
+    const st=document.createElement('div'); st.className='outstick'; st.textContent='第'+(idx+1)+'首';
     $('#tubeWrap').appendChild(st);
     qianTimers.push(setTimeout(()=>{
-      const [rank, poem, expl] = SIGNS[idx];
+      const [, poem, note] = SIGNS[idx];
       S.lastSign = idx; save();
       $('#qianResult').innerHTML = `<div class="qian">
-        <div class="no">福缘寺灵签 · 第 ${idx+1} 签</div>
-        <div class="rank r${rank}">${rank}签</div>
+        <div class="no">每日寄语 · 第 ${idx+1} 首</div>
         <div class="poem">${poem.replace('\n','<br>')}</div>
-        <p style="text-align:left"><b>解曰：</b>${expl}</p>
-        <p style="font-size:12px;color:#9a7a50;margin-bottom:0">仅供娱乐，心诚则灵 🙏</p></div>
-        <p class="center"><button class="btn ghost" id="qianAgain">再求一签</button></p>`;
+        <p style="text-align:left">${note}</p></div>
+        <p class="center"><button class="btn ghost" id="qianAgain">再读一句</button></p>`;
       $('#qianAgain').onclick = drawQian;
       setTimeout(()=>{ const r=$('#qianResult'); if(r) r.scrollIntoView({behavior:'smooth',block:'nearest'}); },60);
     }, 800));
@@ -1974,18 +1930,20 @@ function drawQian(){tgFeedback('qian');
 }
 
 /* =========================================================
-   八、大厅 · 看风水（出生年 + 大门朝向，结果每天变化）
+   八、大厅 · 赏景小记（选院子朝向，写一句当天的小记）
+   r8c-clean：旧模板（年份推算、打分、配色、成对列表）已删除；
+   #fengYear 仍保留（隐藏、不参与结果），兼容 r8/r8a2 的隐藏逻辑。
    ========================================================= */
 let fengDir = '南';
 function openFeng(){
   const now = new Date().getFullYear();
   let opts=''; for(let y=now; y>=1930; y--) opts+=`<option value="${y}" ${y===1995?'selected':''}>${y} 年</option>`;
-  openModal(`<h2>🧭 看风水</h2>
-    <p class="center" style="font-size:13px;color:#7a5a3a">选出生年份和家里大门（或书桌）朝向，看看今日吉方。</p>
-    <div class="form-row"><label for="fengYear">出生年份</label><select id="fengYear">${opts}</select></div>
-    <div class="center" style="font-size:13px">大门朝向</div>
-    <div class="dirs" id="fengDirs">${DIRECTIONS.map(d=>d==='中'?'<button class="mid" disabled>☯️</button>':`<button data-d="${d}" class="${d===fengDir?'sel':''}">${d}</button>`).join('')}</div>
-    <p class="center"><button class="btn" id="fengBtn">🔮 测一测</button></p>
+  openModal(`<h2>赏景小记</h2>
+    <p class="center" style="font-size:13px;color:#7a5a3a">选一个院子朝向，写下今天的赏景小记。</p>
+    <div class="form-row" style="display:none"><label for="fengYear">年份</label><select id="fengYear" tabindex="-1">${opts}</select></div>
+    <div class="center" style="font-size:13px">院子朝向</div>
+    <div class="dirs" id="fengDirs">${DIRECTIONS.map(d=>d==='中'?'<button class="mid" disabled>🏡</button>':`<button data-d="${d}" class="${d===fengDir?'sel':''}">${d}</button>`).join('')}</div>
+    <p class="center"><button class="btn" id="fengBtn">写一写</button></p>
     <div id="fengResult"></div>`);
   $('#fengDirs').querySelectorAll('[data-d]').forEach(b=>b.onclick=()=>{
     fengDir=b.dataset.d; $('#fengDirs').querySelectorAll('[data-d]').forEach(x=>x.classList.toggle('sel', x===b));
@@ -1993,25 +1951,13 @@ function openFeng(){
   $('#fengBtn').onclick = showFeng;
 }
 function showFeng(){
-  const y = +$('#fengYear').value;
-  const zi = ((y-4)%12+12)%12, stem = STEMS[y%10], el = ELEMENTS[stem], info = ELEMENT_INFO[el];
   const d = new Date(); const daySeed = d.getFullYear()*10000+(d.getMonth()+1)*100+d.getDate();
-  const rnd = seededRand(daySeed*31 + y*7 + DIRECTIONS.indexOf(fengDir)*101);
-  const luckyDir = info.dirs[Math.floor(rnd()*info.dirs.length)];
-  const colors = pickN(info.colors, 2, rnd);
-  const yi = pickN(YI, 4, rnd), ji = pickN(JI, 3, rnd);
-  const score = Math.min(99, 62 + Math.floor(rnd()*33) + (luckyDir===fengDir ? 5 : 0));
-  const nStar = Math.max(3, Math.round(score/20));
+  const rnd = seededRand(daySeed*31 + DIRECTIONS.indexOf(fengDir)*101);
+  const pool = YI.concat(JI), line = pool[Math.floor(rnd()*pool.length)];
   $('#fengResult').innerHTML = `<div class="card">
-    <p class="center" style="font-size:20px;margin:2px 0">${ZODIAC_EMOJI[zi]} 属${ZODIAC[zi]} · ${stem}年 · 五行属${el}</p>
-    <p class="center" style="color:#7a5a3a;margin:0">性格关键词：${info.word}</p>
-    <p><b>今日运势：</b><span style="color:var(--red);letter-spacing:2px">${'★'.repeat(nStar)}${'☆'.repeat(5-nStar)}</span> ${score} 分</p>
-    <p><b>吉利方位：</b>${luckyDir}方${luckyDir===fengDir?'（正好是你家大门朝向，大吉！）':''}</p>
-    <p><b>幸运色：</b>${colors.map(c=>`<span class="swatch" style="background:${c[1]}"></span>${c[0]}`).join('　')}</p>
-    <p><b>朝向点评：</b>${DIR_TEXT[fengDir]}</p>
-    <p style="margin-bottom:2px"><b>宜</b></p><div class="tagrow">${yi.map(t=>`<span class="tag yi">${t}</span>`).join('')}</div>
-    <p style="margin-bottom:2px"><b>忌</b></p><div class="tagrow">${ji.map(t=>`<span class="tag ji">${t}</span>`).join('')}</div>
-    <p style="font-size:12px;color:#9a7a50;margin-bottom:0">结果每天更新 · 仅供娱乐</p></div>`;
+    <p>${DIR_TEXT[fengDir]||('院子朝向是'+fengDir+'。')}</p>
+    <p>今天可以${line}。</p>
+    <p style="font-size:12px;color:#9a7a50;margin-bottom:0">小记每天更新，只作欣赏。</p></div>`;
   setTimeout(()=>{ const r=$('#fengResult'); if(r) r.scrollIntoView({behavior:'smooth',block:'nearest'}); },60);
 }
 
@@ -2095,7 +2041,7 @@ function harvest(i, el){tgFeedback('harvest');
   if(!S.unlocked && S.harvestTotal >= UNLOCK_HARVEST){ S.unlocked = true; unlockedNow = true; }
   save(); renderYard(); renderTop(); vibrate(25); bump($('#pillInv'));
   if(el){ plotEffect(el, c.emoji, true); const [x,y]=centerOf(el); floatText('+3 '+c.emoji, x, y); }
-  if(unlockedNow) setTimeout(()=>toast('🎉 收获满 3 份，祠堂已解锁！'), 400);
+  if(unlockedNow) setTimeout(()=>toast('🎉 收获满 3 份，缘堂已解锁！'), 400);
 }
 $('#harvestAll').addEventListener('click', ()=>{
   const now=Date.now(); let n=0;
@@ -2130,7 +2076,7 @@ function tryUnlock(){
   // 演示门禁：只在本地比较口令，不是真正的密码系统；以后在这里接短信验证
   if($('#passInput').value.trim() === DEMO_PASS){
     S.unlocked = true;tgFeedback('unlock'); save(); $('#passInput').blur();
-    $('#gateLock').classList.remove('show'); toast('🙏 欢迎进入祠堂'); renderYard();
+    $('#gateLock').classList.remove('show'); toast('🌿 欢迎来到缘堂'); renderYard();
   }else{
     const c=$('#lockCard'); c.classList.remove('shake'); void c.offsetWidth; c.classList.add('shake'); vibrate(80);
     toast('口令不对，演示口令是 8888');
@@ -2157,7 +2103,7 @@ $('#btnIncense').addEventListener('click', ()=>{
   if(activeSticks(now).length >= INCENSE_SLOTS){ toast('香炉已插满三炷，等香燃一会儿再上吧'); return; }
   tgFeedback('incense');S.incense.sticks.push(now); S.incense.total++; save();
   addMerit(3, $('#burner')); renderHall(); $('#sticks').lastElementChild.classList.add('lighting'); vibrate(20);
-  toast(`🙏 敬上第 ${S.incense.total} 炷香`);
+  toast(`🌿 点亮第 ${S.incense.total} 盏灯，善缘 +1`);
 });
 $('#btnOffer').addEventListener('click', ()=>{
   if(!invCount()){ toast('背包里还没有作物，先去院子种菜吧'); return; }
@@ -2303,7 +2249,7 @@ function worldBuild(){
   doorway(p,'福缘寺',-12);doorway(y,'福缘祠堂',-12);
   p.exits.push({x:0,z:-12,to:'yard'}); y.exits.push({x:0,z:-12,to:'hall'},{x:0,z:14,to:'plaza'});h.exits.push({x:0,z:7.5,to:'yard'});
   for(const [s,labels] of [[p,['进入院子']],[y,['进入祠堂','回大厅']],[h,['回院子']]])s.exits.forEach((e,i)=>worldInteract(s,e.x,e.z,labels[i],()=>go(e.to),2.2));
-  const stallData=[[-4.8,1,'六爻起卦',openGua], [4.8,1,'摇签',openQian],[7,7,'风水',openFeng]];
+  const stallData=[[-4.8,1,'读心笺',openGua], [4.8,1,'抽每日诗笺',openQian],[7,7,'赏园景',openFeng]];
   stallData.forEach(([x,z,label,run],i)=>{
     if(window.TG_R8?.replaceStalls){worldInteract(p,x,z+1.65,label,run);return;}
     worldBox(p,x,.65,z,3,1.3,1.6,'#855333',true);
@@ -7445,7 +7391,7 @@ window.r6TeaSyncWall=async function(){
 const originalWall=window.r6TeaWall;
 window.r6TeaWall=function(){
   r6TeaSyncWall();
-  openModal('<h2>茶会留言墙</h2>'+(S.tea.messages||[]).map(m=>`<p><b>${r3Esc(m.name)}</b>：${r3Esc(m.text)}</p>`).join('')+'<input id="r6Message" maxlength="120" placeholder="留一句善意（120 字）"><button class="btn" id="r6Send">留笺</button>');
+  openModal('<h2>茶会留言墙</h2>'+(S.tea.messages||[]).map(m=>{window.r7RawText?.(m.name,m.text);return `<p><b data-raw>${r3Esc(m.name)}</b>：<span data-raw>${r3Esc(m.text)}</span></p>`;}).join('')+'<input id="r6Message" maxlength="120" placeholder="留一句善意（120 字）"><button class="btn" id="r6Send">留笺</button>');
   $('#r6Send').onclick=async()=>{
     const text=$('#r6Message').value.trim();if(!text)return;
     if(text.length>120)return toast('最多 120 字');
@@ -9113,19 +9059,30 @@ window.TG_MANUAL={
 (()=>{
 'use strict';
 const TH=typeof THREE!=='undefined'&&THREE||window.THREE;
-const pairs=[["列祖列宗之位", "家和业兴"], ["供鱼", "鲜鱼"], ["填写先人的真实姓名，上传一张画像，陪伴每一次追思。", "可填写家风文字，或上传一张全家福。"], ["功德主", "福缘主✨"], ["福缘祠堂", "福缘堂"], ["今日回向已完成，仍可随喜观鱼", "今日善缘已满，仍可在池边看鱼"], ["功德尚不足或今日不可购", "善缘不足"], ["功德尚不足", "善缘不足"], ["观自在菩萨　行深般若波罗蜜多时", "采菊东篱下，悠然见南山"], ["心无挂碍，无有恐怖。", "采菊东篱下，悠然见南山。"], ["色即是空，空即是色。", "明月松间照，清泉石上流。"], ["一花一世界，一叶一菩提。", "草长莺飞二月天，拂堤杨柳醉春烟。"], ["应无所住而生其心。", "行到水穷处，坐看云起时。"], ["时时勤拂拭，莫使惹尘埃。", "绿树村边合，青山郭外斜。"], ["诸恶莫作，众善奉行。", "海内存知己，天涯若比邻。"], ["福缘寺灵签", "福缘心笺"], ["福缘寺", "福缘里"], ["静坐听木鱼", "静室听风铃"], ["听一声木鱼，观一息起落。", "听庭铃轻响，看花影疏疏。"], ["书房抄经", "书房临帖"], ["上香一炷", "点一盏灯"], ["清香一炷，功德 +3", "灯光一盏，善缘 +1"], ["香炉已插满三炷", "灯台已满"], ["香炉已满", "灯台已满"], ["金身佛像", "石灯"], ["石灯笼", "石灯"], ["禅意素雅", "竹石素雅"], ["香烛铺", "灯彩铺"], ["香烛套装", "灯组"], ["供奉祖师", "缘堂陈设"], ["供品店", "点心铺"], ["选一位小院伙伴，兑换一份供品，献给祠堂。", "换一份时令点心，送到缘堂摆放。"], ["上供 · 献上心意", "摆放心意"], ["先人牌匾", "家风匾额"], ["先人真实姓名", "家风文字"], ["先人", "家人"], ["追思", "相聚"], ["供果盘", "果盘"], ["香案", "条案"], ["蒲团", "坐垫"], ["僧袍", "广袖长袍"], ["袈裟", "色织长袍"], ["佛珠", "珠串💠"], ["念珠", "珠串💠"], ["道袍", "直裰"], ["线香", "花枝"], ["居士", "雅士🎋"], ["小沙弥", "园丁"], ["善信", "善友🌱"], ["修行者", "旅人🧭"], ["同行僧人", "同行访客"], ["云游僧", "游方客"], ["小和尚", "角色"], ["僧人", "邻人"], ["佛祖看着呢", "今天先歇一歇吧"], ["香客名册", "福缘名册"], ["香客", "访客"], ["被偷也算布施", "也被记作一份心意"], ["用功德获得", "用善缘兑换"], ["请回一份心意", "换一份雅物"], ["请回雅物，长伴修行", "换一份雅物，长伴小院"], ["请回", "兑换"], ["今日功课", "今日待办"], ["功课完成 · 回向", "获得"], ["今日放生回向", "今日归水"], ["放生随喜", "锦鲤归水"], ["放生", "锦鲤归水"], ["不回向功德", "不增加善缘"], ["随喜观鱼", "在池边看鱼"], ["采莲供心", "采一枚莲蓬"], ["莲花池", "荷塘"], ["山门", "里门"], ["灵签", "福缘心笺"], ["心诚则灵", "今日一句"], ["求下次抽签上上签！", "明日去茶会坐坐。"], ["求签", "读心笺"], ["算卦", "读心笺"], ["看风水", "赏园景"], ["罗汉榻", "卧榻"], ["多积德", "多积善"], ["静坐观心", "静坐歇心"], ["随缘自在", "心安即是家"], ["祠堂", "缘堂"], ["禅房", "静室"], ["功德", "善缘"], ["敲木鱼", "摇风铃"], ["木鱼", "庭铃"], ["上香", "点灯"], ["上供", "摆放"], ["供台", "陈列台"], ["供奉", "陈列"], ["供品", "陈列"], ["供上", "摆上"], ["献上", "摆上"], ["献给", "送到"], ["香炉", "铜灯"], ["香烛", "灯彩"], ["抄经", "临帖"], ["临经", "临帖"], ["回向上限", "最多"], ["回向", "获得"], ["功课", "待办"], ["禅", "闲"], ["🕯️", "🏮"], ["🪘", "🎐"], ["🙏", "🌿"], ["🛕", "🏡"], ["🪷", "✨"], ["📿", "💛"], ["🧘", "🌿"], ["屠宰", "照料"]];
+const pairs=[["列祖列宗之位", "家和业兴"], ["供鱼", "鲜鱼"], ["填写先人的真实姓名，上传一张画像，陪伴每一次追思。", "可填写家风文字，或上传一张全家福。"], ["功德主", "福缘主✨"], ["福缘祠堂", "福缘堂"], ["今日回向已完成，仍可随喜观鱼", "今日善缘已满，仍可在池边看鱼"], ["功德尚不足或今日不可购", "善缘不足"], ["功德尚不足", "善缘不足"], ["观自在菩萨　行深般若波罗蜜多时", "采菊东篱下，悠然见南山"], ["心无挂碍，无有恐怖。", "采菊东篱下，悠然见南山。"], ["色即是空，空即是色。", "明月松间照，清泉石上流。"], ["一花一世界，一叶一菩提。", "草长莺飞二月天，拂堤杨柳醉春烟。"], ["应无所住而生其心。", "行到水穷处，坐看云起时。"], ["时时勤拂拭，莫使惹尘埃。", "绿树村边合，青山郭外斜。"], ["诸恶莫作，众善奉行。", "海内存知己，天涯若比邻。"], ["福缘寺", "福缘里"], ["静坐听木鱼", "静室听风铃"], ["听一声木鱼，观一息起落。", "听庭铃轻响，看花影疏疏。"], ["书房抄经", "书房临帖"], ["上香一炷", "点一盏灯"], ["清香一炷，功德 +3", "灯光一盏，善缘 +1"], ["香炉已插满三炷", "灯台已满"], ["香炉已满", "灯台已满"], ["金身佛像", "石灯"], ["石灯笼", "石灯"], ["禅意素雅", "竹石素雅"], ["香烛铺", "灯彩铺"], ["香烛套装", "灯组"], ["供奉祖师", "缘堂陈设"], ["供品店", "点心铺"], ["选一位小院伙伴，兑换一份供品，献给祠堂。", "换一份时令点心，送到缘堂摆放。"], ["上供 · 献上心意", "摆放心意"], ["先人牌匾", "家风匾额"], ["先人真实姓名", "家风文字"], ["先人", "家人"], ["追思", "相聚"], ["供果盘", "果盘"], ["香案", "条案"], ["蒲团", "坐垫"], ["僧袍", "广袖长袍"], ["袈裟", "色织长袍"], ["佛珠", "珠串💠"], ["念珠", "珠串💠"], ["道袍", "直裰"], ["线香", "花枝"], ["居士", "雅士🎋"], ["小沙弥", "园丁"], ["善信", "善友🌱"], ["修行者", "旅人🧭"], ["同行僧人", "同行访客"], ["云游僧", "游方客"], ["小和尚", "角色"], ["僧人", "邻人"], ["佛祖看着呢", "今天先歇一歇吧"], ["香客名册", "福缘名册"], ["香客", "访客"], ["被偷也算布施", "也被记作一份心意"], ["用功德获得", "用善缘兑换"], ["请回一份心意", "换一份雅物"], ["请回雅物，长伴修行", "换一份雅物，长伴小院"], ["请回", "兑换"], ["今日功课", "今日待办"], ["功课完成 · 回向", "获得"], ["今日放生回向", "今日归水"], ["放生随喜", "锦鲤归水"], ["放生", "锦鲤归水"], ["不回向功德", "不增加善缘"], ["随喜观鱼", "在池边看鱼"], ["采莲供心", "采一枚莲蓬"], ["莲花池", "荷塘"], ["山门", "里门"], ["心诚则灵", "今日一句"], ["罗汉榻", "卧榻"], ["多积德", "多积善"], ["静坐观心", "静坐歇心"], ["随缘自在", "心安即是家"], ["祠堂", "缘堂"], ["禅房", "静室"], ["功德", "善缘"], ["敲木鱼", "摇风铃"], ["木鱼", "庭铃"], ["上香", "点灯"], ["上供", "摆放"], ["供台", "陈列台"], ["供奉", "陈列"], ["供品", "陈列"], ["供上", "摆上"], ["献上", "摆上"], ["献给", "送到"], ["香炉", "铜灯"], ["香烛", "灯彩"], ["抄经", "临帖"], ["临经", "临帖"], ["回向上限", "最多"], ["回向", "获得"], ["功课", "待办"], ["禅", "闲"], ["🕯️", "🏮"], ["🪘", "🎐"], ["🙏", "🌿"], ["🛕", "🏡"], ["🪷", "✨"], ["📿", "💛"], ["🧘", "🌿"], ["屠宰", "照料"]];
 pairs.push(["福缘客","福缘主"],["金币","铜钱"],["需联网才能供奉","需联网才能点灯"]);
 pairs.unshift(["需联网才能供奉","需联网才能点灯"]);
 function rewrite(s){if(typeof s!=='string')return s;for(const [a,b]of pairs)s=s.split(a).join(b);return s.replace(/今日获得已完成/g,'今日善缘已满').replace(/([✓○]) 点灯/g,'$1 点一盏灯').replace(/完成获得/g,'获得').replace(/敬上第\s*(\d+)\s*炷香/g,'点亮第 $1 盏灯，善缘 +1').replace(/点灯 (\d+) 炷/g,'点灯 $1 盏').replace(/铜灯已插满三炷[^。]*/g,'灯台已满，请稍候').replace(/待办完成 · 获得\s*(\d+)\s*善缘/g,'获得 $1 善缘').replace(/陈列台最多五份，每日最多上限 40 善缘/g,'陈列台最多五份，每日最多 40 善缘').replace(/今日锦鲤归水获得/g,'今日归水').replace(/祠/g,'缘').replace(/^供$/g,'陈');}
 window.r7Rewrite=rewrite;
-const fill=CanvasRenderingContext2D.prototype.fillText;CanvasRenderingContext2D.prototype.fillText=function(text,...args){return fill.call(this,rewrite(text),...args);};
+// r8c.2: user content (nicknames, plates, message / wish bodies) is never rewritten. DOM: anything inside [data-raw] (or the
+// known user-content slots) is skipped; registered raw strings (own nickname, remote/neighbour names, message bodies) are kept
+// verbatim inside mixed system text; canvases drawn under r7Raw() (name plates) use the native fillText.
+const RAW=new Set(),RAWSEL='[data-raw],.tgg-row .n,.r7f-nick,.r7f-text';let rawDepth=0,rawList=null;
+window.r7RawText=function(...xs){for(const x of xs)if(typeof x==='string'&&x.trim().length>=2&&x.length<=200&&!RAW.has(x)){RAW.add(x);rawList=null;}};
+window.r7Raw=function(fn){rawDepth++;try{return fn();}finally{rawDepth--;}};
+function guarded(s){if(typeof s!=='string')return s;try{const me=typeof S!=='undefined'&&S?.avatar?.name;if(me)window.r7RawText(me);}catch(e){}
+ if(!RAW.size)return rewrite(s);rawList=rawList||[...RAW].sort((a,b)=>b.length-a.length);let out='',i=0,seg=0;
+ while(i<s.length){let hit=null;for(const r of rawList)if(s.startsWith(r,i)){hit=r;break;}if(hit){out+=rewrite(s.slice(seg,i))+hit;i+=hit.length;seg=i;}else i++;}
+ return seg?out+rewrite(s.slice(seg)):rewrite(s);}
+window.r7Guarded=guarded;
+const fill=CanvasRenderingContext2D.prototype.fillText;window.r7NativeFillText=fill;CanvasRenderingContext2D.prototype.fillText=function(text,...args){return fill.call(this,rawDepth?text:guarded(text),...args);};
 document.title='福缘里 · 心田小院';document.getElementById('hall').dataset.title='缘堂';document.getElementById('zen').dataset.title='静室';TG_SCENES.forEach(s=>s.name=rewrite(s.name));
 for(const c of TG_CATALOG)c.name=rewrite(c.name);
 const label=worldLabel;worldLabel=function(p,t,...rest){return label(p,rewrite(t),...rest);};
 const interact=worldInteract;worldInteract=function(s,x,z,t,...rest){return interact(s,x,z,typeof t==='function'?()=>rewrite(t()):rewrite(t),...rest);};
-const toast0=toast;toast=function(s,...rest){return toast0(rewrite(s),...rest);};
+const toast0=toast;toast=function(s,...rest){return toast0(guarded(s),...rest);};
 const modal=openModal;openModal=function(html,...rest){const out=modal(html,...rest);clean($('#sheet'));return out;};
-function clean(root){if(!root)return;const walk=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);let n;while(n=walk.nextNode()){if(n.parentElement.closest('script,style,textarea,input'))continue;const t=rewrite(n.data);if(t!==n.data)n.data=t;}for(const el of root.querySelectorAll('[title],[aria-label],[data-title],[placeholder]'))for(const a of ['title','aria-label','data-title','placeholder'])if(el.hasAttribute(a)){const t=rewrite(el.getAttribute(a));if(t!==el.getAttribute(a))el.setAttribute(a,t);}}
+function clean(root){if(!root)return;const walk=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);let n;while(n=walk.nextNode()){const pe=n.parentElement;if(!pe||pe.closest('script,style,textarea,input')||pe.closest(RAWSEL))continue;const t=guarded(n.data);if(t!==n.data)n.data=t;}for(const el of root.querySelectorAll('[title],[aria-label],[data-title],[placeholder]'))for(const a of ['title','aria-label','data-title','placeholder'])if(el.hasAttribute(a)&&!el.closest(RAWSEL)){const t=guarded(el.getAttribute(a));if(t!==el.getAttribute(a))el.setAttribute(a,t);}}
 let queued=false;new MutationObserver(()=>{if(queued)return;queued=true;queueMicrotask(()=>{queued=false;clean($('#app'));clean($('#sheet'));clean($('#toast'));clean(document.body);const tray=document.querySelector('#r6Placement .r6-tray');if(tray&&tray.parentElement.tagName!=='DETAILS'){const d=document.createElement('details'),summary=document.createElement('summary');summary.textContent='选择物品';d.className='r7-place-inventory';d.append(summary);tray.replaceWith(d);d.append(tray);}});}).observe(document.body,{childList:true,characterData:true,subtree:true});clean(document.body);
 const reason=TG_MERIT.reasonText;TG_MERIT.reasonText=function(r){return rewrite(reason.call(this,r));};
 // Replace the saved ornament by ID, without touching its price or placement data.
@@ -9134,7 +9091,7 @@ const spawn=r3Spawn;r3Spawn=function(name,prev){if(name==='hall')return prev==='
 function batch(parent,geo,color,rows,particle=false){const m=new TH.InstancedMesh(geo,new TH.MeshLambertMaterial({color,side:TH.DoubleSide}),rows.length),d=new TH.Object3D();rows.forEach((r,i)=>{d.position.set(...r.slice(0,3));d.scale.set(...r.slice(3,6));d.rotation.set(r[6]||0,r[7]||0,r[8]||0);d.updateMatrix();m.setMatrixAt(i,d.matrix);});m.userData.r7Particle=particle;m.userData.r7TreeSoft=parent.name==='r7-wish-tree';if(m.userData.r7TreeSoft||particle)m.userData.tgRealSkip=true;m.frustumCulled=false;parent.add(m);return m;}
 let petals,petalRows=[];
 function build(){const w=W3,h=w.spaces.hall;h.limit={x:12,z:16};h.r6HkDressed=true;
-const keep=new Set([h.plaqueGroup,h.decorGroup,w.fruits,w.sticks,w.smoke]);for(const m of [...h.group.children])if(!keep.has(m))h.group.remove(m);
+const keep=new Set([h.plaqueGroup,h.decorGroup,w.fruits,w.sticks,w.smoke]);const legacy=[];for(const m of [...h.group.children])if(!keep.has(m)){h.group.remove(m);legacy.push(m);}if(!h.r7Legacy)h.r7Legacy={children:legacy,blocks:h.blocks.slice()}; // r8c.2: keep the v13 hall art for restoration
 h.blocks=[];h.items=[];h.exits=[];h.floor=worldBox(h,0,-.16,0,24,.3,32,'#b9ab8c');
 const walls=[];function wall(x,z,sx,sz){walls.push([x,2.6,z,sx,5.2,sz]);h.blocks.push({x:x-sx/2,X:x+sx/2,z:z-sz/2,Z:z+sz/2});}
 for(const x of [-12,12]){wall(x,-7.25,.3,17.5);wall(x,10.75,.3,10.5);}wall(-5,-16,14,.3);wall(9,-16,6,.3);wall(-7,16,10,.3);wall(7,16,10,.3);
@@ -9347,7 +9304,7 @@ function tidy(){
 for(const group of document.querySelectorAll('.tgav-row')){const seen=new Set();for(const b of group.querySelectorAll('button')){const t=r7Rewrite(b.textContent);if(seen.has(t))b.hidden=true;else seen.add(t);}}
 const sheet=$('#sheet');if(sheet){const seen=new Set();for(const b of sheet.querySelectorAll('button')){const t=b.textContent.trim();if(['茶会小院','家庭','🏠 家庭'].includes(t)){const key=t.includes('家庭')?'family':'tea';if(seen.has(key)){if(b.id!=='r7Family')b.remove();else{for(const x of sheet.querySelectorAll('button'))if(x!==b&&/^(🏠 )?家庭$/.test(x.textContent.trim()))x.remove();}}seen.add(key);}}}
 // Neighbors: search all rows, default to ripe crops, friends or family; real UUID suffix only.
-for(const body of document.querySelectorAll('.tgg-bd')){const visits=body.querySelectorAll('[data-visit]');if(visits.length&&!body.querySelector('.r7-neighbor-search')){const search=document.createElement('input');search.className='r7-neighbor-search';search.placeholder='搜索昵称或 ID';search.setAttribute('aria-label','搜索邻居');body.prepend(search);const rows=[...visits].map(b=>{const row=b.closest('.tgg-row'),n=row?.querySelector('.n');if(n&&!n.dataset.r7Suffix){n.dataset.r7Suffix='1';n.textContent+='#'+b.dataset.visit.replace(/-/g,'').slice(-4);}return row;}).filter(Boolean);const filter=()=>rows.forEach(r=>{const q=search.value.trim().toLowerCase();r.hidden=q?!r.textContent.toLowerCase().includes(q):!(r.querySelector('.tgg-tag.hot')||familyIds.has(r.querySelector('[data-visit]')?.dataset.visit));});search.oninput=filter;filter();}}
+for(const body of document.querySelectorAll('.tgg-bd')){const visits=body.querySelectorAll('[data-visit]');if(visits.length&&!body.querySelector('.r7-neighbor-search')){const search=document.createElement('input');search.className='r7-neighbor-search';search.placeholder='搜索昵称或 ID';search.setAttribute('aria-label','搜索邻居');body.prepend(search);const rows=[...visits].map(b=>{const row=b.closest('.tgg-row'),n=row?.querySelector('.n');if(n&&!n.dataset.r7Suffix){n.dataset.r7Suffix='1';n.textContent+='#'+b.dataset.visit.replace(/-/g,'').slice(-4);}return row;}).filter(Boolean);const filter=()=>rows.forEach(r=>{const q=search.value.trim().toLowerCase();r.hidden=q?!r.textContent.toLowerCase().includes(q):false;});search.oninput=filter;filter();}}
 const menu=$('#tgsMenu');menu?.querySelector('[data-for="btnGuard"]')?.remove();const account=menu?.querySelector('[data-for="btnAuth"] span');if(account){const text=window.TG_AUTH?.userId?'已登录':'本地存档';if(account.textContent!==text)account.textContent=text;}const loading=[...document.querySelectorAll('#sheet p,#sheet div,.tgg-bd p,.tgg-bd div')].filter(p=>!p.children.length&&p.textContent==='加载中…');for(const p of loading)p.classList.add('r7-loading');if(!$('#r6PracticeClock'))$('#modal')?.classList.remove('r7-practice');}
 let scheduled=false;new MutationObserver(()=>{if(scheduled)return;scheduled=true;queueMicrotask(()=>{scheduled=false;tidy();});}).observe(document.body,{subtree:true,childList:true});
 const css=document.createElement('style');css.textContent=`.tgg-row[hidden],.tgav-chip[hidden]{display:none!important}#topbar button{min-width:44px!important;min-height:44px!important}#sceneTitle{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}#r7Drawer #backFromHall{display:block!important}#r7Family,#r7Feedback,#r7Manual{min-height:44px;margin:4px}#tgsMenu #r7Family,#tgsMenu #r7Feedback,#tgsMenu #r7Manual{display:block;width:95%}.r7-pending:after{content:'●';color:#c23838;font-size:10px}#modal.r7-practice{align-items:flex-end;background:transparent;pointer-events:none}#modal.r7-practice #sheet{max-height:48vh;overflow:auto;pointer-events:auto}.r7-practice .r6-script{padding:4px;line-height:1.4}.r7-loading:before{content:'◌';display:inline-block;animation:r7spin 1s linear infinite;margin-right:8px}@keyframes r7spin{to{transform:rotate(360deg)}}@media(max-width:430px){#sceneTitle{max-width:95px;font-size:12px}}`;document.head.append(css);tidy();
@@ -9361,8 +9318,8 @@ let building=false;
 const sites=[[-4.8,1,-11,2],[4.8,1,11,2],[7,7,11,9]];
 function site(x,z){return sites.find(a=>Math.abs(x-a[0])<1.9&&Math.abs(z-a[1])<1.3);}
 const mesh=worldMesh;worldMesh=function(p,type,c,x,y,z,...rest){if(building&&p===W3.spaces.plaza.group){const a=site(x,z);if(a){x+=a[2]-a[0];z+=a[3]-a[1];}}return mesh.call(this,p,type,c,x,y,z,...rest);};
-const label=worldLabel;worldLabel=function(p,t,x,y,z,w){if(building&&p===W3.spaces.plaza.group){const a=site(x,z);if(a){x+=a[2]-a[0];z+=a[3]-a[1];}if(/摇签|求签/.test(t))t='每日诗签';if(/六爻/.test(t))t='读心笺';if(t==='风水')t='赏园景';}return label.call(this,p,t,x,y,z,w);};
-const wi=worldInteract;worldInteract=function(s,x,z,t,run,range){if(building&&s===W3.spaces.plaza){const a=sites.find(a=>Math.abs(x-a[0])<.01&&Math.abs(z-a[1]-1.65)<.01);if(a){x=a[2];z=a[3]+1.65;t=a===sites[1]?'抽每日诗签':a===sites[0]?'读心笺':'赏园景';if(a===sites[1])run=()=>openQian();}}return wi.call(this,s,x,z,t,run,range);};
+const label=worldLabel;worldLabel=function(p,t,x,y,z,w){if(building&&p===W3.spaces.plaza.group){const a=site(x,z);if(a){x+=a[2]-a[0];z+=a[3]-a[1];}if(t==='抽每日诗笺')t='每日诗笺';}return label.call(this,p,t,x,y,z,w);};
+const wi=worldInteract;worldInteract=function(s,x,z,t,run,range){if(building&&s===W3.spaces.plaza){const a=sites.find(a=>Math.abs(x-a[0])<.01&&Math.abs(z-a[1]-1.65)<.01);if(a){x=a[2];z=a[3]+1.65;t=a===sites[1]?'抽每日诗笺':a===sites[0]?'读心笺':'赏园景';if(a===sites[1])run=()=>openQian();}}return wi.call(this,s,x,z,t,run,range);};
 const wb=worldBuild;worldBuild=function(){building=true;try{return wb.apply(this,arguments);}finally{building=false;}};
 const spawn=r3Spawn;r3Spawn=function(n,p){if(n==='hall')return p==='zen'?[3,3,Math.PI/2]:p==='study'?[-3,3,-Math.PI/2]:p==='lotus'?[4,-5,Math.PI]:[0,5,0];if(n==='plaza'&&(!p||p==='gate'))return [0,7,0];return spawn.apply(this,arguments);};
 let tree,entry=null;
@@ -9385,7 +9342,7 @@ function poetry(){if(!$('#qianResult'))return;const title=$('#sheet h2');if(titl
 const modal=openModal;openModal=function(html,...args){const out=modal.call(this,html,...args);if($('#qianResult'))poetry();return out;};
 const oq=openQian;openQian=function(){const out=oq.apply(this,arguments);poetry();return out;};const dq=drawQian;drawQian=function(){const out=dq.apply(this,arguments);poetry();return out;};
 let queued=false;new MutationObserver(()=>{if(queued)return;queued=true;queueMicrotask(()=>{queued=false;if($('#qianResult')){const r=$('#qianResult .qian');if($('#sheet h2')?.textContent!=='每日寄语'||r?.querySelector('.rank')||$('#qianAgain')?.textContent!=='再读一句'&&$('#qianAgain'))poetry();}});}).observe($('#sheet'),{subtree:true,childList:true});
-$('#stallQian').textContent='抽每日诗签';
+$('#stallQian').textContent='抽每日诗笺';
 let thumb;function thumbnail(){if(thumb)return thumb;const scene=new T.Scene();scene.background=new T.Color('#e9e2cd');scene.add(new T.HemisphereLight(0xffffff,0x777766,2));const light=new T.DirectionalLight(0xffffff,2);light.position.set(3,5,4);scene.add(light);r3Furniture(scene,{id:'golden_buddha',x:0,z:0});const cam=new T.PerspectiveCamera(40,1,.1,20);cam.position.set(2.4,2.2,3);cam.lookAt(0,.9,0);const renderer=new T.WebGLRenderer({antialias:true,preserveDrawingBuffer:true});renderer.setSize(112,112);renderer.render(scene,cam);thumb=renderer.domElement.toDataURL();renderer.dispose();return thumb;}
 const shop=openShop;openShop=function(tab){const out=shop.apply(this,arguments);if(tab==='merit')for(const a of $('#sheet').querySelectorAll('article'))if(a.querySelector('b')?.textContent==='石灯'){const img=document.createElement('img');img.src=thumbnail();img.alt='石灯模型';img.width=76;img.height=76;a.prepend(img);}return out;};
 })();
@@ -9394,7 +9351,7 @@ const shop=openShop;openShop=function(tab){const out=shop.apply(this,arguments);
 (()=>{'use strict';
 const T=typeof THREE!=='undefined'&&THREE||window.THREE;
 
-/* ---------- 1. Secular wording for 读心笺 / 赏园景 / 诗签 / help ---------- */
+/* ---------- 1. Secular wording for 读心笺 / 赏园景 / 诗笺 / help ---------- */
 const DIR_NOTE={
   '北':'院子朝北，光线比较柔和，门口放一盆绿植很安静。',
   '南':'院子朝南，光照充足，适合晒一晒太阳。',
@@ -9430,39 +9387,13 @@ const HEART=[
 ];
 function heartLine(n){return HEART[Math.abs(n|0)%HEART.length];}
 
-function scrubText(s){
-  if(typeof s!=='string'||!s)return s;
-  const pairs=[
-    ['六爻起卦','今日心语'],['一键起卦','一次读完'],['再起一卦','再读一句'],
-    ['看风水','赏景小记'],['今日吉方','今日小记'],['吉利方位','所在方向'],
-    ['今日运势','今日兴致'],['幸运色','今日配色'],['大吉！',''],['大吉',''],
-    ['心诚则灵','读一句诗'],['求签','抽每日诗签'],['算卦','读心笺'],
-    ['摇签','抽每日诗签'],['灵签','诗签'],['起卦','读心语'],
-    ['成卦','读完'],['卦已成','心语已备'],['卦意：','心语：'],
-    ['动爻：','变化：'],['变卦：','下一句：'],['本卦','本页'],
-    ['在六十四卦中的位置：','在图中的位置：'],
-    ['第 1 / 6 爻','第 1 / 6 次'],['/ 6 爻','/ 6 次'],
-    ['测一测','写一写'],['运势','心情'],['吉方','方向'],
-    ['风水','园景'],['宜忌','安排']
-  ];
-  let out=s;
-  for(const [a,b] of pairs)out=out.split(a).join(b);
-  out=out.replace(/第\s*(\d+)\s*\/\s*6\s*爻/g,'第 $1 / 6 次');
-  out=out.replace(/第\s*(\d+)\s*爻/g,'第 $1 次');
-  out=out.replace(/第(\d+)卦/g,'第$1页');
-  out=out.replace(/([一二三四五上初])爻/g,'$1次');
-  out=out.replace(/[吉凶卦爻]/g,'');
-  return out;
-}
+// r8c-clean（codex2 建议）：旧摊位模板已从 gameplay.js 删除，这里不再需要逐词替换表；函数保留为直通，供旧调用点使用。
+function scrubText(s){return s;}
 
 function secularGua(){
   const h2=$('#sheet h2');if(h2)h2.textContent='今日心语';
   const intro=$('#sheet h2 + p');if(intro)intro.textContent='轻轻摇几次铜钱，读一句今天的心语。';
   const lines=$('#guaLines');if(lines)lines.style.display='none';
-  document.querySelectorAll('#coins .coin span').forEach((sp,i)=>{
-    const t=sp.textContent||'';
-    if(/乾|兑|离|震|巽|坎|艮|坤|隆|宝/.test(t)&&!/字|背/.test(t))sp.textContent=['字','背','字'][i%3];
-  });
   const step=$('#guaStep');
   if(step){
     const m=step.textContent.match(/(\d+)\s*\/\s*6/);
@@ -9504,14 +9435,9 @@ function secularFeng(){
       const name=el.nextSibling&&el.nextSibling.textContent?el.nextSibling.textContent.trim():'';
       return '<span class="swatch" style="background:'+el.style.background+'"></span>'+(name||'');
     });
-    const key=(box.querySelector('p.center[style*="7a5a3a"]')||{}).textContent||'';
-    const head=(box.querySelector('p.center[style*="20px"]')||{}).textContent||'';
-    const year=head.replace(/·\s*五行属.*$/,'').trim();
     const yi=tags.slice(0,4),ji=tags.slice(4,7);
     box.dataset.r7d='1';
     box.innerHTML='<div class="card">'
-      +(year?'<p class="center" style="font-size:20px;margin:2px 0">'+year+'</p>':'')
-      +(key?'<p class="center" style="color:#7a5a3a;margin:0">'+key.replace(/五行属\S+/,'')+'</p>':'')
       +'<p>'+(DIR_NOTE[dir]||('院子朝向是'+dir+'。'))+'</p>'
       +(swatches.length?'<p><b>今日配色：</b>'+swatches.join('　')+'</p>':'')
       +(yi.length?'<p style="margin-bottom:2px"><b>可以试试</b></p><div class="tagrow">'+yi.map(t=>'<span class="tag yi">'+t+'</span>').join('')+'</div>':'')
@@ -9521,8 +9447,8 @@ function secularFeng(){
 }
 
 function secularQian(){
-  const h2=$('#sheet h2');if(h2&&/诗签|灵签/.test(h2.textContent))h2.textContent='每日寄语';
-  const intro=$('#sheet h2 + p');if(intro&&/签|所求/.test(intro.textContent))intro.textContent='读一句诗，给今天留一点从容。';
+  const h2=$('#sheet h2');if(h2&&/诗笺/.test(h2.textContent))h2.textContent='每日寄语';
+  const intro=$('#sheet h2 + p');if(intro&&/所求/.test(intro.textContent))intro.textContent='读一句诗，给今天留一点从容。';
   const body=$('#tube .body');if(body)body.textContent='诗句';
   const b=$('#qianBtn');if(b)b.textContent='抽一首诗';
   const again=$('#qianAgain');if(again)again.textContent='再读一句';
@@ -9530,22 +9456,10 @@ function secularQian(){
     const t=st.textContent||'';
     const m=t.match(/(\d+)/);
     if(m)st.textContent='第'+m[1]+'首';
-    else if(/签/.test(t))st.textContent=t.replace(/签/g,'首');
   }
 }
 
-function secularHelp(){
-  const s=$('#sheet');if(!s)return;
-  s.querySelectorAll('p,b,li,div,h2,h3,button,span,label').forEach(el=>{
-    if(el.closest('script,style'))return;
-    if(!el.childElementCount&&/算卦|求签|看风水|摇签|起卦|吉方|运势/.test(el.textContent||'')){
-      el.textContent=el.textContent
-        .replace(/点摊位算卦、求签、看风水/g,'点摊位读今日心语、抽每日诗签、写赏景小记')
-        .replace(/算卦、求签、看风水/g,'读今日心语、抽每日诗签、写赏景小记');
-      el.textContent=scrubText(el.textContent);
-    }
-  });
-}
+function secularHelp(){ /* r8c-clean：玩法说明已在 gameplay.js 源头改好，不再需要运行时替换 */ }
 
 function secularAll(){
   if(!$('#sheet'))return;
@@ -9683,7 +9597,7 @@ function moveNorthWall(dz){
 
 function relocateStalls(){
   const p=W3.spaces.plaza;
-  const from=[{x:-11,z:2,l:'读心笺'},{x:11,z:2,l:'抽每日诗签'},{x:11,z:9,l:'赏园景'}];
+  const from=[{x:-11,z:2,l:'读心笺'},{x:11,z:2,l:'抽每日诗笺'},{x:11,z:9,l:'赏园景'}];
   const to=[{x:-16,z:8,l:'今日心语'},{x:16,z:8,l:'每日寄语'},{x:16,z:-8,l:'赏景小记'}];
   // also catch unmoved original stall leftovers
   const extra=[{x:-4.8,z:1},{x:4.8,z:1},{x:7,z:7}];
@@ -9692,7 +9606,7 @@ function relocateStalls(){
     moveCluster(a.x,a.z,b.x,b.z,2.4);
     extra.forEach(e=>moveCluster(e.x,e.z,b.x,b.z,2.2));
   });
-  p.items=p.items.filter(it=>!/读心笺|抽每日诗签|每日诗签|赏园景|赏景小记|摇签|六爻|风水/.test(it.label||''));
+  p.items=p.items.filter(it=>!/读心笺|抽每日诗笺|每日诗笺|赏园景|赏景小记/.test(it.label||''));
   p.blocks=p.blocks.filter(b=>{
     const cx=(b.x+b.X)/2,cz=(b.z+b.Z)/2;
     return !to.concat(from).some(s=>Math.hypot(cx-s.x,cz-s.z)<2.2);
@@ -10718,8 +10632,8 @@ window.TG_R7F_OPEN=function(item){openWishCard(item||{nickname:'阿禾',text:'�
 function openWishCard(item,ev){
   closeWishCard();ensureStyle();
   const card=document.createElement('div');card.id='r7fWishCard';
-  const nick=document.createElement('div');nick.className='r7f-nick';nick.textContent=String(item.nickname||'访客');
-  const text=document.createElement('div');text.className='r7f-text';text.textContent=String(item.text||'');
+  const nick=document.createElement('div');nick.className='r7f-nick';nick.textContent=String(item.nickname||'访客');nick.dataset.raw='';
+  const text=document.createElement('div');text.className='r7f-text';text.textContent=String(item.text||'');text.dataset.raw='';
   const time=document.createElement('div');time.className='r7f-time';time.textContent=relTime(item.created_at);
   card.appendChild(nick);card.appendChild(text);card.appendChild(time);
   (document.getElementById('app')||document.body).appendChild(card);
@@ -11607,11 +11521,12 @@ function firstHit(s,from,to,noTrunk){
  const d=to.clone().sub(from),len=d.length();if(len<.001)return null;
  ray.set(from,d.multiplyScalar(1/len));ray.near=.06;ray.far=len;ray.camera=W3.camera;
  const meshes=cameraMeshes(s);
- let hit=ray.intersectObjects(meshes,false).find(h=>h.point.y>.28&&h.distance>.06);
+ const far=(h,d)=>!h.object.userData.r8cNoCam||d>=1.6; // r8c: indoor furniture only pushes the eye in when it is well away from the player (never crowds the head)
+ let hit=ray.intersectObjects(meshes,false).find(h=>h.point.y>.28&&h.distance>.06&&far(h,h.distance));
  // Thin roof undersides may use BackSide materials. Test both directions so
  // collision never depends on which side of a slab the camera approaches.
  ray.set(to,d.clone().negate());ray.near=.01;ray.far=len;
- const back=ray.intersectObjects(meshes,false).filter(h=>h.point.y>.28&&len-h.distance>.06).sort((a,b)=>b.distance-a.distance)[0];
+ const back=ray.intersectObjects(meshes,false).filter(h=>h.point.y>.28&&len-h.distance>.06&&far(h,len-h.distance)).sort((a,b)=>b.distance-a.distance)[0];
  if(back&&(!hit||len-back.distance<hit.distance))hit={...back,distance:len-back.distance};
  ray.set(from,d);ray.near=.06;ray.far=len;
  for(const row of s.r8CameraBoxes||[]){if(!visible(row.mesh,s.group))continue;const v=ray.ray.intersectBox(row.box,new T.Vector3());if(v){const distance=v.distanceTo(from);if(distance>.06&&distance<len&&(!hit||distance<hit.distance))hit={distance,point:v,object:row.mesh};}}
@@ -11694,7 +11609,7 @@ worldCamera=function(a){
 const signRay=new T.Raycaster();
 function fadeSigns(s,head,dt,snap){const c=W3.camera.position,d=head.clone().sub(c),len=d.length();if(len<.01)return;
  if(snap||!s.r8Signs||performance.now()-(s.r8SignsAt||0)>2000){s.r8Signs=null;s.r8SignsAt=performance.now();} // labels can be added after entry (stall signs, wish tags)
- const signs=s.r8Signs||(s.r8Signs=(()=>{const o=[];s.group.traverse(m=>{if(m.isMesh&&m.userData.wallSign&&m.material)o.push(m);});return o;})());if(!signs.length)return;
+ const signs=s.r8Signs||(s.r8Signs=(()=>{const o=[];s.group.traverse(m=>{if(m.isMesh&&(m.userData.wallSign||m.userData.r8cFade)&&m.material)o.push(m);});return o;})());if(!signs.length)return;
  const hits=new Set();for(const dy of [0,-.6,-1.3]){const t=head.clone();t.y+=dy;const dd=t.sub(c),l=dd.length();signRay.set(c,dd.multiplyScalar(1/l));signRay.far=l;for(const h of signRay.intersectObjects(signs,false))hits.add(h.object);}
  const now=performance.now(),rdt=Math.min(.1,Math.max(dt,(now-(s.r8SignT||now))/1000));s.r8SignT=now;const k=snap?1:1-Math.exp(-rdt*14);
  for(const m of signs){const target=hits.has(m)?.2:1,cur=m.userData.r8SignFade??1,next=cur+(target-cur)*k;m.userData.r8SignFade=next;
@@ -12611,12 +12526,31 @@ function sitNow(){const w=W3,s=seat;if(!s)return;const before=w.player.position.
    const hip=P.legL.getWorldPosition(new T.Vector3()).y-w.player.position.y,len=.85*P.legL.getWorldScale(new T.Vector3()).y;w.body.position.y=by;
    const lift=s.item.id==='cushion'?.02:.07; // floor cushion: sit low so the legs pass under the low tea table
    w.player.position.y=top+lift-hip;s.legA=Math.max(.35,Math.acos(Math.min(.98,(top+lift)/len)));s.top=top;s.lift=lift;}}catch(e){}}
+ if(w.pose==='sleep'&&['bed','daybed'].includes(s.item.id)){try{if(bedPlan(s,before))return;}catch(e){}}
  const after=w.player.position.clone();s.from=before;s.to=after;s.rotTo=w.player.rotation.y;s.rot0=s.item.rot||0;s.phase='down';s.t=0;w.player.position.copy(before);}
+// r8c beds / 榻: walk to the long side → turn (back to the bed) → sit on the edge → lie down (head on the pillow, body along the
+// long axis = r6's sleep transform) ; getting up runs the same in reverse (lie → edge → stand at the approach point).
+function bedPlan(s,before){const w=W3,av=w.r6Avatar,A=window.TG_AVATAR,B=w.body;if(!B)return false;const it=s.item,rot=it.rot||0,fx=Math.sin(rot),fz=Math.cos(rot),d=seatDepth(it);
+ const L={pos:w.player.position.clone(),rotY:w.player.rotation.y,by:0,bz:.65,bs:.9,brx:-Math.PI/2}; // r6 sleep body (r6.js r4Pose wrapper)
+ const ex=it.x+fx*Math.max(.12,d/2-.2),ez=it.z+fz*Math.max(.12,d/2-.2);const top=seatTop({...it,x:ex,z:ez})??seatTop(it)??.45;
+ let hip=.55,legA=1.2;if(av&&A?.setPose){const r0=B.rotation.x,y0=B.position.y,z0=B.position.z,s0=B.scale.x;A.setPose(av,'sit');B.rotation.x=0;B.position.set(B.position.x,-.28,0);B.scale.setScalar(1);w.player.updateMatrixWorld(true);const P=av.userData.parts;hip=P.legL.getWorldPosition(new T.Vector3()).y-w.player.position.y;const len=.85*P.legL.getWorldScale(new T.Vector3()).y;legA=Math.max(.35,Math.acos(Math.min(.98,(top+.07)/len)));A.setPose(av,'stand');B.rotation.x=r0;B.position.y=y0;B.position.z=z0;B.scale.setScalar(s0);}
+ const E={pos:new T.Vector3(ex,top+.07-hip,ez),rotY:rot,by:-.28,bz:0,bs:1,brx:0,legA};
+ Object.assign(s,{bed:true,lie:L,edge:E,from:before,rot0:w.player.rotation.y,phase:'edge',t:0,legA:null,top:null});w.player.position.copy(before);w.player.rotation.y=s.rot0;return true;}
+function bedBody(s,a,b,k,legs){const w=W3,B=w.body,P=w.r6Avatar?.userData?.parts;B.rotation.x=a.brx+(b.brx-a.brx)*k;B.position.y=a.by+(b.by-a.by)*k;B.position.z=a.bz+(b.bz-a.bz)*k;B.scale.setScalar(a.bs+(b.bs-a.bs)*k);
+ if(P&&legs!=null){P.legL.rotation.set(-legs,0,.06);P.legR.rotation.set(-legs,0,-.06);}}
+function bedTick(s,dt){const w=W3,p=w.player.position,A=window.TG_AVATAR,av=w.r6Avatar,sm=k=>k*k*(3-2*k);w.vx=w.vz=0;
+ const STAND={brx:0,by:0,bz:0,bs:1};
+ if(s.phase==='edge'){s.t+=dt;const k=Math.min(1,s.t/.45),e=sm(k);if(!s.sitPose){try{A?.setPose(av,'sit');}catch(_){}s.sitPose=true;}p.lerpVectors(s.from,s.edge.pos,e);w.player.rotation.y=s.rot0+angDiff(s.rot0,s.edge.rotY)*e;bedBody(s,STAND,s.edge,e,s.edge.legA*e);if(k>=1){s.phase='lie';s.t=0;}}
+ else if(s.phase==='lie'){s.t+=dt;const k=Math.min(1,s.t/.7),e=sm(k);p.lerpVectors(s.edge.pos,s.lie.pos,e);w.player.rotation.y=s.edge.rotY+angDiff(s.edge.rotY,s.lie.rotY)*e;bedBody(s,s.edge,s.lie,e,s.edge.legA*(1-e));if(k>=1){try{A?.setPose(av,'stand');}catch(_){}s.sitPose=false;s.phase='sat';p.copy(s.lie.pos);w.player.rotation.y=s.lie.rotY;}}
+ else if(s.phase==='sat'){if(w.pose!=='sleep'){s.phase='rise';s.t=0;bedTick(s,0);}}
+ else if(s.phase==='rise'){s.t+=dt;const k=Math.min(1,s.t/.6),e=sm(k);if(!s.sitPose){try{A?.setPose(av,'sit');}catch(_){}s.sitPose=true;}p.lerpVectors(s.lie.pos,s.edge.pos,e);w.player.rotation.y=s.lie.rotY+angDiff(s.lie.rotY,s.edge.rotY)*e;bedBody(s,s.lie,s.edge,e,s.edge.legA*e);if(k>=1){s.phase='stand';s.t=0;}}
+ else if(s.phase==='stand'){s.t+=dt;const k=Math.min(1,s.t/.35),e=sm(k),to=new T.Vector3(s.P.x,0,s.P.z);p.lerpVectors(s.edge.pos,to,e);bedBody(s,s.edge,STAND,e,s.edge.legA*(1-e));if(k>=1){try{A?.setPose(av,'stand');}catch(_){}p.copy(to);bedBody(s,STAND,STAND,1,0);seat=null;w.r5SeatBounds=null;}}}
 // lie with the head on the pillow: r6 lays the body along local −x of the bed; the pillow is at −x too (r3 daybed) — checked in qa.
 const anim=tgAnimate;tgAnimate=function(ts,dt){const out=anim.apply(this,arguments);const w=W3;if(!w)return out;
  try{
  if(seat){const p=w.player.position,s=seat;
   if(w.active!==s.scene){seat=null;}
+  else if(s.bed&&s.phase!=='walk'&&s.phase!=='turn'){bedTick(s,dt);}
   else if(s.phase==='walk'){s.t+=dt;const d=Math.hypot(p.x-s.P.x,p.z-s.P.z);
    if(!w.target&&d>.3){seat=null;} // player steered away: cancel
    else if(d<.25||s.t>4){worldStop();s.phase='turn';s.t=0;s.yaw0=w.player.rotation.y;}}
@@ -12648,7 +12582,7 @@ function pickPrompt(){const w=W3,s=w.spaces[w.active];if(!s||worldBlocked())retu
  if(!best){return;}
  w.action=best.it.run;if(btn.textContent!==best.label)btn.textContent=best.label;btn.classList.add('show');w.r8bPrompt=best.label;}
 let retryT=0;const anim2=tgAnimate;tgAnimate=function(ts,dt){const out=anim2.apply(this,arguments);try{const sp=W3.spaces?.[W3.active];if(sp&&SCENES[W3.active]&&!sp.r8bFixed&&ts-retryT>400){retryT=ts;fixScene(W3.active);}pickPrompt();}catch(e){}return out;};
-// ---------- UI (r8b): drawer buttons ≥ 44 px; 赏景小记 without 宜/忌-style lists ----------
+// ---------- UI (r8b): drawer buttons ≥ 44 px; 赏景小记 as one gentle sentence (no daily-advice lists) ----------
 {const css=document.createElement('style');css.id='r8b-css';css.textContent='#r7Drawer button{min-height:var(--tg-hit,44px)}#r6Placement summary{min-height:var(--tg-hit,44px);display:flex;align-items:center;cursor:pointer}.tgfb-root label.tgfb-lab{display:flex;align-items:center;min-height:var(--tg-hit,44px)}';document.head.append(css);}
 {// 赏景小记 (来福): one gentle sentence — a small everyday suggestion or the view — instead of any paired do/don't list
  const LINES={'北':['院子朝北，光线柔和，今天适合在窗边读几页书。','北边的院子很安静，今天适合给绿植浇一次水。'],
@@ -12681,6 +12615,507 @@ document.addEventListener('click',e=>{const b=e.target.closest?.('#r5Claim');if(
 document.addEventListener('click',e=>{const b=e.target.closest?.('button');if(!b||!/^←\s*回院子$/.test(b.textContent.trim())||W3?.active!=='yard')return;e.stopImmediatePropagation();toast('你已经在心田小院');},true);
 window.TG_R8B={version:'r8b',fixes,SCENES,fixScene};
 const enter=worldEnter;worldEnter=function(){const r=enter.apply(this,arguments);fixScene(W3.active);return r;};
+})();
+
+/* r8c-0 (codex2 r8b H, null.trim pageerror after the 捏脸 panel): three.js runs getProgramInfoLog()/getShaderInfoLog().trim();
+   on a lost WebGL context (the 捏脸 preview renderer is disposed with forceContextLoss, and SwiftShader can drop a context) these
+   return null → "Cannot read properties of null (reading 'trim')". Null-safe: a lost context yields '' instead of throwing. */
+(()=>{for(const C of [window.WebGL2RenderingContext,window.WebGLRenderingContext])if(C&&!C.prototype.__r8cLog){C.prototype.__r8cLog=true;
+ for(const k of ['getProgramInfoLog','getShaderInfoLog','getShaderSource']){const f=C.prototype[k];if(f)C.prototype[k]=function(){const r=f.apply(this,arguments);return r==null?'':r;};}}})();
+/* r8c-0b (r8c.1): the runtime 诗笺 rewrite was removed — r7c/r7d/world3d now carry 「每日诗笺」 at source. */
+/* r8c.js — 福缘里 r8c sidecar (runs after r8b.js). Overrides codex2 behaviour at runtime only; no codex2 file, backend,
+   economy, ID, save key or RPC is touched.
+   1. Draw calls ("一定要流畅"):
+      a) Static render batching: every static, opaque mesh/instanced mesh of the active scene that shares a material
+         signature (type, maps, side, shading, emissive, shadow flags …) is drawn through ONE merged render proxy per
+         signature; the material colour (× vertex colour × instance colour) is baked into a colour attribute.
+         The source meshes stay in the scene graph untouched (raycasts, colliders, interaction points, audits, game code
+         all keep seeing them) — they are only skipped by the renderer's frustum test (userData.r8cHide).
+         Every frame the sources are checked (parent, visibility chain, material, geometry, matrix, colours, instance
+         buffers); any change un-batches that proxy, marks the changed source dynamic and re-batches the rest later.
+      b) Avatars (player, NPCs, remote players): the 7–8 rigid parts sharing TG_AVATAR's material are drawn as one
+         rigidly-skinned SkinnedMesh whose bones are the part meshes themselves (same animation, 1 call + 1 shadow call
+         instead of 8 + 8). Rebuilt when a part's geometry / visibility changes (outfit update, sit/ride pose).
+*/
+(function(){
+if(window.TG_R8C)return;
+const T=THREE;const R8C=window.TG_R8C={stats:{},changes:[],off:/[?&]r8cnobatch/.test(location.search)};
+// ---- renderer-only hide: frustum test says "outside" for hidden sources (raycasts are unaffected) ----
+{const FP=T.Frustum.prototype,io=FP.intersectsObject;FP.intersectsObject=function(o){if(o.userData.r8cHide)return false;return io.call(this,o);};}
+function hide(o){if(o.userData.r8cHide)return;o.userData.r8cHide=true;o.userData.r8cFC=o.frustumCulled;o.frustumCulled=true;}
+function show(o){if(!o.userData.r8cHide)return;o.userData.r8cHide=false;o.frustumCulled=o.userData.r8cFC;delete o.userData.r8cFC;}
+
+// ===================== a) static batching =====================
+const SKIPU=['tgNpc','npc','tgAvatar','r6Ride','r6Passenger','r6Ghost','r6Hk','r6Fade','r41Label','wallSign','r6Lanterns','r8cDyn','npcNoOcclude','r7TreeSoft','__text','r6Label','r8cBatch','r8cLamp','r8cFade'];
+const SKIPN=/avatar|npc|player|remote|animal|koi|fish|bird|butterfly|r6Ride|mount|smoke|particle|petal|cloud|water|r7-wish-tree|r7f-wish-tags|r8a-mist|r8a-sky/i;
+const OKMAT=new Set(['MeshLambertMaterial','MeshStandardMaterial','MeshPhongMaterial','MeshBasicMaterial','MeshToonMaterial','MeshPhysicalMaterial']);
+const OBC=T.Material.prototype.onBeforeCompile,OBR=T.Object3D.prototype.onBeforeRender;
+const MAPS=['map','normalMap','roughnessMap','metalnessMap','emissiveMap','alphaMap','bumpMap','envMap','specularMap','displacementMap','gradientMap','matcap','clearcoatMap'];
+function skipNode(o,s){if(o===W3.player||o===s.animalGroup)return true;const u=o.userData||{};for(const k of SKIPU)if(u[k])return true;return SKIPN.test(o.name||'');}
+function matKey(m,o){if(!m||Array.isArray(m)||!OKMAT.has(m.type)||m.visible===false||m.transparent||m.opacity<1||m.colorWrite===false||m.vertexAlpha||m.alphaHash)return null;
+ const ok=obcKey(m);if(ok===null||m.aoMap||m.lightMap||!defOK(m)||m.clippingPlanes)return null;
+ const k=[m.type,m.side,m.flatShading?1:0,m.alphaTest,m.fog?1:0,m.depthTest?1:0,m.depthWrite?1:0,m.polygonOffset?[m.polygonOffsetFactor,m.polygonOffsetUnits].join('/'):0,m.toneMapped?1:0,m.wireframe?1:0,m.blending,m.dithering?1:0,
+  m.emissive?m.emissive.getHexString()+'*'+m.emissiveIntensity:'',m.roughness??'',m.metalness??'',m.shininess??'',m.specular?m.specular.getHexString():'',m.reflectivity??'',m.envMapIntensity??'',m.normalScale?m.normalScale.x+','+m.normalScale.y:'',m.bumpScale??'',
+  o.castShadow?1:0,o.receiveShadow?1:0,o.renderOrder,ok];
+ for(const n of MAPS)k.push(m[n]?m[n].uuid:'');return k.join('|');}
+// shader patches that are safe to batch: realism.js world-space box UV (depends on world position/normal only)
+function obcKey(m){if(m.onBeforeCompile===OBC)return '';const u=m.userData?.tgUniforms;if(u&&m.userData.tgWorldUV!=null&&m.customProgramCacheKey?.()==='tgWorldUV1')return 'wuv'+u.tgUVScale.value+':'+u.tgFlow.value.x+','+u.tgFlow.value.y;return null;}
+const DEF={};function defOK(m){const d=m.defines||{};const ref=DEF[m.type]||(DEF[m.type]=JSON.stringify(new T[m.type]().defines||{}));return JSON.stringify(d)===ref;}
+function needsUV(m){return MAPS.some(n=>n!=='envMap'&&n!=='matcap'&&m[n]);}
+function colSnap(m){return (m.color?m.color.r+','+m.color.g+','+m.color.b:'')+'|'+(m.emissive?m.emissive.getHexString()+m.emissiveIntensity:'')+'|'+m.opacity+'|'+m.transparent+'|'+m.visible+'|'+m.version;}
+function candidates(s){const out=[];
+ const walk=o=>{if(!o.visible)return;if(o!==s.group&&skipNode(o,s))return;
+  if(o.isMesh&&!o.isSkinnedMesh&&!o.isSprite){const g=o.geometry,m=o.material;
+   if(g&&g.attributes?.position&&g.attributes.normal&&!g.morphAttributes?.position&&g.drawRange.count===Infinity&&g.drawRange.start===0&&o.layers.mask===1&&o.onBeforeRender===OBR&&!o.morphTargetInfluences){
+    const key=matKey(m,o);const n=g.attributes.position.count*(o.isInstancedMesh?o.count:1);
+    if(key&&n>0&&n<=120000&&!(needsUV(m)&&!g.attributes.uv)&&!(m.vertexColors&&g.attributes.color&&g.attributes.color.itemSize===4&&m.transparent))out.push({o,key});}}
+  for(const c of o.children)walk(c);};
+ walk(s.group);return out;}
+function snapOf(o){o.updateWorldMatrix(true,false);return {parent:o.parent,mat:o.material,geo:o.geometry,mw:Float64Array.from(o.matrixWorld.elements),col:colSnap(o.material),pv:o.geometry.attributes.position.version,
+ im:o.isInstancedMesh?o.instanceMatrix.version+':'+o.count+':'+(o.instanceColor?o.instanceColor.version:'-'):'',vis:visTo(o)};}
+function visTo(o){let n='';for(let p=o;p;p=p.parent){if(!p.visible)return 'x';if(p.userData?.r8cSpace)break;}return 'v';}
+function same(o,a){if(o.parent!==a.parent||o.material!==a.mat||o.geometry!==a.geo)return false;
+ const e=o.matrixWorld.elements;for(let i=0;i<16;i++)if(Math.abs(e[i]-a.mw[i])>1e-6)return false;
+ if(o.geometry.attributes.position.version!==a.pv)return false;if(colSnap(o.material)!==a.col)return false;
+ if(o.isInstancedMesh&&(o.instanceMatrix.version+':'+o.count+':'+(o.instanceColor?o.instanceColor.version:'-'))!==a.im)return false;
+ return visTo(o)===a.vis;}
+const _m=new T.Matrix4(),_n=new T.Matrix3(),_v=new T.Vector3(),_c=new T.Color(),_ic=new T.Color();
+function build(s,list){// list: [{o,key}] same key
+ s.group.updateMatrixWorld(true);const inv=s.group.matrixWorld.clone().invert();const m0=list[0].o.material,uv=needsUV(m0);
+ let nv=0,ni=0;const parts=[];
+ for(const {o} of list){const g=o.geometry,cnt=o.isInstancedMesh?o.count:1,pc=g.attributes.position.count,ic=g.index?g.index.count:pc;
+  for(let k=0;k<cnt;k++){_m.multiplyMatrices(inv,o.matrixWorld);if(o.isInstancedMesh){const im=new T.Matrix4();o.getMatrixAt(k,im);_m.multiply(im);}
+   if(o.isInstancedMesh){const e=_m.elements;if(!isFinite(e[0])||_m.determinant()===0)continue;}
+   parts.push({o,k,M:_m.clone()});nv+=pc;ni+=ic;}}
+ if(nv===0)return null;
+ const wuv=m0.onBeforeCompile!==OBC,WN=wuv?new Float32Array(nv*3):null;const P=new Float32Array(nv*3),N=new Float32Array(nv*3),C=new Float32Array(nv*3),U=uv?new Float32Array(nv*2):null,I=nv>65535?new Uint32Array(ni):new Uint16Array(ni);
+ let vo=0,io=0;
+ for(const {o,k,M} of parts){const g=o.geometry,pos=g.attributes.position,nor=g.attributes.normal,col=(o.material.vertexColors&&g.attributes.color)||null,u=g.attributes.uv;const m=o.material;
+  _n.getNormalMatrix(M);const flip=M.determinant()<0;_c.copy(m.color||_c.set(1,1,1));if(o.isInstancedMesh&&o.instanceColor){o.getColorAt(k,_ic);_c.multiply(_ic);}
+  const base=vo;
+  for(let i=0;i<pos.count;i++){_v.fromBufferAttribute(pos,i).applyMatrix4(M);P[vo*3]=_v.x;P[vo*3+1]=_v.y;P[vo*3+2]=_v.z;
+   if(nor){if(WN){_v.fromBufferAttribute(nor,i).transformDirection(M);WN[vo*3]=_v.x;WN[vo*3+1]=_v.y;WN[vo*3+2]=_v.z;}_v.fromBufferAttribute(nor,i).applyMatrix3(_n).normalize();N[vo*3]=_v.x;N[vo*3+1]=_v.y;N[vo*3+2]=_v.z;}
+   let r=_c.r,gg=_c.g,b=_c.b;if(col){r*=col.getX(i);gg*=col.getY(i);b*=col.getZ(i);}C[vo*3]=r;C[vo*3+1]=gg;C[vo*3+2]=b;
+   if(U&&u){U[vo*2]=u.getX(i);U[vo*2+1]=u.getY(i);}vo++;}
+  const ix=g.index,cnt=ix?ix.count:pos.count;
+  for(let t=0;t<cnt;t+=3){const a=ix?ix.getX(t):t,b2=ix?ix.getX(t+1):t+1,c2=ix?ix.getX(t+2):t+2;I[io++]=base+a;if(flip){I[io++]=base+c2;I[io++]=base+b2;}else{I[io++]=base+b2;I[io++]=base+c2;}}
+ }
+ const geo=new T.BufferGeometry();geo.setAttribute('position',new T.BufferAttribute(P,3));geo.setAttribute('normal',new T.BufferAttribute(N,3));geo.setAttribute('color',new T.BufferAttribute(C,3));if(U)geo.setAttribute('uv',new T.BufferAttribute(U,2));if(WN)geo.setAttribute('tgUVN',new T.BufferAttribute(WN,3));
+ geo.setIndex(new T.BufferAttribute(I.subarray(0,io),1));geo.computeBoundingBox();geo.computeBoundingSphere();
+ const mat=m0.clone();if(m0.onBeforeCompile!==OBC){const ob=m0.onBeforeCompile,ck=m0.customProgramCacheKey;
+  // realism's box projection picks the axis from mat3(modelMatrix)*normal of the ORIGINAL mesh (scale included): feed it that direction
+  mat.onBeforeCompile=function(sh,r){ob.call(this,sh,r);sh.vertexShader='attribute vec3 tgUVN;\n'+sh.vertexShader.replace('normalize(mat3(tgM)*objectNormal)','normalize(mat3(tgM)*tgUVN)');};
+  mat.customProgramCacheKey=()=>String(ck?.())+'-r8cUVN';mat.userData.tgUniforms=m0.userData.tgUniforms;}mat.vertexColors=true;if(mat.color)mat.color.setRGB(1,1,1);mat.name='r8c-batch';
+ const px=new T.Mesh(geo,mat);px.name='r8c-batch';px.castShadow=list[0].o.castShadow;px.receiveShadow=list[0].o.receiveShadow;px.renderOrder=list[0].o.renderOrder;
+ px.userData={r8cBatch:true,npcNoOcclude:true,r6Merged:true};px.raycast=()=>{};px.matrixAutoUpdate=false;
+ return px;}
+function batchScene(s,name){if(R8C.off)return;s.group.userData.r8cSpace=true;
+ const st=s.r8c||(s.r8c={batches:[],pend:null,t0:performance.now()});
+ const cand=candidates(s).filter(c=>!c.o.userData.r8cIn);
+ const groups=new Map();for(const c of cand){if(!groups.has(c.key))groups.set(c.key,[]);groups.get(c.key).push(c);}
+ let made=0,srcs=0;
+ for(const [key,list] of groups){if(list.length<2&&!(list[0].o.isInstancedMesh&&false))continue;
+  const px=build(s,list);if(!px)continue;s.group.add(px);px.updateMatrixWorld(true);
+  const recs=list.map(({o})=>{const r={o,snap:snapOf(o)};o.userData.r8cIn=true;hide(o);return r;});
+  st.batches.push({px,recs,key});made++;srcs+=list.length;}
+ R8C.stats[name]={batches:st.batches.length,sources:st.batches.reduce((a,b)=>a+b.recs.length,0),last:{made,srcs}};}
+function unbatch(s,b,why){const i=s.r8c.batches.indexOf(b);if(i>=0)s.r8c.batches.splice(i,1);b.px.parent?.remove(b.px);b.px.geometry.dispose();b.px.material.dispose();
+ for(const r of b.recs){show(r.o);r.o.userData.r8cIn=false;}R8C.changes.push({t:Math.round(performance.now()),why});}
+function unbatchAll(s){if(!s?.r8c)return;for(const b of [...s.r8c.batches])unbatch(s,b,'reset');}
+R8C.diag=()=>{const s=W3.spaces[W3.active],out={};const inc=new Set(candidates(s).map(c=>c.o));
+ s.group.traverse(o=>{if(!o.isMesh||o.userData.r8cIn||o.userData.r8cBatch)return;let r;
+  if(inc.has(o))r='cand-single';else{let sk=null;for(let p=o;p&&p!==s.group;p=p.parent)if(skipNode(p,s)){sk='skip:'+(p.name||Object.keys(p.userData).filter(k=>SKIPU.includes(k)).join());break;}
+   const m=o.material;r=sk||(Array.isArray(m)?'multimat':!OKMAT.has(m.type)?'type:'+m.type:m.transparent?'transparent':obcKey(m)===null?'obc:'+(m.customProgramCacheKey?.()||'?'):!defOK(m)?'defines':!o.geometry.attributes.normal?'nonormal':o.layers.mask!==1?'layers':o.onBeforeRender!==OBR?'obr':!o.visible?'invisible':'other:'+[o.geometry.drawRange.count,!!o.geometry.morphAttributes?.position,o.geometry.attributes.position.count*(o.count||1),needsUV(m)&&!o.geometry.attributes.uv,o.isSkinnedMesh].join());}
+  out[r]=(out[r]||0)+1;});return out;};
+// A/B switch for QA: draw the original meshes instead of the proxies (no rebuild, same frame state)
+R8C.ab=on=>{for(const s of Object.values(W3.spaces))for(const b of s.r8c?.batches||[]){b.px.visible=!on;for(const r of b.recs)on?show(r.o):hide(r.o);}
+ for(const g of AV){const u=g.userData;if(u.r8cSkin)u.r8cSkin.visible=!on;for(const o of u.r8cParts||[])on?show(o):hide(o);}R8C.abOff=on;};
+R8C.unbatchAll=()=>{for(const s of Object.values(W3.spaces))unbatchAll(s);};
+function check(s){const st=s.r8c;if(!st)return;
+ for(const b of [...st.batches]){for(const r of b.recs){if(!same(r.o,r.snap)){r.o.userData.r8cDyn=true;unbatch(s,b,(r.o.name||r.o.type)+' changed');st.pend={at:performance.now()+1500,snaps:null};break;}}}}
+// stability window: candidates snapshotted, re-checked 0.8 s later; only unchanged ones are batched
+function tick(){const w=W3;if(!w?.active||R8C.off||R8C.abOff)return;const s=w.spaces[w.active];if(!s?.group)return;const now=performance.now();
+ if(R8C.lastActive!==w.active){R8C.lastActive=w.active;R8C.enterAt=now;if(s.r8c)s.r8c.pend={at:now+700,snaps:null};}
+ if(!s.r8c){s.r8c={batches:[],pend:{at:now+700,snaps:null}};}
+ check(s);const p=s.r8c.pend;
+ if(p&&now>=p.at){if(!p.snaps){p.snaps=new Map();for(const c of candidates(s))if(!c.o.userData.r8cIn)p.snaps.set(c.o,snapOf(c.o));p.at=now+800;}
+  else{for(const [o,sn] of p.snaps)if(!same(o,sn))o.userData.r8cDyn=true;s.r8c.pend=null;batchScene(s,w.active);}}
+}
+
+// ===================== b) avatar skinning =====================
+const AV=new Set();
+function avatarParts(g,MAT){const out=[];g.traverse(o=>{if(o.isMesh&&!o.isSkinnedMesh&&o.material===MAT&&o.geometry?.attributes?.position)out.push(o);});return out;}
+function avSig(g,parts){let s='';for(const o of parts){let v=true;for(let p=o;p&&p!==g;p=p.parent)if(!p.visible){v=false;break;}s+=o.uuid.slice(0,8)+o.geometry.uuid.slice(0,8)+(v?1:0)+(o.castShadow?1:0)+(o.receiveShadow?1:0)+o.geometry.attributes.position.version+';';}return s;}
+function avBuild(g,MAT){const u=g.userData;if(u.r8cSkin){g.remove(u.r8cSkin);u.r8cSkin.geometry.dispose();u.r8cSkin.skeleton?.dispose();u.r8cSkin=null;}
+ for(const o of u.r8cParts||[])show(o);
+ const parts=avatarParts(g,MAT);u.r8cParts=[];u.r8cSig=avSig(g,parts);
+ const vis=parts.filter(o=>{for(let p=o;p&&p!==g;p=p.parent)if(!p.visible)return false;return true;});if(vis.length<2)return;
+ g.updateMatrixWorld(true);const inv=g.matrixWorld.clone().invert();let nv=0,ni=0;
+ for(const o of vis){const gg=o.geometry;nv+=gg.attributes.position.count;ni+=gg.index?gg.index.count:gg.attributes.position.count;}
+ const P=new Float32Array(nv*3),N=new Float32Array(nv*3),C=new Float32Array(nv*3),SI=new Uint16Array(nv*4),SW=new Float32Array(nv*4),I=nv>65535?new Uint32Array(ni):new Uint16Array(ni);
+ let vo=0,io=0;const M=new T.Matrix4(),NM=new T.Matrix3();const bones=[],inverses=[];
+ vis.forEach((o,bi)=>{const gg=o.geometry,pos=gg.attributes.position,nor=gg.attributes.normal,col=gg.attributes.color;M.multiplyMatrices(inv,o.matrixWorld);NM.getNormalMatrix(M);const flip=M.determinant()<0;const base=vo;
+  for(let i=0;i<pos.count;i++){_v.fromBufferAttribute(pos,i).applyMatrix4(M);P.set([_v.x,_v.y,_v.z],vo*3);if(nor){_v.fromBufferAttribute(nor,i).applyMatrix3(NM).normalize();N.set([_v.x,_v.y,_v.z],vo*3);}
+   if(col)C.set([col.getX(i),col.getY(i),col.getZ(i)],vo*3);else C.set([1,1,1],vo*3);SI[vo*4]=bi;SW[vo*4]=1;vo++;}
+  const ix=gg.index,cnt=ix?ix.count:pos.count;for(let t=0;t<cnt;t+=3){const a=ix?ix.getX(t):t,b=ix?ix.getX(t+1):t+1,c=ix?ix.getX(t+2):t+2;I[io++]=base+a;if(flip){I[io++]=base+c;I[io++]=base+b;}else{I[io++]=base+b;I[io++]=base+c;}}
+  bones.push(o);inverses.push(o.matrixWorld.clone().invert());});
+ const geo=new T.BufferGeometry();geo.setAttribute('position',new T.BufferAttribute(P,3));geo.setAttribute('normal',new T.BufferAttribute(N,3));geo.setAttribute('color',new T.BufferAttribute(C,3));
+ geo.setAttribute('skinIndex',new T.Uint16BufferAttribute(SI,4));geo.setAttribute('skinWeight',new T.Float32BufferAttribute(SW,4));geo.setIndex(new T.BufferAttribute(I.subarray(0,io),1));geo.computeBoundingSphere();
+ const sk=new T.SkinnedMesh(geo,MAT);sk.name='r8c-avatar-skin';sk.userData={r8cBatch:true,npcNoOcclude:true};sk.raycast=()=>{};
+ sk.castShadow=vis.some(o=>o.castShadow);sk.receiveShadow=vis.some(o=>o.receiveShadow);g.add(sk);u.r8cSkin=sk;sk.updateMatrixWorld(true);
+ sk.bind(new T.Skeleton(bones,inverses),sk.matrixWorld.clone());
+ sk.boundingSphere=geo.boundingSphere.clone();sk.boundingSphere.radius+=.8; // limbs swing/sit within this
+ for(const o of vis){hide(o);u.r8cParts.push(o);}AV.add(g);}
+function avTick(){const A=window.TG_AVATAR;if(!A?.material||R8C.off||R8C.abOff)return;const MAT=A.material();const w=W3,s=w.spaces[w.active];if(!s)return;
+ const roots=[];const find=o=>{if(o.userData?.tgAvatar){roots.push(o);return;}for(const c of o.children)find(c);};if(w.player)find(w.player);find(s.group);
+ for(const g of roots){const parts=avatarParts(g,MAT);if(g.userData.r8cSig!==avSig(g,parts))avBuild(g,MAT);}
+ for(const g of AV){if(!g.parent){const u=g.userData;for(const o of u.r8cParts||[])show(o);AV.delete(g);}}}
+R8C.avatarOff=()=>{for(const g of AV){const u=g.userData;if(u.r8cSkin)g.remove(u.r8cSkin);for(const o of u.r8cParts||[])show(o);}};
+
+// ===================== 2. 缘堂 / 静室 / 书房 interiors =====================
+// a) complete shell: ceiling just above the wall tops, an outer lining behind the wall panels (closes corner/door-side gaps),
+//    and a short vestibule behind every doorway ending in a lit paper screen — no sky is visible from any camera position.
+//    Shell pieces never cast shadows (the rooms keep their current lighting) and sit outside the walk limit (no colliders).
+const ROOMS={
+ hall:{H:5.2,doors:[{side:'z+',c:0,w:4,h:3.4},{side:'x+',c:3.375,w:1.25,h:3.4},{side:'x-',c:3.375,w:1.25,h:3.4},{side:'z-',c:4.5,w:1,h:3.4}]},
+ zen:{H:4.2,doors:[{side:'x-',c:0,w:3.1,h:3.3}]},
+ study:{H:4.2,doors:[{side:'x+',c:0,w:3.1,h:3.3}]}};
+function wallMat(s,H){let best=null;s.group.traverse(m=>{if(best||!m.isMesh||m.userData.r8cShell||!m.material?.map)return;for(let q=m;q&&q!==s.group;q=q.parent)if(!q.visible)return;const b=new T.Box3().setFromObject(m);if(Math.abs(b.max.y-H)<.06&&b.min.y<.05&&(Math.max(-b.min.x,b.max.x)>5.8||Math.max(-b.min.z,b.max.z)>7.8))best=m.material;});return best;}
+function shell(s,name){const R=ROOMS[name];if(!R||s.group.getObjectByName('r8c-room-shell'))return;const H=R.H;
+ const wm=wallMat(s,H)||new T.MeshLambertMaterial({color:'#b89a72'});const fm=s.floor?.material||wm;
+ const paper=new T.MeshBasicMaterial({color:'#efe2c0'}),lat=new T.MeshLambertMaterial({color:'#5e4634'});
+ const g=new T.Group();g.name='r8c-room-shell';const add=(mat,x0,x1,y0,y1,z0,z1)=>{const m=new T.Mesh(new T.BoxGeometry(x1-x0,y1-y0,z1-z0),mat);m.position.set((x0+x1)/2,(y0+y1)/2,(z0+z1)/2);m.castShadow=false;m.receiveShadow=true;m.userData.r8cShell=true;g.add(m);return m;};
+ const X=6.18,Z=8.18,t=.08;
+ // r8c.1: the 缘堂 ceiling (5.2 m, lit only from below by the hemisphere) read almost black → hall-only ceiling material:
+ // same texture, a warm emissive lift from its own map (no new light, no geometry change; at most +1 draw call)
+ let cm=wm;if(name==='hall'&&wm.emissive){cm=wm.clone();cm.emissive=new T.Color('#7a6142');cm.emissiveMap=wm.map||null;cm.emissiveIntensity=.6;if('roughness' in cm)cm.roughness=Math.min(1,(wm.roughness??1));cm.name='r8c-hall-ceiling';}
+ add(cm,-X-t,X+t,H+.02,H+.14,-Z-t,Z+t); // ceiling
+ {const L=s.limit;add(fm,-X-t,X+t,-.3,0,L.z-.01,Z+t);add(fm,-X-t,X+t,-.3,0,-Z-t,-L.z+.01);add(fm,L.x-.01,X+t,-.3,0,-L.z,L.z);add(fm,-X-t,-L.x+.01,-.3,0,-L.z,L.z);} // floor ring under the lining
+ const sides={'x+':{n:'x',sg:1,len:Z},'x-':{n:'x',sg:-1,len:Z},'z+':{n:'z',sg:1,len:X},'z-':{n:'z',sg:-1,len:X}};
+ for(const [k,sd] of Object.entries(sides)){const ds=R.doors.filter(d=>d.side===k).sort((a,b)=>a.c-b.c);let at=-sd.len-t;const seg=(a,b,y0,y1)=>{if(b-a<.01)return;if(sd.n==='x'){const x=sd.sg*X;add(wm,Math.min(x,x+sd.sg*t),Math.max(x,x+sd.sg*t),y0,y1,a,b);}else{const z=sd.sg*Z;add(wm,a,b,y0,y1,Math.min(z,z+sd.sg*t),Math.max(z,z+sd.sg*t));}};
+  for(const d of ds){const a=d.c-d.w/2,b=d.c+d.w/2;seg(at,a,0,H+.02);seg(a,b,d.h,H+.02);at=b;vestibule(d,sd);}
+  seg(at,sd.len+t,0,H+.02);}
+ function vestibule(d,sd){const D=2.2,a=d.c-d.w/2-.1,b=d.c+d.w/2+.1,o=sd.n==='x'?X+t:Z+t,e=o+D; // pieces touch, never overlap
+  const P=(u0,u1,y0,y1,v0,v1,mat)=>{ // u: along the outward normal (signed), v: along the wall
+   const lo=Math.min(sd.sg*u0,sd.sg*u1),hi=Math.max(sd.sg*u0,sd.sg*u1);if(sd.n==='x')add(mat,lo,hi,y0,y1,v0,v1);else add(mat,v0,v1,y0,y1,lo,hi);};
+  P(o,e,-.3,0,a-.08,b+.08,fm);P(o,e,0,d.h+.1,a-.08,a,wm);P(o,e,0,d.h+.1,b,b+.08,wm);P(o,e,d.h,d.h+.1,a,b,wm);
+  P(e,e+.06,0,d.h+.1,a-.08,b+.08,paper);
+  for(let i=1;i<4;i++){const v=a+(b-a)*i/4;P(e-.04,e,0,d.h,v-.025,v+.025,lat);}
+  for(const yy of [d.h*.33,d.h*.66]){P(e-.04,e,yy-.025,yy+.025,a,a+(b-a)/4-.025,lat);for(let i=1;i<4;i++){const v0=a+(b-a)*i/4+.025,v1=a+(b-a)*(i+1)/4-(i<3?.025:0);P(e-.04,e,yy-.025,yy+.025,v0,v1,lat);}}}
+ s.group.add(g);g.updateMatrixWorld(true);R8C.changes.push({scene:name,what:'room shell (ceiling, lining, '+R.doors.length+' vestibules)'});}
+// b) furniture: colliders that match what you see, lamps split out of the merged furnishing so they can fade (never a camera
+//    collider), merged furnishing excluded from the indoor camera boom (walls/ceiling still are).
+function splitTris(m,pred){const g=m.geometry,P=g.attributes.position,ix=g.index,n=ix?ix.count:P.count,keep=[],take=[];const v=new T.Vector3();
+ for(let t=0;t<n;t+=3){const a=ix?ix.getX(t):t,b=ix?ix.getX(t+1):t+1,c=ix?ix.getX(t+2):t+2;v.set((P.getX(a)+P.getX(b)+P.getX(c))/3,(P.getY(a)+P.getY(b)+P.getY(c))/3,(P.getZ(a)+P.getZ(b)+P.getZ(c))/3);(pred(v)?take:keep).push(a,b,c);}
+ if(!take.length)return null;
+ const sub=ids=>{const map=new Map(),out={};const names=Object.keys(g.attributes);for(const k of names)out[k]=[];const idx=[];for(const i of ids){let j=map.get(i);if(j===undefined){j=map.size;map.set(i,j);for(const k of names){const A=g.attributes[k];for(let c=0;c<A.itemSize;c++)out[k].push(A.array[i*A.itemSize+c]);}}idx.push(j);}return {out,idx,names};};
+ const mk=(r,geo)=>{for(const k of r.names){const A=g.attributes[k];geo.setAttribute(k,new T.BufferAttribute(new A.array.constructor(r.out[k]),A.itemSize,A.normalized));}geo.setIndex(r.idx);geo.computeBoundingBox();geo.computeBoundingSphere();return geo;};
+ const lamp=mk(sub(take),new T.BufferGeometry());mk(sub(keep),g); // the furnishing keeps its geometry object (in place), lamp triangles removed
+ return lamp;}
+const LAMPS=[[-3.8,-2],[3.8,-2]];
+function furnish(s,name){if(name!=='zen'&&name!=='study')return;const fg=s.group.getObjectByName('r6-'+name+'-furnishing');const fm=fg?.children.find(m=>m.isMesh);if(!fm||fm.userData.r8cFix)return;fm.userData.r8cFix=true;
+ fg.updateMatrixWorld(true);const inv=fm.matrixWorld.clone().invert(),wv=new T.Vector3();
+ const inLamp=v=>{wv.copy(v).applyMatrix4(fm.matrixWorld);return wv.y<2.6&&LAMPS.some(([x,z])=>Math.abs(wv.x-x)<.45&&Math.abs(wv.z-z)<.45);};
+ // desk / table footprint from what is drawn (study) — the old collider was 2.1×1.6 m for a 1.3×0.8 m desk (STUDY-006 air wall)
+ let desk=null;if(name==='study'){const b=new T.Box3(),P=fm.geometry.attributes.position;for(let i=0;i<P.count;i++){wv.fromBufferAttribute(P,i).applyMatrix4(fm.matrixWorld);if(Math.abs(wv.x)<1.2&&wv.z>-3.9&&wv.z<-2.1&&wv.y>.15&&wv.y<1.35)(R8C.deskPts||(R8C.deskPts=[])).push([+wv.x.toFixed(2),+wv.y.toFixed(2),+wv.z.toFixed(2)]);}const pts=R8C.deskPts||[];const top=pts.reduce((m,p)=>p[1]>m&&p[1]<1.02?p[1]:m,0);for(const p of pts)if(Math.abs(p[1]-top)<.03)b.expandByPoint(new T.Vector3(p[0],p[1],p[2]));R8C.deskTop=top;if(!b.isEmpty())desk=b;}
+ for(const [lx,lz] of LAMPS){const lg=splitTris(fm,v=>{wv.copy(v).applyMatrix4(fm.matrixWorld);return wv.y<2.6&&Math.abs(wv.x-lx)<.45&&Math.abs(wv.z-lz)<.45;});
+  if(lg){const lamp=new T.Mesh(lg,fm.material.clone());lamp.name='r8c-lamp';lamp.castShadow=fm.castShadow;lamp.receiveShadow=fm.receiveShadow;lamp.userData.r8cFade=true;lamp.userData.r8cNoCam=true;lamp.userData.r8cLamp=true;fg.add(lamp);}}
+ if(name==='study'){const dg=splitTris(fm,v=>{wv.copy(v).applyMatrix4(fm.matrixWorld);return Math.abs(wv.x)<1.02&&wv.z>-3.78&&wv.z<-2.22&&wv.y>.115&&wv.y<1.035;});
+  if(dg){const dm=new T.Mesh(dg,fm.material);dm.name='r8c-desk';dm.castShadow=fm.castShadow;dm.receiveShadow=fm.receiveShadow;dm.userData.r8cNoCam=true;fg.add(dm);dg.computeBoundingBox();const bb=dg.boundingBox.clone().applyMatrix4(fm.matrixWorld);R8C.deskBox=[bb.min.toArray(),bb.max.toArray()].map(a=>a.map(v=>+v.toFixed(2)));desk=bb;}}
+ for(const o of [fm,s.group.getObjectByName('r7b-tea-study')?.children.find(m=>m.isMesh&&!m.material.map)].filter(Boolean))o.userData.r8cNoCam=true;
+ // colliders
+ const B=s.blocks;
+ for(const [x,z] of LAMPS)B.push({x:x-.42,X:x+.42,z:z-.42,Z:z+.42,label:'r8c lamp'});
+ for(const b of B)if(b.z===-6.2&&b.Z===-5.2&&Math.abs(b.X-b.x-2.2)<.01){b.z=-7.9;b.label='r8c shelf (to the wall)';}
+ if(name==='zen'){for(const x of [-1.5,1.5])for(const z of [-2.8,-1])B.push({x:x-.44,X:x+.44,z:z-.4,Z:z+.4,label:'r8c stool'});B.push({x:-.88,X:.88,z:-6.08,Z:-5.32,label:'r8c side table'});
+  // stools face the tea table (r7b passed the outward yaw)
+  for(const it of s.items)if(it.label==='坐下喝茶'&&!it.r8cSeat){const x=it.x,z=it.z,rot=x<0?Math.PI/2:-Math.PI/2;it.run=()=>r4Use({id:'cushion',x,z,rot,depth:.86},'zen');it.r8cSeat=true;}}
+ if(name==='study'&&desk){const i=B.findIndex(b=>b.x===-1.05&&b.X===1.05&&b.z===-3.8&&b.Z===-2.2);const nb={x:desk.min.x-.02,X:desk.max.x+.02,z:desk.min.z-.02,Z:desk.max.z+.02,label:'r8c desk (drawn footprint)'};if(i>=0)B[i]=nb;else B.push(nb);
+  // 案前临帖: sit on the cushion facing the desk first, then open the practice sheet
+  for(const it of s.items)if(/案前/.test(it.label)&&!it.r8cSeat){const open=it.run;it.r8cSeat=true;it.run=()=>{r4Use({id:'cushion',x:0,z:-1.5,rot:Math.PI,depth:.5},'study');const t0=performance.now();const wait=()=>{const st=window.TG_R8B_SEAT?.();if(st?.phase==='sat'||performance.now()-t0>3500){open();return;}if(!st&&performance.now()-t0>400){open();return;}requestAnimationFrame(wait);};requestAnimationFrame(wait);};}}
+ R8C.changes.push({scene:name,what:'furniture colliders, lamps split (fade, no camera), desk block '+(desk?desk.min.toArray().map(v=>v.toFixed(2))+'..'+desk.max.toArray().map(v=>v.toFixed(2)):'-')});}
+// d) [disabled — the art3 boxes are the lions' face and front legs; removing them is a visual regression] PLAZA-001 (codex2 r8b H, pre-existing): art3's old box-lion legs/muzzle/eyes sit inside and in front of the r6 stone lions → collapse those instances
+function plazaLions(s){if(s.r8cLions)return;const g=s.group.getObjectByName('art3-plaza');if(!g)return;s.r8cLions=0;const M=new T.Matrix4(),v=new T.Vector3(),q=new T.Quaternion(),sc=new T.Vector3(),Z=new T.Matrix4().makeScale(0,0,0);g.updateMatrixWorld(true);
+ g.traverse(o=>{if(!o.isInstancedMesh)return;let ch=false;for(let i=0;i<o.count;i++){o.getMatrixAt(i,M);M.clone().premultiply(o.matrixWorld).decompose(v,q,sc);if(Math.abs(Math.abs(v.x)-5.6)<.5&&v.z>-18.6&&v.z<-17.85&&v.y>.6&&v.y<2.3&&Math.max(sc.x,sc.y,sc.z)<.9){o.setMatrixAt(i,Z);ch=true;s.r8cLions++;}}if(ch){o.instanceMatrix.needsUpdate=true;o.computeBoundingSphere?.();o.computeBoundingBox?.();}});
+ R8C.changes.push({scene:'plaza',what:'old art3 lion parts collapsed: '+s.r8cLions});}
+function rooms(){const w=W3,n=w?.active,s=w?.spaces?.[n];if(!s||!ROOMS[n])return;try{shell(s,n);}catch(e){console.warn('r8c shell',e);R8C.errR=String(e);}try{furnish(s,n);}catch(e){console.warn('r8c furnish',e);R8C.errF=String(e);}}
+{const en=worldEnter;worldEnter=function(){const r=en.apply(this,arguments);rooms();return r;};}
+
+// c) indoor camera: when the boom would be squeezed by a wall (< 2.6 m horizontal), ease the yaw towards the nearest
+//    direction with room behind the player, so the eye never collapses to the head / near plane.
+function availH(n,x,z,yaw){const L=W3.spaces[n].limit,ax=L.x-.55,az=L.z-.55,dx=Math.sin(yaw),dz=Math.cos(yaw);let t=99;
+ if(dx>1e-4)t=Math.min(t,(ax-x)/dx);else if(dx<-1e-4)t=Math.min(t,(-ax-x)/dx);if(dz>1e-4)t=Math.min(t,(az-z)/dz);else if(dz<-1e-4)t=Math.min(t,(-az-z)/dz);return Math.max(0,t);}
+{const cam=worldCamera;let lastT=0;worldCamera=function(a){const w=W3;try{const n=w?.active;if(n&&ROOMS[n]&&S.view!=='fp'&&!w.r6Plan&&!(typeof r6IsRiding==='function'&&r6IsRiding())){
+  const p=w.player.position,need=Math.min(w.radius*Math.cos(w.pitch),2.6),now=performance.now(),dt=a===1?1:Math.min(.1,Math.max(.001,(now-(lastT||now))/1000));lastT=now;
+  if(availH(n,p.x,p.z,w.yaw)<need){let best=null;for(let k=1;k<=18&&!best;k++)for(const sg of [1,-1]){const y=w.yaw+sg*k*Math.PI/18;if(availH(n,p.x,p.z,y)>=need){best=y;break;}}
+   if(best==null){let bv=-1;for(let k=0;k<36;k++){const y=k*Math.PI/18,v=availH(n,p.x,p.z,y);if(v>bv){bv=v;best=y;}}}
+   const d=Math.atan2(Math.sin(best-w.yaw),Math.cos(best-w.yaw));w.yaw+=d*(a===1?1:1-Math.exp(-dt*4));w.r8cYawSwing=(w.r8cYawSwing||0)+1;}}}catch(e){}
+ return cam.apply(this,arguments);};}
+// 3) r8c.1 wish tags at the old plaza tree (TG_WISH / r7f untouched; camera POSITION untouched → tree-trace unaffected):
+//    a) after a tag is hung, the view eases (≈0.8 s, smoothstep, rate-limited) to frame the new tag clear of the HUD,
+//       holds, and eases back once the player moves / drags the view (or after 8 s);
+//    b) within the tree radius the default view leans gently toward the canopy so some tags are in view;
+//    c) HUD / direction-sign hit areas never sit over a visible tag (faded + pointer-events:none while they overlap).
+const TAGS={focus:null,k:0,bias:0,known:null,lastHud:0,hudOff:new Set()};R8C.tags=TAGS;
+const TREE=new T.Vector3(0,0,0),TREE_R=8.5,HUDSEL='#topbar button,#topbar [class*=pill],#topbar .pill,#coins,#r41Waypoints button,#r7MenuToggle,#joystick';
+function tagMesh(){return W3?.spaces?.plaza?.group?.getObjectByName('r7f-tag-mesh');}
+function tagPoints(m){const out=[],M=new T.Matrix4(),v=new T.Vector3();m.updateMatrixWorld();for(let i=0;i<m.count;i++){m.getMatrixAt(i,M);v.setFromMatrixPosition(M).applyMatrix4(m.matrixWorld);out.push(v.clone());}return out;}
+function watchHang(){const m=tagMesh();if(!m)return;const pts=tagPoints(m);
+ if(TAGS.known&&pts.length>TAGS.known.length&&W3.active==='plaza'){const fresh=pts.filter(p=>!TAGS.known.some(q=>q.distanceTo(p)<.3));const t=fresh[fresh.length-1]||pts[pts.length-1];
+  if(t){const pl=W3.player.position;TAGS.focus={pos:t.clone(),from:pl.clone(),yaw:W3.yaw,t:0,release:false};R8C.lastHang={tag:t.toArray().map(v=>+v.toFixed(2)),at:Date.now()};}}
+ TAGS.known=pts;}
+function hudRects(){return [...document.querySelectorAll(HUDSEL)].filter(e=>e.getClientRects().length&&getComputedStyle(e).visibility!=='hidden').map(e=>({e,r:e.getBoundingClientRect()}));}
+const sm=x=>x<=0?0:x>=1?1:x*x*(3-2*x);
+function lookQ(cam,pt){const m=new T.Matrix4().lookAt(cam.position,pt,cam.up);return new T.Quaternion().setFromRotationMatrix(m);}
+function frameTags(){const w=W3,cam=w.camera;if(w.active!=='plaza'||S.view==='fp'){TAGS.focus=null;TAGS.k=0;TAGS.bias=0;return;}
+ const now=performance.now(),wall=TAGS.at?(now-TAGS.at)/1000:1/60;TAGS.at=now;const dt=Math.min(.25,Math.max(.001,Math.max(w.r8CameraDt||0,Math.min(wall,.25)))),p=w.player.position,head=new T.Vector3(p.x,p.y+1.45,p.z);
+ // a) focus on the newly hung tag
+ const F=TAGS.focus;if(F){F.t+=dt;const moved=Math.hypot(p.x-F.from.x,p.z-F.from.z)>.35||Math.abs(w.joy?.x||0)+Math.abs(w.joy?.y||0)>.05||!!w.target||Math.abs(Math.atan2(Math.sin(w.yaw-F.yaw),Math.cos(w.yaw-F.yaw)))>.12;if(moved||F.t>8)F.release=true;}
+ const goal=F&&!F.release?1:0,rate=1/.8; // full swing in 0.8 s
+ TAGS.k=Math.max(0,Math.min(1,TAGS.k+Math.sign(goal-TAGS.k)*Math.min(Math.abs(goal-TAGS.k),rate*dt)));if(F&&F.release&&TAGS.k<=0)TAGS.focus=null;
+ // b) canopy bias near the tree (eased by distance, rate-limited)
+ const d=Math.hypot(p.x-TREE.x,p.z-TREE.z),bGoal=d<TREE_R?sm((TREE_R-d)/2.5):0;TAGS.bias+=Math.sign(bGoal-TAGS.bias)*Math.min(Math.abs(bGoal-TAGS.bias),.8*dt);
+ if(TAGS.k<=0&&TAGS.bias<=0)return;
+ const q0=cam.quaternion.clone(),fwd=new T.Vector3(0,0,-1).applyQuaternion(q0),L=cam.position.distanceTo(head);const base=cam.position.clone().addScaledVector(fwd,L); // what r8 looked at
+ let q=q0;
+ if(TAGS.bias>0){const up=base.clone();up.y+=1.3;q=q0.clone().slerp(lookQ(cam,up),.55*TAGS.bias);} // lean toward the canopy, player stays in frame
+ if(TAGS.k>0&&TAGS.focus){const tag=TAGS.focus.pos;let a=.62; // aim between head and tag (tag upper-middle of the screen, player lower part)
+  const aim=head.clone().lerp(tag,a);q=q.clone().slerp(lookQ(cam,aim),sm(TAGS.k));}
+ cam.quaternion.copy(q);cam.updateMatrixWorld();}
+function hudClear(){const now=performance.now();if(now-TAGS.lastHud<200)return;TAGS.lastHud=now;const w=W3,m=tagMesh();const off=new Set();
+ if(w?.active==='plaza'&&m&&m.count&&Math.hypot(w.player.position.x-TREE.x,w.player.position.z-TREE.z)<TREE_R+4){const cam=w.camera,cv=w.renderer.domElement.getBoundingClientRect(),fr=new T.Frustum().setFromProjectionMatrix(new T.Matrix4().multiplyMatrices(cam.projectionMatrix,cam.matrixWorldInverse));
+  const scr=tagPoints(m).filter(v=>fr.containsPoint(v)).map(v=>{const n=v.clone().project(cam);return [cv.left+(n.x+1)/2*cv.width,cv.top+(1-n.y)/2*cv.height];});
+  for(const {e,r} of hudRects())if(scr.some(([x,y])=>x>r.left-22&&x<r.right+22&&y>r.top-26&&y<r.bottom+26))off.add(e);}
+ for(const e of TAGS.hudOff)if(!off.has(e)){e.style.opacity=e.dataset.r8cOp||'';e.style.pointerEvents=e.dataset.r8cPe||'';delete e.dataset.r8cTagClear;}
+ for(const e of off)if(!TAGS.hudOff.has(e)){e.dataset.r8cOp=e.style.opacity;e.dataset.r8cPe=e.style.pointerEvents;e.dataset.r8cTagClear='1';e.style.transition='opacity .25s';e.style.opacity='.3';e.style.pointerEvents='none';}
+ TAGS.hudOff=off;}
+{const cam=worldCamera;worldCamera=function(){const r=cam.apply(this,arguments);try{watchHang();frameTags();}catch(e){R8C.errT=String(e);}return r;};}
+R8C.tagScreen=()=>{const w=W3,m=tagMesh();if(!m)return null;const cv=w.renderer.domElement.getBoundingClientRect();return tagPoints(m).map(v=>{const n=v.clone().project(w.camera);return {w:v.toArray().map(x=>+x.toFixed(2)),x:Math.round(cv.left+(n.x+1)/2*cv.width),y:Math.round(cv.top+(1-n.y)/2*cv.height),inView:Math.abs(n.x)<=1&&Math.abs(n.y)<=1&&n.z<1};});};
+R8C.hudRects=()=>hudRects().map(({e,r})=>({id:e.id||e.className||e.tagName,r:[r.left,r.top,r.right,r.bottom].map(Math.round),cleared:!!e.dataset.r8cTagClear}));
+// ---- frame hook ----
+const anim=tgAnimate;tgAnimate=function(ts,dt){const out=anim.apply(this,arguments);try{rooms();}catch(e){}try{tick();}catch(e){console.warn('r8c batch',e);R8C.err=String(e);}try{hudClear();}catch(e){R8C.errH=String(e);}try{avTick();}catch(e){console.warn('r8c avatar',e);R8C.errA=String(e);}return out;};
+})();
+
+/* r8c.2: restore the v13 缘堂 art (hall only). r7 wiped the hall group and r7c rebuilt a bare room; r7 also hid the
+   art3 「古朴木作」 style (朱漆柱、雕花窗棂、额枋、宫灯、红毯). Here the original objects (stashed by r7 in h.r7Legacy) come back,
+   minus what r7c/r8c now own (floor collider, perimeter walls, ceiling, altar table) and minus devotional props; text is
+   swapped for neutral wording only — no object is deleted for compliance. */
+(()=>{
+'use strict';
+const T=THREE;const LOG=(window.TG_R8C2={changes:[],restored:0,skipped:[]});
+const near=(a,b,e=.02)=>Math.abs(a-b)<e;
+function sizeOf(o){const b=new T.Box3().setFromObject(o);return {b,s:b.getSize(new T.Vector3()),c:b.getCenter(new T.Vector3())};}
+// Neutral paintings on canvas (山水 / 梅花 / 荷花): no blank placeholders.
+function paint(kind,W=512,H=470){const c=document.createElement('canvas');c.width=W;c.height=H;const a=c.getContext('2d');let seed=kind*977+13;const r=()=>((seed=(seed*1664525+1013904223)>>>0)/4294967296);
+ a.fillStyle='#5a3a22';a.fillRect(0,0,W,H);a.fillStyle='#d9b77a';a.fillRect(10,10,W-20,H-20);
+ const x0=26,y0=26,w=W-52,h=H-52;const g=a.createLinearGradient(0,y0,0,y0+h);g.addColorStop(0,'#f1e7cf');g.addColorStop(1,'#e4d6b3');a.fillStyle=g;a.fillRect(x0,y0,w,h);
+ a.save();a.beginPath();a.rect(x0,y0,w,h);a.clip();
+ if(kind===0){// 青绿山水
+  a.fillStyle='rgba(200,90,60,.55)';a.beginPath();a.arc(x0+w*.78,y0+h*.2,26,0,7);a.fill();
+  const ridge=(base,amp,col,n)=>{a.fillStyle=col;a.beginPath();a.moveTo(x0,y0+h);for(let i=0;i<=n;i++){const x=x0+w*i/n;a.lineTo(x,y0+base-amp*Math.abs(Math.sin(i*1.7+base))-r()*amp*.35);}a.lineTo(x0+w,y0+h);a.fill();};
+  ridge(h*.55,h*.32,'#9db5a0',9);ridge(h*.68,h*.28,'#6f9480',11);ridge(h*.8,h*.2,'#4e7464',13);
+  a.fillStyle='#a9c3c4';a.fillRect(x0,y0+h*.82,w,h*.18);a.strokeStyle='rgba(255,255,255,.6)';a.lineWidth=2;for(let i=0;i<7;i++){a.beginPath();const y=y0+h*.85+i*9;a.moveTo(x0+r()*w*.5,y);a.lineTo(x0+w*.4+r()*w*.6,y);a.stroke();}
+  a.fillStyle='#4a3a2a';a.beginPath();a.moveTo(x0+w*.3,y0+h*.9);a.lineTo(x0+w*.42,y0+h*.9);a.lineTo(x0+w*.39,y0+h*.93);a.lineTo(x0+w*.33,y0+h*.93);a.fill();
+  for(let i=0;i<5;i++){a.strokeStyle='#5d4632';a.lineWidth=3;const x=x0+w*(.08+i*.05),y=y0+h*.8;a.beginPath();a.moveTo(x,y);a.lineTo(x,y-40-i*6);a.stroke();a.fillStyle='#3f6a4f';a.beginPath();a.arc(x,y-46-i*6,13,0,7);a.fill();}
+ }else if(kind===1){// 梅花
+  a.strokeStyle='#3e2c22';a.lineCap='round';const br=(x,y,ang,len,wd,d)=>{if(d>5||len<8)return;const x2=x+Math.cos(ang)*len,y2=y+Math.sin(ang)*len;a.lineWidth=wd;a.beginPath();a.moveTo(x,y);a.quadraticCurveTo((x+x2)/2+(r()-.5)*20,(y+y2)/2+(r()-.5)*20,x2,y2);a.stroke();
+   for(let k=0;k<3;k++){const t=r();const bx=x+(x2-x)*t,by=y+(y2-y)*t;if(r()<.7){a.fillStyle=r()<.5?'#d8485a':'#e98a96';for(let p=0;p<5;p++){a.beginPath();a.arc(bx+Math.cos(p*1.256)*5,by+Math.sin(p*1.256)*5,4.5,0,7);a.fill();}a.fillStyle='#f5d36b';a.beginPath();a.arc(bx,by,2,0,7);a.fill();}}
+   br(x2,y2,ang-.5+r()*.3,len*.72,wd*.68,d+1);br(x2,y2,ang+.35+r()*.3,len*.64,wd*.66,d+1);};
+  br(x0+w*.1,y0+h*.95,-1.0,h*.36,14,0);
+  a.fillStyle='rgba(60,40,30,.75)';a.font='bold 30px serif';a.textAlign='center';['暗','香','疏','影'].forEach((ch,i)=>a.fillText(ch,x0+w*.86,y0+50+i*36));
+  a.fillStyle='#b8322d';a.fillRect(x0+w*.86-11,y0+50+4*36-14,22,22);
+ }else{// 荷花
+  a.fillStyle='#bcd0c4';a.fillRect(x0,y0+h*.62,w,h*.38);
+  const leaf=(x,y,rr)=>{a.fillStyle='#4f7f5b';a.beginPath();a.ellipse(x,y,rr,rr*.42,0,0,7);a.fill();a.strokeStyle='#3d6648';a.lineWidth=2;for(let i=0;i<8;i++){a.beginPath();a.moveTo(x,y);a.lineTo(x+Math.cos(i*.785)*rr,y+Math.sin(i*.785)*rr*.42);a.stroke();}};
+  leaf(x0+w*.25,y0+h*.72,70);leaf(x0+w*.7,y0+h*.8,58);leaf(x0+w*.5,y0+h*.9,48);
+  const lotus=(x,y,s)=>{a.strokeStyle='#4d7a55';a.lineWidth=4;a.beginPath();a.moveTo(x,y);a.lineTo(x+4,y+h*.32);a.stroke();for(let i=-2;i<=2;i++){a.fillStyle=i===0?'#f3b7c3':'#e98aa0';a.save();a.translate(x,y);a.rotate(i*.38);a.beginPath();a.ellipse(0,-s*.55,s*.28,s*.6,0,0,7);a.fill();a.restore();}};
+  lotus(x0+w*.42,y0+h*.42,62);lotus(x0+w*.68,y0+h*.5,44);
+  a.fillStyle='#2f4c3a';a.beginPath();a.ellipse(x0+w*.2,y0+h*.36,10,18,.3,0,7);a.fill();
+ }
+ a.restore();a.strokeStyle='#7c5a34';a.lineWidth=4;a.strokeRect(x0,y0,w,h);
+ const t=new T.CanvasTexture(c);t.colorSpace=T.SRGBColorSpace;t.anisotropy=4;return t;}
+function label(text,w,h,vertical){const c=document.createElement('canvas');c.width=vertical?64:512;c.height=vertical?256:128;const a=c.getContext('2d');
+ if(vertical){a.fillStyle='#a64d37';a.fillRect(0,0,64,256);a.strokeStyle='#dab574';a.strokeRect(5,5,54,246);a.fillStyle='#ffe0a0';a.font='bold 42px serif';a.textAlign='center';[...text].forEach((v,i)=>a.fillText(v,32,53+i*55));}
+ else{a.fillStyle='#402820';a.fillRect(0,0,512,128);a.strokeStyle='#dfb65a';a.lineWidth=8;a.strokeRect(8,8,496,112);a.fillStyle='#ffe6a1';a.font='bold 66px serif';a.textAlign='center';a.textBaseline='middle';a.fillText(text,256,66);}
+ const t=new T.CanvasTexture(c);t.colorSpace=T.SRGBColorSpace;return t;}
+function canvasText(m){return m?.material?.map?.image?.__r8c2Text;}
+// The world3d/art2 couplets and tablets carry their text only in canvas pixels; identify them by position.
+
+// --- merged-geometry editing: enhance.js merged same-colour boxes (24 verts / 36 idx each, in order) and art2 merged
+// props; we drop only the parts that r7c/r8c now own or that are devotional, and nudge a few parts out of door openings.
+function rebuild(g,keepRanges,vmap){const out=new T.BufferGeometry();const attrs=Object.keys(g.attributes);const idx=g.index?g.index.array:Uint32Array.from({length:g.attributes.position.count},(_,i)=>i);let nv=0;const remap=new Int32Array(g.attributes.position.count).fill(-1);const order=[];
+ for(const [v0,v1] of keepRanges.verts)for(let v=v0;v<v1;v++){remap[v]=nv++;order.push(v);}
+ for(const k of attrs){const a=g.attributes[k],n=a.itemSize,arr=new a.array.constructor(nv*n);order.forEach((v,i)=>{for(let j=0;j<n;j++)arr[i*n+j]=a.array[v*n+j];});out.setAttribute(k,new T.BufferAttribute(arr,n,a.normalized));}
+ const ni=[];for(let i=0;i<idx.length;i+=3){const a=remap[idx[i]],b=remap[idx[i+1]],c=remap[idx[i+2]];if(a>=0&&b>=0&&c>=0)ni.push(a,b,c);}out.setIndex(ni);
+ if(vmap){const pos=out.attributes.position;order.forEach((v,i)=>{const d=vmap(v);if(d){const q=d(pos.getX(i),pos.getY(i),pos.getZ(i));pos.setXYZ(i,q[0],q[1],q[2]);}});}
+ out.computeBoundingBox();out.computeBoundingSphere();return out;}
+function boxChunk(m){const g=m.geometry;if(!m.isMesh||m.isInstancedMesh||!g?.attributes?.position)return 0;const pos=g.attributes.position,n=pos.count;const C=g.index?24:36;
+ if(g.index&&g.index.count!==n*1.5)return 0;if(n%C||n<=C)return 0;const u=new Set();for(let i=0;i<C;i++)u.add(pos.getX(i).toFixed(4)+','+pos.getY(i).toFixed(4)+','+pos.getZ(i).toFixed(4));return u.size===8?C:0;}
+function editBoxMerge(m,decide,C){const g=m.geometry,pos=g.attributes.position,n=pos.count/C;const verts=[],moves=new Map();let dropped=0;const b=new T.Box3(),v=new T.Vector3();
+ for(let k=0;k<n;k++){b.makeEmpty();for(let i=k*C;i<k*C+C;i++)b.expandByPoint(v.fromBufferAttribute(pos,i));const c=b.getCenter(new T.Vector3()),sz=b.getSize(new T.Vector3());const d=decide(c,sz);
+  if(d==='drop'){dropped++;continue;}verts.push([k*C,k*C+C]);if(d&&d.move)moves.set(k,d.move);}
+ if(!dropped&&!moves.size)return 0;m.geometry=rebuild(g,{verts},moves.size?vi=>{const mv=moves.get(Math.floor(vi/C));return mv?((x,y,z)=>[x+(mv[0]||0),y+(mv[1]||0),z+(mv[2]||0)]):null;}:null);
+ return dropped+moves.size;}
+function editComponents(m,dropFn){const g=m.geometry;const pos=g.attributes.position,n=pos.count,idx=g.index?g.index.array:Uint32Array.from({length:n},(_,i)=>i),par=new Int32Array(n).map((_,i)=>i);const f=x=>{while(par[x]!==x)x=par[x]=par[par[x]];return x;};
+ if(!g.index){const seen=new Map();for(let i=0;i<n;i++){const k=Math.round(pos.getX(i)*1e4)+','+Math.round(pos.getY(i)*1e4)+','+Math.round(pos.getZ(i)*1e4);const j=seen.get(k);if(j==null)seen.set(k,i);else par[f(i)]=f(j);}}
+ for(let i=0;i<idx.length;i+=3){const a=f(idx[i]),b=f(idx[i+1]),c=f(idx[i+2]);par[b]=a;par[f(c)]=a;}
+ const box=new Map(),v=new T.Vector3();for(let i=0;i<n;i++){const r=f(i);if(!box.has(r))box.set(r,new T.Box3());box.get(r).expandByPoint(v.fromBufferAttribute(pos,i));}
+ const drop=new Set();for(const [r,b] of box)if(dropFn(b.getCenter(new T.Vector3()),b.getSize(new T.Vector3())))drop.add(r);if(!drop.size)return 0;
+ const verts=[];let s0=-1;for(let i=0;i<=n;i++){const keep=i<n&&!drop.has(f(i));if(keep&&s0<0)s0=i;if(!keep&&s0>=0){verts.push([s0,i]);s0=-1;}}m.geometry=rebuild(g,{verts});return drop.size;}
+const inBurner=c=>Math.abs(c.x)<1.25&&Math.abs(c.z+2.3)<1.25&&c.y<1.7;
+const CPL=5.22;// couplets move out of the north door opening (r8c: x 4..5) to sit between door and corner pillar
+function boxRule(c,sz){
+ if(near(c.y,2.1,.05)&&near(sz.y,4.2,.05)&&Math.min(sz.x,sz.z)<.4)return 'drop';// r3 perimeter walls (r7c/r8c walls kept)
+ if(near(c.y,5.5,.05)&&sz.x>10)return 'drop';// legacy ceiling
+ if(near(c.z,-5.8,.05)&&(near(c.y,1.35,.05)||near(c.y,.65,.05))&&Math.abs(c.x)<2.6)return 'drop';// altar table duplicates r7c altar
+ if(near(c.z,-7.2,.05)&&(near(c.y,2.8,.05)||near(c.y,1.8,.05)))return 'drop';// ancestral tablet boards/bases
+ if(inBurner(c)&&sz.y>.05&&sz.x<1.5)return 'drop';// incense burner feet
+ if(near(Math.abs(c.x),4.7,.05)&&near(c.z,-7.75,.05)&&near(sz.y,2.4,.05))return {move:[Math.sign(c.x)*(CPL-4.7),0,0]};// couplet boards
+ if(near(Math.abs(c.x),4.7,.05)&&near(c.y,4.5,.05)&&near(sz.y,.7,.05)&&sz.x<.05)return {move:[0,.2,0]};// lantern cords end at the lantern top
+ return null;}
+const COUPLET={'-4.7':'花香满院','4.7':'竹影临窗'};// neutral auspicious pair (no blessing-prayer / religious wording)
+function restore(){const w=W3,h=w?.spaces?.hall,L=h?.r7Legacy;if(!L||h.r8c2Done)return;h.r8c2Done=true;
+ const keepOut=[];
+ for(const o of L.children){const p=o.position;let why=null;
+  if(o.isMesh&&o.geometry===w.geometries?.box){const sc=o.scale;
+   if(near(p.y,5.5))why='legacy ceiling (r8c.1 ceiling kept)';
+   else if(near(p.y,2.1)&&near(sc.y,4.2))why='r3 perimeter wall (r7c/r8c walls kept)';
+   else if(near(p.y,2.7)&&near(sc.y,5.4))why='world3d wall';
+   else if(near(p.z,-5.8)&&(near(p.y,1.35)||near(p.y,.65))&&Math.abs(p.x)<2.5)why='altar table duplicate of r7c';
+   else if(near(p.z,-7.2)&&near(p.y,2.8))why='ancestral-tablet board (paintings occupy the wall)';
+   else if(near(p.z,-7.2)&&near(p.y,1.8))why='ancestral-tablet base';
+   else if(near(p.x,2.1)&&near(p.y,1.65)&&near(p.z,-3.55))why='muyu mallet (devotional)';}
+  if(o.isMesh&&o.userData.wallSign){if(near(p.z,-7.05))why='ancestral tablet text';else if(near(p.z,-7.78)&&near(p.y,4.1))why='old plaque text (r7c 家和业兴 plaque kept)';}
+  if(o.isMesh&&near(p.x,2.1)&&near(p.y,1.4)&&near(p.z,-3.8))why='muyu (devotional) — table kept';
+  if(o.isGroup&&o.children.some(c=>c.userData?.wallSign)&&h.exits.some(e=>Math.hypot(e.x-p.x,e.z-p.z)<.5)){// door frame: keep, retitle with current scene names
+   const to=h.exits.find(e=>Math.hypot(e.x-p.x,e.z-p.z)<.5).to,name=TG_SCENES.find(s=>s.id===to)?.name||'';
+   for(const c of o.children)if(c.userData?.wallSign){c.material=c.material.clone();c.material.map=label(name);c.material.map.image.__r8c2Text=name;}
+   LOG.changes.push({object:'door '+to,text:name});}
+  const shared=o.isMesh&&Object.values(w.geometries||{}).includes(o.geometry),atOrigin=o.position.lengthSq()<1e-8;
+  if(!why&&o.isMesh&&!o.isInstancedMesh&&(shared||!atOrigin)&&o.geometry!==w.geometries?.box){const c=new T.Box3().setFromObject(o).getCenter(new T.Vector3());if(inBurner(c))why='incense burner part (replaced by a planter)';}
+  else if(!why&&o.isMesh&&!o.isInstancedMesh&&o.geometry!==w.geometries?.box){
+   const C=boxChunk(o);if(C){const k=editBoxMerge(o,boxRule,C);if(k){LOG.changes.push({object:'enhance merged boxes #'+o.material.color.getHexString(),parts:k});if(!o.geometry.index.count)why='merged boxes emptied';}}
+   else if(o.geometry.attributes.position.count>64){const k=editComponents(o,(c)=>inBurner(c));if(k){LOG.changes.push({object:'art2 merged #'+o.material.color.getHexString(),burnerParts:k});if(!o.geometry.index.count)why='merged emptied (burner only)';}}
+   else{const c=new T.Box3().setFromObject(o).getCenter(new T.Vector3());if(inBurner(c))why='incense burner part (replaced by a planter)';}}
+  if(o.isGroup&&near(p.x,4)&&near(p.z,-7.5))why='lotus door frame (3.3 m) wider than the r8c north opening — r7c label kept';
+  if(o.isMesh&&o.geometry===w.geometries?.box&&near(p.z,-7.2)&&near(p.y,.86)){o.scale.x=4.4;LOG.changes.push({object:'back table',to:'4.4 m wide (clear of the lotus door post)'});}
+  if(o.isMesh&&o.material?.map&&near(o.position.z,-7.71)&&near(Math.abs(o.position.x),4.7))o.position.x=Math.sign(o.position.x)*CPL;
+  if(why){LOG.skipped.push(why);continue;}
+  h.group.add(o);LOG.restored++;
+  if(o.isMesh&&near(p.y,.85)&&near(p.z,-2.3)&&o.geometry?.type==='CylinderGeometry')o.userData.r8c2Vessel=true;
+ }
+ // couplets (art2): same boards, neutral text
+ for(const o of h.group.children)if(o.isMesh&&o.material?.map&&near(o.position.z,-7.71)&&near(Math.abs(o.position.x),CPL)){const t=COUPLET[o.position.x<0?'-4.7':'4.7'];o.material=o.material.clone();o.material.map=label(t,0,0,true);o.material.map.image.__r8c2Text=t;LOG.changes.push({object:'couplet '+o.position.x,text:t});}
+ // the bronze vessel becomes a flower planter (no incense)
+ const pb=new T.Group();pb.name='r8c2-planter-body';pb.position.set(0,0,-2.3);h.group.add(pb);worldMesh(pb,'cylinder','#8a6d3b',0,.06,0,.95,.12,.95);worldMesh(pb,'cylinder','#9a7a45',0,.52,0,.78,.8,.78);worldMesh(pb,'cylinder','#5e4a2c',0,.925,0,.7,.01,.7);
+ const fl=new T.Group();fl.name='r8c2-planter';fl.position.set(0,.93,-2.3);h.group.add(fl);
+ for(let i=0;i<7;i++){const a=i*2.4,rr=.12+(i%3)*.07;worldMesh(fl,'cylinder','#6d8f57',Math.cos(a)*rr*.5,.22,Math.sin(a)*rr*.5,.025,.45,.025);worldMesh(fl,'ball',i%2?'#f0b6c2':'#f6e2a8',Math.cos(a)*rr,.48+(i%2)*.08,Math.sin(a)*rr,.13,.1,.13);}
+ for(let i=0;i<5;i++){const a=i*1.26+.3;const lf=worldMesh(fl,'ball','#5f8a4e',Math.cos(a)*.28,.1,Math.sin(a)*.28,.22,.05,.12);lf.rotation.y=-a;}
+ // a vase on the former muyu table
+ const v=new T.Group();v.name='r8c2-vase';v.position.set(2.1,1.4,-3.8);h.group.add(v);worldMesh(v,'ball','#4f7f86',0,.2,0,.3,.4,.3);worldMesh(v,'cylinder','#4f7f86',0,.45,0,.1,.18,.1);
+ for(let i=0;i<4;i++){const a=i*1.6;worldMesh(v,'cylinder','#6d8f57',Math.cos(a)*.05,.7,Math.sin(a)*.05,.02,.45,.02);worldMesh(v,'ball','#e7d6a8',Math.cos(a)*.1,.95,Math.sin(a)*.1,.1,.08,.1);}
+ // colliders for restored solids (pillars, vessel, side table); r7c walls/altar colliders stay as they are
+ for(const b of [{x:-4.25,X:-3.75,z:-2.25,Z:-1.75,r8c2:'pillar'},{x:3.75,X:4.25,z:-2.25,Z:-1.75,r8c2:'pillar'},{x:-.8,X:.8,z:-3.1,Z:-1.5,r8c2:'vessel'},{x:1.25,X:2.95,z:-4.4,Z:-3.2,r8c2:'side table'},{x:-2.2,X:2.2,z:-7.6,Z:-6.8,r8c2:'back table'},
+  ...[[0,7.5,0],[5.6,3,1],[-5.6,3,1]].flatMap(([x,z,side])=>[-1.65,1.65].map(d=>{const px=side?x:x+d,pz=side?z+d:z;return {x:px-.2,X:px+.2,z:pz-.2,Z:pz+.2,r8c2:'door post'};}))])h.blocks.push(b);
+ for(const o of h.group.children)if(o.isInstancedMesh&&o.count===10&&o.material?.color?.getHexString()==='759457'){const m4=new T.Matrix4(),pp=new T.Vector3(),q=new T.Quaternion(),sc=new T.Vector3();for(let i=0;i<o.count;i++){o.getMatrixAt(i,m4);m4.decompose(pp,q,sc);pp.y=2.7;sc.y=.32;m4.compose(pp,q,sc);o.setMatrixAt(i,m4);}o.instanceMatrix.needsUpdate=true;LOG.changes.push({object:'vase stems',to:'start at the vase mouth'});}
+ window.TG_R8C2.blocks=h.blocks.filter(b=>b.r8c2).length;
+}
+function paintings(){const h=W3?.spaces?.hall;const g=h?.plaqueGroup;if(!g)return;
+ for(const o of h.group.children)if(o.isMesh&&o.userData.wallSign&&near(o.position.z,-7.78)&&near(o.position.y,4)){o.position.y=4.22;o.scale.set(4.4,1.1,1);}
+ g.children.forEach((m,i)=>{m.position.y=2.92;if(m.userData.r8c2Paint===m.material?.uuid)return;const old=m.material.map;m.material=m.material.clone();m.material.map=paint(i%3);m.material.needsUpdate=true;m.userData.r8c2Paint=m.material.uuid;old?.dispose?.();});}
+function styleOn(){const h=W3?.spaces?.hall,st=h?.art3Styles;if(!st)return;st.root.visible=true;
+ if(!st.r8c2Pillar){st.r8c2Pillar=true;const m4=new T.Matrix4(),pp=new T.Vector3(),q=new T.Quaternion(),sc=new T.Vector3();let n=0;// NE corner pillar stood 0.3 m inside the r7c east wall (its twin is at x -5.62)
+  st.wood.traverse(o=>{if(!o.isInstancedMesh)return;let ch=false;for(let i=0;i<o.count;i++){o.getMatrixAt(i,m4);m4.decompose(pp,q,sc);if(near(pp.x,5.9,.03)&&near(pp.z,-7.6,.03)){pp.x=5.62;m4.compose(pp,q,sc);o.setMatrixAt(i,m4);ch=true;n++;}}if(ch){o.instanceMatrix.needsUpdate=true;o.computeBoundingBox?.();o.computeBoundingSphere?.();}});
+  if(n)LOG.changes.push({object:'art3 NE pillar',from:'x 5.9',to:'x 5.62 (symmetric, clear of the wall)',instances:n});}}
+const deco=tgDecorate;tgDecorate=function(){const out=deco.apply(this,arguments);try{restore();}catch(e){LOG.err=String(e);console.warn('r8c2',e);}return out;};
+const sync=worldSyncHall;worldSyncHall=function(){const out=sync.apply(this,arguments);try{styleOn();}catch(e){}return out;};
+const shrine=worldSyncShrine;worldSyncShrine=function(){const out=shrine.apply(this,arguments);try{paintings();}catch(e){LOG.errP=String(e);}return out;};
+// Entry view: from the yard (or a cold load) stand on the carpet with the altar + plaque ahead; the boom fits inside the room.
+function chimeFix(){const h=W3.spaces.hall;if(h.r8c2Chime)return;const c=h.group.getObjectByName('r7-garden-chime');if(!c)return;h.r8c2Chime=true;c.position.set(-3.05,0,-1.15);const it=h.items.find(i=>i.label==='摇风铃');if(it){it.x=-3.05;it.z=-.3;}LOG.changes.push({object:'摇风铃 chime',from:'(-4,-1.5) inside the restored west pillar',to:'(-3.05,-1.15) / prompt (-3.05,-0.3)'});}
+function entryView(prev){const w=W3;if(S.view==='fp'||w.r6Plan)return;if(['zen','study','lotus'].includes(prev))return;
+ w.player.position.set(0,0,1.6);w.player.rotation.y=Math.PI;w.yaw=0;w.pitch=.15;w.radius=6.0;w.vx=w.vz=0;if(w.follow)w.follow.copy(w.player.position).y=1.1;
+ try{worldCamera(1);}catch(e){}LOG.entry={prev:prev||null,at:[0,1.6],yaw:0,pitch:.15,radius:6.0};}
+const enter=worldEnter;worldEnter=function(name,prev){const out=enter.apply(this,arguments);if(W3?.active==='hall'){try{styleOn();paintings();chimeFix();entryView(prev);}catch(e){LOG.errE=String(e);}}return out;};
+})();
+
+/* r8c.2b: (1) remote players get their own avatar + plate instead of a clone of the local player (which carried MY plate);
+   (2) name plates draw with the native fillText and user strings are registered as raw so r7's rewrite never touches them. */
+(()=>{
+'use strict';
+const T=THREE,A=()=>window.TG_AVATAR;const LOG=(window.TG_R8C2B={built:0,disposed:0,errs:[]});
+// --- (2) plates: every avatar build/update draws its plate under r7Raw (native fillText)
+const av=A();if(av&&!av.r8c2Raw){av.r8c2Raw=true;for(const k of ['build','update']){const f=av[k];av[k]=function(){return window.r7Raw?window.r7Raw(()=>f.apply(this,arguments)):f.apply(this,arguments);};}}
+const regTea=()=>{try{for(const m of S?.tea?.messages||[])window.r7RawText?.(m.name,m.text);}catch(e){}};
+// --- (1) remote players
+const hash=s=>{let h=2166136261;for(const ch of String(s))h=Math.imul(h^ch.charCodeAt(0),16777619);return h>>>0;};
+function cfgFor(p){const a=A();const base=p.avatar&&typeof p.avatar==='object'?{...p.avatar}:a.randomConfig(hash(p.id));// missing avatar → stable per-id look
+ const name=String(p.name||p.nickname||'同行访客').slice(0,16),title=p.title||p.avatar?.title||'';
+ return a.normalize({...base,name,title},{checkOwned:false});}
+function makeRemote(p){const a=A();const mesh=new T.Group();mesh.name='r8c2-remote';mesh.userData.r8c2Remote=String(p.id);
+ const body=new T.Group();body.name='r8c2-remote-body';mesh.add(body);// enhance/r6 animate children[0] (bob, mount lift); kept empty so their limb swing hits nothing
+ const cfg=cfgFor(p),model=a.build(cfg,{plate:true,detail:1});model.userData.r8c2Key=JSON.stringify([cfg.name,cfg.title,p.avatar||null]);mesh.add(model);
+ mesh.position.set(p.pos.x,p.pos.y,p.pos.z);const yaw=typeof p.rot==='number'?p.rot:p.rot?.y||0;mesh.rotation.y=yaw;W3.scene.add(mesh);
+ // enhance's own label path stays wired to an off-scene dummy (it disposes it on leave)
+ const c=document.createElement('canvas');c.width=c.height=4;const label=new T.Sprite(new T.SpriteMaterial({map:new T.CanvasTexture(c)}));
+ LOG.built++;return {mesh,label,c,name:p.name,model};}
+const applyR=window.applyRemotePlayers;
+window.applyRemotePlayers=window.TG_NET.applyRemotePlayers=function(list){for(const p of list||[])if(p)window.r7RawText?.(p.name,p.nickname,p.nameWithTitle);return applyR.apply(this,arguments);};
+const inner=tgRemotes;tgRemotes=function(dt){const w=W3;if(!w?.player||!A()?.build)return inner.apply(this,arguments);w.remotes=w.remotes||new Map();
+ const ids=new Set(tgRemoteList.map(p=>String(p.id)));
+ for(const [id,r] of w.remotes)if(!ids.has(id)&&r.model){try{A().dispose(r.model);}catch(e){}r.model=null;LOG.disposed++;}
+ for(const p of tgRemoteList){const id=String(p.id);let r=w.remotes.get(id);if(!r){try{r=makeRemote(p);w.remotes.set(id,r);}catch(e){LOG.errs.push(String(e));}continue;}
+  if(r.model){const cfg=cfgFor(p),key=JSON.stringify([cfg.name,cfg.title,p.avatar||null]);if(r.model.userData.r8c2Key!==key){A().update(r.model,cfg);r.model.userData.r8c2Key=key;}}}
+ const out=inner.apply(this,arguments);
+ const now=performance.now();
+ for(const p of tgRemoteList){const r=w.remotes.get(String(p.id));if(!r?.model)continue;const body=r.mesh.children[0];
+  r.model.position.y=body.position.y;r.model.rotation.x=body.rotation.x;body.rotation.x=0;
+  const want=p.mount?.kind?'ride':(p.anim==='sit'?'sit':'stand');if(A().getPose?.(r.model)!==want)A().setPose(r.model,want);
+  A().animate(r.model,p.anim==='walk'?'walk':'idle',now);}
+ return out;};
+// net-delivered titles/names may arrive before the first frame: register what is already known
+setTimeout(regTea,0);document.addEventListener('click',()=>setTimeout(regTea,0),true);
+})();
+
+/* r8c.2c hotfix — 缘堂 only.
+   H-1: the third-person camera never collapses into the head. The camera chain runs unchanged; afterwards, if the eye is
+        closer than 0.9 m to the head (squeezed by the altar / planter / back-wall colliders), it eases (≈0.15 s) to a raised
+        view above and slightly behind the player, looking down at the chest — never a floor-only frame. The chain keeps its
+        own previous output, so its smoothing state is not disturbed; hysteresis 0.9 / 1.3 m.
+   H-2: the copper 点灯 lamp moves from (2,2) to (3.2,2) with its prompt and collider, so the spawn (0,1.6) is outside
+        every interaction radius (the prompt no longer covers 🎐 in landscape) and the planter is no longer hidden behind it. */
+(()=>{const T=THREE;const R=window.TG_R8C2C={version:'r8c2c',cam:{raisedFrames:0,minD:99},lamp:null};
+const LAMP_X=3.2,HEAD=1.45,IN=.9,OUT=1.3;
+function moveLamp(){const h=W3?.spaces?.hall;if(!h)return;const lamp=h.group.getObjectByName('r7-copper-lamp');if(!lamp)return;
+ if(!lamp.userData.r8c2cMoved){const x0=lamp.position.x,z0=lamp.position.z,dx=LAMP_X-x0;lamp.position.x=LAMP_X;lamp.userData.r8c2cMoved=true;lamp.userData.r8c2cFrom=[x0,z0];lamp.updateMatrixWorld(true);
+  let items=0;for(const it of h.items)if(Math.hypot(it.x-x0,it.z-z0)<.3){it.x+=dx;items++;}
+  R.lamp={from:[x0,z0],to:[LAMP_X,z0],items};}
+ // collider (r8.js adds it from the lamp's box, possibly before or after this move): keep it on the lamp
+ const [x0,z0]=lamp.userData.r8c2cFrom,dx=LAMP_X-x0;for(const b of h.blocks)if(b.r8a==='copper lamp'&&!b.r8c2c&&Math.abs((b.x+b.X)/2-x0)<.2&&Math.abs((b.z+b.Z)/2-z0)<.2){b.x+=dx;b.X+=dx;b.r8c2c=true;}}
+// the raised eye must have a clear line to the head (beams, lintels, lanterns, lattice): real raycast against the hall's
+// visible meshes, cached per 0.25 m cell × yaw sector, so it only runs when the player moves into a new cell while raised
+let meshes=null;const cache=new Map();function hallMeshes(){if(meshes)return meshes;meshes=[];const h=W3.spaces.hall;h.group.traverse(o=>{if((o.isMesh||o.isInstancedMesh)&&!o.isSprite&&!o.userData.r7Particle)meshes.push(o);});return meshes;}
+const V=new T.Vector3(),head=new T.Vector3(),rp=new T.Vector3(),look=new T.Vector3(),q1=new T.Quaternion(),m4=new T.Matrix4(),prevPos=new T.Vector3(),prevQ=new T.Quaternion(),rc=new T.Raycaster(),dir=new T.Vector3();
+const visUp=o=>{for(let q=o;q;q=q.parent)if(!q.visible)return false;return true;};
+function clear(from,to){dir.subVectors(to,from);const L=dir.length();dir.normalize();rc.set(from,dir);rc.near=.3;rc.far=L+.25;const hit=rc.intersectObjects(hallMeshes(),false).find(x=>visUp(x.object));return !hit;}
+function raised(w,out){const p=w.player.position,L=w.spaces.hall.limit,key=Math.round(p.x*4)+','+Math.round(p.z*4)+','+Math.round(w.yaw*8/Math.PI);
+ const c=cache.get(key);if(c)return out.set(p.x+c[0],p.y+c[1],p.z+c[2]);
+ const ys=[2.3,1.9,1.5,1.1],hbs=[.35,.15,.6];let pick=null;
+ for(const up of ys){for(const hb of hbs){out.set(p.x+Math.sin(w.yaw)*hb,p.y+HEAD+up,p.z+Math.cos(w.yaw)*hb);out.x=Math.max(-L.x+.3,Math.min(L.x-.3,out.x));out.z=Math.max(-L.z+.3,Math.min(L.z-.3,out.z));out.y=Math.min(out.y,5.2-.35);
+  if(clear(head,out)){pick=[out.x-p.x,out.y-p.y,out.z-p.z];break;}}if(pick)break;}
+ if(!pick)pick=[Math.sin(w.yaw)*.25,HEAD+1.2,Math.cos(w.yaw)*.25];/* never exactly overhead (degenerate lookAt) */R.cam.rays=(R.cam.rays||0)+1;if(cache.size>4000)cache.clear();cache.set(key,pick);return out.set(p.x+pick[0],p.y+pick[1],p.z+pick[2]);}
+let k=0,had=false;
+const cam=worldCamera;worldCamera=function(a){const w=W3;const on=w?.active==='hall'&&S.view!=='fp'&&!w.r6Plan&&!(typeof r6IsRiding==='function'&&r6IsRiding());
+ if(on&&had&&k>0){w.camera.position.copy(prevPos);w.camera.quaternion.copy(prevQ);}// hand the chain its own last output
+ const out=cam.apply(this,arguments);if(!on){k=0;had=false;return out;}
+ try{const c=w.camera,p=w.player.position;prevPos.copy(c.position);prevQ.copy(c.quaternion);had=true;head.set(p.x,p.y+HEAD,p.z);
+  const d=c.position.distanceTo(head),dt=a>=1?1:(a>0?Math.min(.1,-Math.log(1-a)/6):1/60);// worldCamera(1-exp(-6·dt)) → frame dt
+  const want=d<IN?1:d>OUT?0:(k>.5?1:0);k+=(want-k)*(a===1?1:1-Math.exp(-dt*14));if(want===0&&k<.01)k=0;if(want===1&&k>.99)k=1;
+  if(k>0){raised(w,rp);const e=k*k*(3-2*k);c.position.lerpVectors(prevPos,rp,e);look.set(p.x,p.y+.9,p.z);m4.lookAt(c.position,look,c.up);q1.setFromRotationMatrix(m4);c.quaternion.slerpQuaternions(prevQ,q1,e);c.updateMatrixWorld();R.cam.raisedFrames++;}
+  R.cam.k=+k.toFixed(3);R.cam.minD=Math.min(R.cam.minD,c.position.distanceTo(head));}catch(e){R.cam.err=String(e);}
+ return out;};
+{const en=worldEnter;worldEnter=function(){const r=en.apply(this,arguments);try{if(W3?.active==='hall'){moveLamp();meshes=null;cache.clear();}}catch(e){R.err=String(e);}k=0;had=false;return r;};}
+try{moveLamp();}catch(e){}
+{const t=tgAnimate;tgAnimate=function(){const r=t.apply(this,arguments);try{if(W3?.active==='hall')moveLamp();}catch(e){}return r;};}
 })();
 
 </script>
@@ -12760,6 +13195,13 @@ const enter=worldEnter;worldEnter=function(){const r=enter.apply(this,arguments)
     '.tgg-sec{font-size:13px;color:#8a5a34;margin:8px 2px 4px;font-weight:700}' +
     '.tgg-row{display:flex;align-items:center;gap:8px;padding:8px 10px;background:#f3e2bf;border:1px solid #c08a57;border-radius:10px;margin-bottom:6px}' +
     '.tgg-row .n{flex:1;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}' +
+    /* r8-nick: neighbour rows = name on its own line, status tags below, buttons on the right of the tags; nothing can squeeze the name */
+    '.tgg-row.tgg-nb{flex-wrap:wrap;row-gap:6px}' +
+    '.tgg-row.tgg-nb .n{flex:1 1 100%;min-width:0;white-space:normal;overflow-wrap:anywhere;line-height:1.35;font-size:15px}' +
+    '.tgg-row.tgg-nb .tgg-tags{flex:1 1 auto;display:flex;flex-wrap:wrap;gap:4px;align-items:center;min-width:0}' +
+    '.tgg-row.tgg-nb .tgg-acts{flex:0 0 auto;display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end;margin-left:auto}' +
+    '.tgg-row.tgg-nb .tgg-btn{min-height:44px;min-width:44px;flex-shrink:0;white-space:nowrap}' +
+    '.tgg-row.tgg-nb .tgg-tag{flex-shrink:0}' +
     '.tgg-tag{font-size:12px;border-radius:999px;padding:2px 7px;background:#e7d3ad;color:#5b3820;white-space:nowrap}' +
     '.tgg-tag.hot{background:#b8322a;color:#ffe39a}.tgg-tag.on{background:#3d8a4a;color:#fff}' +
     '.tgg-empty{font-size:13px;color:#8a5a34;padding:6px 2px}';
@@ -13115,8 +13557,8 @@ const enter=worldEnter;worldEnter=function(){const r=enter.apply(this,arguments)
     // 邻居 shows real players only: drop online people without a real cloud save (needs r3.sql; ignored if missing)
     var onIds = Object.keys(on);
     if (onIds.length) { try { var real = await rpc('real_players', { p_ids: onIds }); if (Array.isArray(real)) onIds.forEach(function (id) { if (real.indexOf(id) < 0) delete on[id]; }); } catch (e) {} }
-    list.forEach(function (n) { n.online = !!on[n.id]; });
-    Object.keys(on).forEach(function (id) { if (!list.some(function (n) { return n.id === id; })) list.unshift({ id: id, name: on[id].name || on[id].nickname, stealable: 0, planted: 0, guarded: false, online: true }); });
+    list.forEach(function (n) { n.online = !!on[n.id]; if (on[n.id] && on[n.id].title && !n.title) n.title = on[n.id].title; });   // title only known for people online (presence)
+    Object.keys(on).forEach(function (id) { if (!list.some(function (n) { return n.id === id; })) list.unshift({ id: id, name: on[id].name || on[id].nickname, title: on[id].title || null, stealable: 0, planted: 0, guarded: false, online: true }); });
     return list;
   }
   var panel = null;
@@ -13138,7 +13580,7 @@ const enter=worldEnter;worldEnter=function(){const r=enter.apply(this,arguments)
       var tags = (n.online ? '<span class="tgg-tag on">在线</span>' : '') +
         (n.guarded ? '<span class="tgg-tag">🐕看门中</span>' : '') +
         (n.stealable ? '<span class="tgg-tag hot">可偷 ' + n.stealable + '</span>' : (n.planted ? '<span class="tgg-tag">种了 ' + n.planted + ' 块</span>' : '<span class="tgg-tag">空园</span>'));
-      return '<div class="tgg-row"><span class="n">' + esc(n.name || '访客') + '</span>' + tags + '<button class="tgg-btn" data-visit="' + esc(n.id) + '">去菜园</button></div>';
+      return '<div class="tgg-row tgg-nb"><span class="n">' + (n.title ? '【' + esc(n.title) + '】' : '') + esc(n.name || '访客') + '</span><span class="tgg-tags">' + tags + '</span><span class="tgg-acts"><button class="tgg-btn" data-visit="' + esc(n.id) + '">去菜园</button></span></div>';
     }
     h += '<div class="tgg-sec">此刻在这里的访客</div>' + (onl.length ? onl.map(row).join('') : '<div class="tgg-empty">现在这里只有你一个人</div>');
     h += '<div class="tgg-sec">最近的邻居（熟菜多的排前面）</div>' + (rest.length ? rest.map(row).join('') : '<div class="tgg-empty">还没有邻居种菜</div>');
@@ -13313,6 +13755,9 @@ const enter=worldEnter;worldEnter=function(){const r=enter.apply(this,arguments)
   function me() { return AUTH && AUTH.user && AUTH.user.id; }
   function online() { return !!(AUTH && AUTH.online && AUTH.user); }
   function say(t) { try { toast(t); } catch (e) { console.log('[toast]', t); } }
+  // r8c.2 / r8-nick: user content (peer nicknames, message bodies) carries data-raw so the game's r7 wording rewrite skips it;
+  // the same strings are registered with r7RawText() so they also stay verbatim inside mixed system text (notes, toasts, titles).
+  function rawText() { try { if (window.r7RawText) window.r7RawText.apply(null, arguments); } catch (e) {} }
   function esc(t) { return String(t == null ? '' : t).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function rpc(fn, args) {
     var hook = window.TG_SOCIAL_RPC || window.TG_GARDEN_RPC;
@@ -13695,7 +14140,7 @@ const enter=worldEnter;worldEnter=function(){const r=enter.apply(this,arguments)
     ts.forEach(function (t) { total += t.unread | 0; });
     ts.filter(function (t) { return t.unread > 0 && !t.last_from_me && t.id !== dmWith && (!lastSeenMax[t.id] || t.at > lastSeenMax[t.id]); }).slice(0, 2).forEach(function (t) {
       lastSeenMax[t.id] = t.at; dmNames[t.id] = t.name;
-      note('💬 ' + t.name + '：' + (t.last.length > 24 ? t.last.slice(0, 24) + '…' : t.last));
+      rawText(t.name, t.last); note('💬 ' + t.name + '：' + (t.last.length > 24 ? t.last.slice(0, 24) + '…' : t.last));
     });
     if (seq === badgeSeq) setBadge(total);
     return total;
@@ -13720,7 +14165,7 @@ const enter=worldEnter;worldEnter=function(){const r=enter.apply(this,arguments)
       host.appendChild(dmPanel);   // #app when present (stays inside the game frame), else body
     }
     injectCss();
-    dmPanel.innerHTML = '<div class="tgg-box"><div class="tgg-hd"><span>' + (back ? '<button data-back style="font-size:18px;margin-right:6px">‹</button>' : '') + esc(title) + '</span><button data-close aria-label="关闭">×</button></div><div class="tgg-bd"></div></div>';
+    dmPanel.innerHTML = '<div class="tgg-box"><div class="tgg-hd"><span>' + (back ? '<button data-back style="font-size:18px;margin-right:6px">‹</button>' : '') + (typeof title === 'object' ? esc(title.pre) + '<span class="tgs-peer" data-raw>' + esc(title.name) + '</span>' + esc(title.post) : esc(title)) + '</span><button data-close aria-label="关闭">×</button></div><div class="tgg-bd"></div></div>';
     dmPanel.querySelector('[data-close]').onclick = closeDM;
     var b = dmPanel.querySelector('[data-back]'); if (b) b.onclick = function () { dmWith = null; renderList(); };
     return dmPanel.querySelector('.tgg-bd');
@@ -13738,8 +14183,8 @@ const enter=worldEnter;worldEnter=function(){const r=enter.apply(this,arguments)
     var ts = []; try { ts = await threads(); } catch (e) { bd.innerHTML = '<div class="tgg-empty">读不到私信：' + esc(e && e.message) + '</div>'; return; }
     if (!dmPanel || dmWith) return;
     var h = ts.length ? ts.map(function (t) {
-      dmNames[t.id] = t.name;
-      return '<div class="tgs-thread" data-id="' + esc(t.id) + '"><div style="min-width:0;flex:1"><div class="n">' + esc(t.name) + ' <span style="font-weight:400;font-size:11px;color:#a08060">' + fmt(t.at) + '</span></div><div class="l">' + (t.last_from_me ? '我：' : '') + esc(t.last) + '</div></div>' + (t.unread ? '<span class="b">' + t.unread + '</span>' : '') + '</div>';
+      dmNames[t.id] = t.name; rawText(t.name, t.last);
+      return '<div class="tgs-thread" data-id="' + esc(t.id) + '"><div style="min-width:0;flex:1"><div class="n"><span class="tgs-name" data-raw>' + esc(t.name) + '</span> <span style="font-weight:400;font-size:11px;color:#a08060">' + fmt(t.at) + '</span></div><div class="l">' + (t.last_from_me ? '我：' : '') + '<span class="tgs-last" data-raw>' + esc(t.last) + '</span></div></div>' + (t.unread ? '<span class="b">' + t.unread + '</span>' : '') + '</div>';
     }).join('') : '<div class="tgg-empty">还没有私信。点大厅里别人的角色，或在「邻居」里选人，就能发私信。</div>';
     h += '<button class="tgg-btn alt" data-nb style="margin-top:6px">🏘️ 从邻居里找人</button>';
     bd.innerHTML = h;
@@ -13752,7 +14197,7 @@ const enter=worldEnter;worldEnter=function(){const r=enter.apply(this,arguments)
     var typed = keepInput && dmPanel && dmPanel.querySelector('.tgs-compose input') ? dmPanel.querySelector('.tgs-compose input').value : '';
     var bd;
     if (!keepInput || !dmPanel || !dmPanel.querySelector('.tgs-msgs')) {
-      bd = shell('与 ' + name + ' 私信', true);
+      rawText(name); bd = shell({ pre: '与 ', name: name, post: ' 私信' }, true);
       bd.innerHTML = '<div class="tgs-extras" style="display:flex;gap:6px;flex-wrap:wrap"></div><div class="tgs-msgs"><div class="tgg-empty">加载中…</div></div><div class="tgs-compose"><input maxlength="500" placeholder="说点什么…" enterkeyhint="send"><button class="tgg-btn">发送</button></div>';
       var ex = bd.querySelector('.tgs-extras');
       (D.chatButtons || []).forEach(function (cb) { var b = document.createElement('button'); b.className = 'tgg-btn alt'; b.style.cssText = 'padding:5px 9px;font-size:12px'; b.textContent = cb.label; b.onclick = function () { cb.run(other, dmNames[other] || name); }; ex.appendChild(b); });
@@ -13777,7 +14222,7 @@ const enter=worldEnter;worldEnter=function(){const r=enter.apply(this,arguments)
       msgs.forEach(function (m) {
         if (m.at - last > 5 * 60000) h += '<div class="tgs-time">' + fmt(m.at) + '</div>';
         last = m.at;
-        h += '<div class="tgs-msg ' + (m.sender === me() ? 'mine' : 'them') + '" data-id="' + m.id + '">' + esc(m.body) + '</div>';
+        rawText(m.body); h += '<div class="tgs-msg ' + (m.sender === me() ? 'mine' : 'them') + '" data-id="' + m.id + '" data-raw>' + esc(m.body) + '</div>';
       });
       box.innerHTML = h || '<div class="tgg-empty">打个招呼吧 👋</div>';
       box.scrollTop = box.scrollHeight;
@@ -14894,9 +15339,23 @@ const enter=worldEnter;worldEnter=function(){const r=enter.apply(this,arguments)
     if (typeof avatar === 'string') { try { avatar = AV && AV.deserialize ? AV.deserialize(avatar) : JSON.parse(avatar); } catch (e) { return { ok: false, reason: 'bad_avatar' }; } }
     else if (avatar && AV && AV.normalize) { try { avatar = AV.normalize(avatar); } catch (e) {} }
     var r; try { r = await rpc('avatar_save', { p_avatar: avatar || {}, p_title: title || null }); } catch (e) { r = { ok: false, reason: 'error', message: e && e.message }; }
-    if (r && r.ok) { MINE = Object.assign(MINE || {}, r); CACHE[me()] = MINE; publish(); fire('saved', { me: MINE }); }
+    if (r && r.ok) { MINE = Object.assign(MINE || {}, r); CACHE[me()] = MINE; publish(); fire('saved', { me: MINE }); syncNick(r, avatar); }
     return r;
   };
+  // r8-nick: the 捏人 name (avatar.name) becomes the account nickname while that is still the random default (访客/香客 + digits),
+  // so other players see it in presence / 邻居 / 私信 / 家庭. A name chosen via 改名/注册 is never overwritten.
+  // Only after a successful avatar_save: the server already ran the text filter on the name (bad_name otherwise).
+  var DEFAULT_NICK = /^(访客|香客)\d+$/;
+  function syncNick(r, sent) {
+    try {
+      var AU = window.TG_AUTH; if (!AU || typeof AU.setNickname !== 'function' || !AU.user) return;
+      if (!DEFAULT_NICK.test(String(AU.nickname || '').trim())) return;
+      var nm = String((r.avatar && typeof r.avatar.name === 'string') ? r.avatar.name : (sent && sent.name) || '').trim();
+      if (!nm || DEFAULT_NICK.test(nm) || /^__test/.test(nm)) return;
+      Promise.resolve(AU.setNickname(nm)).catch(function (e) { console.warn('[TG_AVATAR_NET] nickname sync', e && e.message); });
+    } catch (e) {}
+  }
+  A._syncNick = syncNick;
   A.buy = async function (id) {   // accessories / titles only (server avatar_buy); same lock / pay-first / idempotency as TG_MERIT.spend
     if (!MINE) await A.load();
     var r = await payMerit('avatar_buy', id);
