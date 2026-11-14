@@ -1148,7 +1148,7 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
     var iAmTest = /^__test/.test(AUTH.nickname || '');
     remote.forEach(function (p) { if (!iAmTest && /^__test/.test(p.nickname || '')) return;   // test bots are invisible to real players
       if (p.pos && (!NET.scene || p.scene === NET.scene)) {
-        var o = { id: p.id, nickname: p.nickname, name: p.nickname, pos: p.pos, rot: p.rot, anim: p.anim, scene: p.scene, t: p.t, x: p.x || {}, mount: (p.x && p.x.mount) || null };
+        var o = { id: p.id, nickname: p.nickname, name: p.nickname, pos: p.pos, rot: p.rot, anim: p.anim, scene: p.scene, t: p.t, st: p.st == null ? null : p.st, x: p.x || {}, mount: (p.x && p.x.mount) || null };
         if (typeof NET.decorate === 'function') { try { NET.decorate(o); } catch (e) {} }   // r6: tg-r6.js adds avatar / title
         out.push(o);
       } });
@@ -1229,7 +1229,7 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
       var d = msg.payload || {};
       if (!d.id || d.id === myId) return;
       var p = remote.get(d.id) || { id: d.id, nickname: d.nickname || '访客' };
-      p.pos = d.pos; p.rot = d.rot; p.anim = d.anim || 'idle'; p.scene = d.scene || name; p.t = Date.now();
+      p.pos = d.pos; p.rot = d.rot; p.anim = d.anim || 'idle'; p.scene = d.scene || name; p.t = Date.now(); p.st = Number.isFinite(d.t) ? d.t : null;   // r8remote: st = sender time (null from old clients)
       if (d.nickname) p.nickname = d.nickname;
       remote.set(d.id, p);
       emitRemote();
@@ -1266,7 +1266,7 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
   }
   function sendMove(force) {
     if (!chan || !chanReady || !AUTH.user) return;
-    var payload = { id: AUTH.user.id, nickname: AUTH.nickname, scene: chanScene, pos: me.pos, rot: me.rot, anim: me.anim };
+    var payload = { id: AUTH.user.id, nickname: AUTH.nickname, scene: chanScene, pos: me.pos, rot: me.rot, anim: me.anim, t: Date.now() };   // r8remote: t = sender clock (ms); old clients ignore it
     var key = JSON.stringify([payload.pos, payload.rot, payload.anim, payload.scene]);
     if (!force && key === lastSent) return;
     lastSent = key; lastSentAt = Date.now();
@@ -13038,7 +13038,7 @@ function entryView(prev){const w=W3;if(S.view==='fp'||w.r6Plan)return;if(['zen',
 const enter=worldEnter;worldEnter=function(name,prev){const out=enter.apply(this,arguments);if(W3?.active==='hall'){try{styleOn();paintings();chimeFix();entryView(prev);}catch(e){LOG.errE=String(e);}}return out;};
 })();
 
-/* r8c.2b: (1) remote players get their own avatar + plate instead of a clone of the local player (which carried MY plate);
+/* r8c.2b (+r8c.2d remote hotfix: per-id look fallback, clone rebuild, readable plates, buffered interpolation): (1) remote players get their own avatar + plate instead of a clone of the local player (which carried MY plate);
    (2) name plates draw with the native fillText and user strings are registered as raw so r7's rewrite never touches them. */
 (()=>{
 'use strict';
@@ -13048,29 +13048,102 @@ const av=A();if(av&&!av.r8c2Raw){av.r8c2Raw=true;for(const k of ['build','update
 const regTea=()=>{try{for(const m of S?.tea?.messages||[])window.r7RawText?.(m.name,m.text);}catch(e){}};
 // --- (1) remote players
 const hash=s=>{let h=2166136261;for(const ch of String(s))h=Math.imul(h^ch.charCodeAt(0),16777619);return h>>>0;};
-function cfgFor(p){const a=A();const base=p.avatar&&typeof p.avatar==='object'?{...p.avatar}:a.randomConfig(hash(p.id));// missing avatar → stable per-id look
- const name=String(p.name||p.nickname||'同行访客').slice(0,16),title=p.title||p.avatar?.title||'';
- return a.normalize({...base,name,title},{checkOwned:false});}
+// r8c2d: a look counts only if it carries real appearance fields; {name:''} / text-only / acc-only objects fall back to a stable per-id look
+const LOOK=['hair','outfit','color1','color2'];
+const hasLook=a=>!!a&&typeof a==='object'&&LOOK.some(k=>a[k]!=null&&a[k]!=='');
+const RND=new Map();// per-id random look, computed once (randomConfig's free-accessory filter depends on MY catalog state)
+// r8c2d: no religious options in random looks (monk robe, shaved head, prayer beads / rosary) → deterministic non-religious swap from the same hash
+const SAFE={outfit:['daopao','ruqun','yuanling','duanda'],hair:['bun','long','ponytail','twin','short'],hand:['none','fan','scroll']};
+function secular(c,h){if(c.outfit==='sengpao')c.outfit=SAFE.outfit[h%4];if(c.hair==='bald')c.hair=SAFE.hair[(h>>>3)%5];
+ if(c.acc){if(c.acc.neck==='beads')c.acc.neck='none';if(c.acc.hand==='rosary'||c.acc.hand==='incense')c.acc.hand=SAFE.hand[(h>>>7)%3];}return c;}
+const rnd=id=>{let c=RND.get(id);if(!c){const h=hash(id);c=secular({...A().randomConfig(h),acc:{...(A().randomConfig(h).acc||{})}},h);RND.set(id,c);}return c;};
+const nameOf=p=>String(p.name||p.nickname||'同行访客'),titleOf=p=>String(p.title||p.avatar?.title||'');
+const lookKey=p=>JSON.stringify([titleOf(p),hasLook(p.avatar)?p.avatar:null]);
+function cfgFor(p){const a=A();const base=hasLook(p.avatar)?{...p.avatar}:{...rnd(String(p.id))};
+ return a.normalize({...base,name:nameOf(p),title:titleOf(p)},{checkOwned:false});}
+// --- r8c2d plates: own sprite (avatar plate off), dark backing + outline, ~1.5x text, depthTest off, full name (no 12-char cut), native fillText via r7Raw
+const PF='"Noto Sans CJK SC","Noto Sans SC","PingFang SC","Microsoft YaHei",sans-serif',PX=.003;// world metres per canvas px (name 72px → .216 m)
+function rr(x,X,Y,W,H,R){x.beginPath();x.moveTo(X+R,Y);x.arcTo(X+W,Y,X+W,Y+H,R);x.arcTo(X+W,Y+H,X,Y+H,R);x.arcTo(X,Y+H,X,Y,R);x.arcTo(X,Y,X+W,Y,R);x.closePath();}
+function drawPlate(name,title){const cv=document.createElement('canvas'),x=cv.getContext('2d');let nf=72;const tf=44;
+ const draw=()=>{x.font='700 '+nf+'px '+PF;let nw=x.measureText(name).width;x.font='600 '+tf+'px '+PF;const tw=title?x.measureText('【'+title+'】').width:0;return Math.max(nw,tw);};
+ let w=draw();while(w>1100&&nf>40){nf-=4;w=draw();}
+ const pad=28,W=Math.min(1200,Math.ceil(w+pad*2)),th=title?tf+14:0,H=nf+30+th;cv.width=W;cv.height=H+8;
+ x.textAlign='center';x.textBaseline='middle';
+ rr(x,4,4,W-8,H,Math.min(34,H/2));x.fillStyle='rgba(30,20,12,.78)';x.fill();x.lineWidth=4;x.strokeStyle='rgba(240,205,130,.95)';x.stroke();
+ if(title){x.font='600 '+tf+'px '+PF;x.fillStyle='#f3cf7a';x.fillText('【'+title+'】',W/2,4+12+tf/2);}
+ x.font='700 '+nf+'px '+PF;x.lineJoin='round';x.lineWidth=10;x.strokeStyle='rgba(20,10,4,.95)';const ny=4+th+(nf+30)/2;x.strokeText(name,W/2,ny);x.fillStyle='#fffaf0';x.fillText(name,W/2,ny);
+ const t=new T.CanvasTexture(cv);t.colorSpace=T.SRGBColorSpace;t.anisotropy=2;return {t,w:cv.width,h:cv.height};}
+function setPlate(r,p){const name=nameOf(p),title=titleOf(p),key=name+'\u0001'+title;if(r.plateKey===key&&r.plate)return;
+ window.r7RawText?.(name,title);const d=window.r7Raw?window.r7Raw(()=>drawPlate(name,title)):drawPlate(name,title);
+ if(!r.plate){const m=new T.SpriteMaterial({map:d.t,transparent:true,depthTest:false,depthWrite:false,fog:false});r.plate=new T.Sprite(m);r.plate.name='r8c2d-plate';r.plate.center.set(.5,0);r.plate.renderOrder=20;r.plate.frustumCulled=false;}
+ else{r.plate.material.map?.dispose();r.plate.material.map=d.t;r.plate.material.needsUpdate=true;}
+ r.plateW=d.w*PX;r.plateH=d.h*PX;r.plate.scale.set(r.plateW,r.plateH,1);r.plateKey=key;}
+function dropPlate(r){if(!r?.plate)return;r.plate.parent?.remove(r.plate);r.plate.material.map?.dispose();r.plate.material.dispose();r.plate=null;r.plateKey=null;}
 function makeRemote(p){const a=A();const mesh=new T.Group();mesh.name='r8c2-remote';mesh.userData.r8c2Remote=String(p.id);
  const body=new T.Group();body.name='r8c2-remote-body';mesh.add(body);// enhance/r6 animate children[0] (bob, mount lift); kept empty so their limb swing hits nothing
- const cfg=cfgFor(p),model=a.build(cfg,{plate:true,detail:1});model.userData.r8c2Key=JSON.stringify([cfg.name,cfg.title,p.avatar||null]);mesh.add(model);
+ const cfg=cfgFor(p),model=a.build(cfg,{plate:false,detail:1,shadow:false});model.userData.r8c2Key=lookKey(p);mesh.add(model);
  mesh.position.set(p.pos.x,p.pos.y,p.pos.z);const yaw=typeof p.rot==='number'?p.rot:p.rot?.y||0;mesh.rotation.y=yaw;W3.scene.add(mesh);
  // enhance's own label path stays wired to an off-scene dummy (it disposes it on leave)
  const c=document.createElement('canvas');c.width=c.height=4;const label=new T.Sprite(new T.SpriteMaterial({map:new T.CanvasTexture(c)}));
- LOG.built++;return {mesh,label,c,name:p.name,model};}
+ const r={mesh,label,c,name:p.name,model,r8c2d:true};setPlate(r,p);mesh.add(r.plate);r.plateBase=2.02*cfg.height/100+(cfg.acc?.head==='hat'?.08:0);
+ LOG.built++;return r;}
+// a remote entry without .model is enhance's clone of MY player (my avatar + my plate): drop it without touching the shared geometry/materials
+function dropClone(w,id,r){try{w.scene.remove(r.mesh);r.label?.material?.map?.dispose();r.label?.material?.dispose();}catch(e){}w.remotes.delete(id);LOG.clones=(LOG.clones||0)+1;}
+// --- r8c2d buffered interpolation: samples stamped with sender time (p.st / p.t from new backends) or local receive time; render 140 ms behind
+const DELAY=140,WALK_REF=4,BUF=new Map();// WALK_REF: local full walk speed (m/s) = cadence 1.0 (r8d line: 1.77)
+LOG.samples=0;
+const yawOf=p=>typeof p.rot==='number'?p.rot:(p.rot?.y||0);
+function sample(p){const id=String(p.id),now=performance.now();let b=BUF.get(id);if(!b){b={s:[],off:null,lastRecv:now,lastSt:null,key:''};BUF.set(id,b);}
+ const st=Number.isFinite(p.st)?p.st:null;const key=[p.pos.x,p.pos.y,p.pos.z,yawOf(p),p.anim,p.scene].join(',');
+ if(key===b.key&&(st==null||st===b.lastSt))return;// presence resync / unchanged: no new sample
+ if(st!=null&&b.lastSt!=null&&st<b.lastSt)return;// stale (older than what we already have)
+ let t=Number.isFinite(p.t)&&Math.abs(Date.now()-p.t)<2000?now-(Date.now()-p.t):now;// no st: local receive time (p.t from the backend, else now)
+ if(st!=null){const o=now-st;b.off=b.off==null?o:Math.min(b.off+(now-b.lastRecv)*.002,o);t=st+b.off;b.lastSt=st;}
+ const last=b.s[b.s.length-1];
+ if(st==null&&last&&p.scene===last.scene)t=Math.min(Math.max(now,last.t+100),now+400);// no sender clock: the sender sends ≤10 Hz, so packets closer than 100 ms are jitter/bursts → re-space them (lead capped at 400 ms; the render clock catches up at ≤1.25x)
+ if(last&&(p.scene!==last.scene||Math.hypot(p.pos.x-last.x,p.pos.z-last.z)>6))b.s.length=0;// scene change / teleport: snap
+ else if(last&&t-last.t>250){const pv=b.s[b.s.length-2],still=last.anim!=='walk'||(pv&&pv.x===last.x&&pv.z===last.z);if(still)b.s.push({...last,t:t-100});}// motion after a real pause starts ~one send interval before this sample (moving remotes: plain interpolation across the gap)
+ const prev=b.s[b.s.length-1];if(prev&&t<=prev.t)t=prev.t+1;
+ b.s.push({t,x:p.pos.x,y:p.pos.y,z:p.pos.z,rot:yawOf(p),anim:p.anim,scene:p.scene});b.key=key;b.lastRecv=now;LOG.samples++;
+ while(b.s.length>24||(b.s.length>2&&b.s[1].t<now-3000))b.s.shift();}
+const angLerp=(a,b,k)=>a+Math.atan2(Math.sin(b-a),Math.cos(b-a))*k;
+// render clock per remote: follows now-DELAY at rate 1 (±25 % to absorb drift), never runs past the newest sample (hold instead of
+// extrapolating) and resumes from where it held, so a late packet slows the remote briefly instead of making it jump
+function interp(id,now){const b=BUF.get(id);if(!b||!b.s.length)return null;const s=b.s,L=s[s.length-1],target=now-DELAY;
+ if(b.rt==null||Math.abs(target-b.rt)>1000)b.rt=target;else{const dt=Math.max(0,now-(b.lastNow??now));b.rt+=dt*(1+Math.max(-.25,Math.min(.25,(target-b.rt)/400)));}
+ b.lastNow=now;if(b.rt>L.t)b.rt=L.t;const rt=b.rt;
+ if(rt<=s[0].t)return s[0];if(rt>=L.t)return L;
+ for(let i=s.length-2;i>=0;i--)if(s[i].t<=rt){const a=s[i],c=s[i+1],k=(rt-a.t)/(c.t-a.t);return {x:a.x+(c.x-a.x)*k,y:a.y+(c.y-a.y)*k,z:a.z+(c.z-a.z)*k,rot:angLerp(a.rot,c.rot,k),anim:k<.5?a.anim:c.anim};}
+ return L;}
 const applyR=window.applyRemotePlayers;
-window.applyRemotePlayers=window.TG_NET.applyRemotePlayers=function(list){for(const p of list||[])if(p)window.r7RawText?.(p.name,p.nickname,p.nameWithTitle);return applyR.apply(this,arguments);};
+window.applyRemotePlayers=window.TG_NET.applyRemotePlayers=function(list){for(const p of list||[])if(p){window.r7RawText?.(p.name,p.nickname,p.nameWithTitle,p.title);try{if(p.id!=null&&p.pos&&[p.pos.x,p.pos.y,p.pos.z].every(Number.isFinite))sample(p);}catch(e){}}return applyR.apply(this,arguments);};
+const camV=new T.Vector3();
 const inner=tgRemotes;tgRemotes=function(dt){const w=W3;if(!w?.player||!A()?.build)return inner.apply(this,arguments);w.remotes=w.remotes||new Map();
  const ids=new Set(tgRemoteList.map(p=>String(p.id)));
- for(const [id,r] of w.remotes)if(!ids.has(id)&&r.model){try{A().dispose(r.model);}catch(e){}r.model=null;LOG.disposed++;}
- for(const p of tgRemoteList){const id=String(p.id);let r=w.remotes.get(id);if(!r){try{r=makeRemote(p);w.remotes.set(id,r);}catch(e){LOG.errs.push(String(e));}continue;}
-  if(r.model){const cfg=cfgFor(p),key=JSON.stringify([cfg.name,cfg.title,p.avatar||null]);if(r.model.userData.r8c2Key!==key){A().update(r.model,cfg);r.model.userData.r8c2Key=key;}}}
+ for(const [id,r] of w.remotes)if(!ids.has(id)){if(r.model){try{A().dispose(r.model);}catch(e){}r.model=null;LOG.disposed++;}dropPlate(r);BUF.delete(id);}
+ for(const p of tgRemoteList){const id=String(p.id);let r=w.remotes.get(id);
+  if(r&&!r.model){dropClone(w,id,r);r=null;}
+  if(!r){try{r=makeRemote(p);w.remotes.set(id,r);}catch(e){LOG.errs.push(String(e));}continue;}
+  const key=lookKey(p);if(r.model.userData.r8c2Key!==key){const cfg=cfgFor(p);A().update(r.model,cfg);r.model.userData.r8c2Key=key;r.plateBase=2.02*cfg.height/100+(cfg.acc?.head==='hat'?.08:0);}
+  setPlate(r,p);}
  const out=inner.apply(this,arguments);
- const now=performance.now();
- for(const p of tgRemoteList){const r=w.remotes.get(String(p.id));if(!r?.model)continue;const body=r.mesh.children[0];
-  r.model.position.y=body.position.y;r.model.rotation.x=body.rotation.x;body.rotation.x=0;
+ const now=performance.now(),cam=w.camera,H=w.renderer?.domElement?.clientHeight||innerHeight;
+ for(const p of tgRemoteList){const id=String(p.id),r=w.remotes.get(id);if(!r?.model)continue;const body=r.mesh.children[0];
+  // position / yaw: buffered interpolation replaces enhance's exponential lerp
+  const q=interp(id,now);if(q){r.mesh.position.set(q.x,q.y,q.z);r.mesh.rotation.y=q.rot;}
+  // displayed speed → walk/idle with hysteresis + min hold; cadence follows speed
+  const ft=now-(r.lastNow||now);r.lastNow=now;
+  if(ft>4){const lp=r.lastPos||r.mesh.position.clone(),v=Math.hypot(r.mesh.position.x-lp.x,r.mesh.position.z-lp.z)/(ft/1000);r.spd=(r.spd||0)+(Math.min(v,12)-(r.spd||0))*(1-Math.exp(-ft/120));(r.lastPos||(r.lastPos=new T.Vector3())).copy(r.mesh.position);
+   const walking=r.walk?r.spd>.15:r.spd>.35;if(walking!==!!r.walk&&now-(r.walkSince||0)>180){r.walk=walking;r.walkSince=now;LOG.switches=(LOG.switches||0)+1;}
+   r.animT=(r.animT||0)+ft*(r.walk?Math.max(.45,Math.min(1.4,r.spd/WALK_REF)):1);}
+  // no double bob: the avatar rig bobs itself; body only carries r6's mount lift
+  r.model.position.y=p.mount?.kind?.9:0;r.model.rotation.x=body.rotation.x;body.rotation.x=0;body.position.y=0;
   const want=p.mount?.kind?'ride':(p.anim==='sit'?'sit':'stand');if(A().getPose?.(r.model)!==want)A().setPose(r.model,want);
-  A().animate(r.model,p.anim==='walk'?'walk':'idle',now);}
+  A().animate(r.model,r.walk&&want!=='sit'?'walk':'idle',r.animT||now);
+  // plate: above the head (mount-aware), never smaller than ~15 css px name height on screen
+  if(r.plate){if(r.plate.parent!==r.mesh)r.mesh.add(r.plate);r.plate.position.set(0,r.model.position.y+(r.plateBase||2.02),0);
+   let f=1;if(cam&&cam.isPerspectiveCamera){r.plate.getWorldPosition(camV);const d=camV.distanceTo(cam.position),ppm=H/(2*d*Math.tan(cam.fov*Math.PI/360));f=Math.max(1,Math.min(2.6,15/(.216*ppm)));}
+   r.plate.scale.set(r.plateW*f,r.plateH*f,1);}}
  return out;};
 // net-delivered titles/names may arrive before the first frame: register what is already known
 setTimeout(regTea,0);document.addEventListener('click',()=>setTimeout(regTea,0),true);
@@ -13317,7 +13390,7 @@ try{moveLamp();}catch(e){}
       addInv(r.crop, 1); safe(function () { save(); }); safe(function () { renderTop(); });
       if (STORE && window.TG_VISIT) safe(function () { STORE.save(S); });   // game save() skips while visiting; keep the loot
       fb('harvest'); stealFx(c);
-      note('🧺 从 ' + v.name + ' 的菜园偷到 ' + c.emoji + c.name + '，可以拿去上供', true);
+      note('🧺 从 ' + v.name + ' 的菜园偷到 ' + c.emoji + c.name + '，可以拿去摆放', true);
       NET.sendEvent && NET.sendEvent('steal', { owner: v.owner, plot: i, crop: r.crop });
       poke(v.owner);
       if (VISIT === v && v.server[i]) { v.server[i].s = (v.server[i].s || 0) + 1; (v.server[i].t = v.server[i].t || []).push(me()); applyVisit(); }
@@ -15376,9 +15449,14 @@ try{moveLamp();}catch(e){}
     ids.forEach(function (id) { CACHE[id] = (r && r[id]) || { avatar: {}, title: null, rev: 0, none: true }; });
     safe(function () { NET._emit && NET._emit(); }); fire('others', { ids: ids });
   }
+  // r8remote: appearance keys that make a look "real" (an empty / text-only avatar must not render as everyone's default look)
+  var LOOK_KEYS = ['height', 'build', 'skin', 'face', 'hair', 'hairColor', 'outfit', 'color1', 'color2', 'trim', 'capeColor'];
+  function hasLook(a) { return !!a && typeof a === 'object' && LOOK_KEYS.some(function (k) { var v = a[k]; return v != null && v !== ''; }); }
+  A._hasLook = hasLook;
   function publish() {   // presence: rev + appearance (accessories/title are always taken from the server copy)
     if (!MINE || !NET.setPresence) return;
     var av = Object.assign({}, MINE.avatar || {}); delete av.accessories; delete av.acc; delete av.title; delete av.name;
+    if (!hasLook(av)) { NET.setPresence('av', MINE.rev ? { rev: MINE.rev } : null); return; }   // r8remote: no empty look on the wire
     NET.setPresence('av', { rev: MINE.rev || 0, a: av });
   }
   NET.decorate = function (o) {
@@ -15390,6 +15468,7 @@ try{moveLamp();}catch(e){}
         if ((typeof v === 'string' && /^[A-Za-z0-9#_.-]{0,32}$/.test(v)) || typeof v === 'boolean' || (typeof v === 'number' && isFinite(v))) f[k] = v; });
       var sv = (c && c.avatar) || {};   // paid / text parts always from the server copy
       a = Object.assign(f, { acc: sv.acc || {}, accessories: sv.accessories || [], title: sv.title || '', name: sv.name || '' });
+      if (!hasLook(f) && !(c && !c.none)) a = null;   // r8remote: no server save + empty presence look → null (game picks a stable random look)
     }
     o.avatar = a || null;
     o.avatarWire = null;   // TG_AVATAR.serialize() of the trusted merge, ready for deserialize()+build()/update()
