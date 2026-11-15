@@ -8,7 +8,7 @@
 <title>福缘里 · 心田小院</title>
 <meta name="application-name" content="福缘里 · 心田小院">
 <meta name="apple-mobile-web-app-title" content="福缘里">
-<meta name="description" content="福缘里 · 心田小院：种菜养小动物、布置自己的小院，去茶馆喝茶、在祈愿古树下挂一张心愿笺，和邻居串门聊天。">
+<meta name="description" content="福缘里 · 心田小院：种菜养小动物、布置自己的小院，去茶馆喝茶、在心愿树下挂一张心愿笺，和邻居串门聊天。">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="福缘里 · 心田小院">
 <meta property="og:title" content="福缘里 · 心田小院">
@@ -1656,6 +1656,7 @@ function defaultState(){
     muyu:0,                             // 摇风铃次数
     scene:'plaza',
     lastSign:null,
+    sellable:{}, sellSeeded:true,       // r9: 商铺买入、可半价卖回的件数；新存档无需补录
   };
 }
 window.TG_STORAGE=window.TG_STORAGE_ADAPTER||{
@@ -1669,6 +1670,7 @@ const d=Object.assign(defaultState(),raw||{});
 // Only an absent record receives the starter grant; pre-economy saves retain zero.
 if(raw!=null&&!Object.prototype.hasOwnProperty.call(raw,'coins'))d.coins=0;
 if(raw!=null&&!Object.prototype.hasOwnProperty.call(raw,'backpack'))d.backpack={};
+if(raw!=null&&!Object.prototype.hasOwnProperty.call(raw,'sellSeeded'))delete d.sellSeeded; // r9: legacy save -> one-time buy-back seed (r9-sell.js)
 if(!Array.isArray(d.plots)||d.plots.length!==PLOT_COUNT)d.plots=Array(PLOT_COUNT).fill(null);
 d.plots=d.plots.map(p=>p&&CROP_BY_ID[p.crop]?p:null);
 if(!d.incense||!Array.isArray(d.incense.sticks))d.incense={total:0,sticks:[]};
@@ -2768,11 +2770,11 @@ function r3Commit(){renderTop();save();}
 function openShop(tab='furniture'){
  if(r3DenyVisit())return;
  if(!['furniture','decor','offering','sell','animals'].includes(tab))tab='furniture';
- const cats=[['furniture','家具'],['decor','装饰'],['offering','缘堂陈设'],['animals','牲畜'],['sell','出售作物']];
+ const cats=[['furniture','家具'],['decor','装饰'],['offering','缘堂陈设'],['animals','牲畜'],['sell','卖作物/产物']];
  const rows=tab==='sell'?[...CROPS.map(c=>({...c,sell:c.sell})),...R3_PRODUCE].filter(c=>(S.inventory[c.id]||0)>0).map(c=>`<div class="r3-row"><span class="r3-emoji">${c.emoji}</span><span><b>${c.name}</b><small>库存 ${S.inventory[c.id]} · 单价 🪙 ${c.sell}</small></span><button class="btn" data-sell="${c.id}">卖 1</button><button class="btn ghost" data-sell-all="${c.id}">全卖</button></div>`).join(''):tab==='animals'?R3_ANIMAL_SHOP.map(c=>`<div class="r3-row"><span class="r3-emoji">${c.emoji}</span><span><b>${c.name}</b><small>${c.pen===null?'小院自由活动':'入住'+R3_PENS[c.pen].name} · ${S.animals.filter(a=>a.kind===c.id).length}/${c.cap}<br>${c.desc}</small></span><button class="btn" data-animal="${c.id}">🪙 ${c.price} 领养</button></div>`).join(''):window.TG_CATALOG.filter(c=>c.cat===tab).map(c=>`<div class="r3-row"><span class="r3-emoji">${c.emoji}</span><span><b>${c.name}</b><small>${c.w} × ${c.d} 米 · 背包 ${S.backpack[c.id]||0}<br>${r3Esc(c.desc||'可在房间中布置')}</small></span><button class="btn" data-buy="${c.id}">🪙 ${c.price} 购买</button></div>`).join('');
  openModal(`<h2>🏮 集市商铺</h2><p class="r3-balance">铜钱 🪙 ${S.coins}</p><nav class="r3-tabs">${cats.map(([id,name])=>`<button class="btn ${id===tab?'':'ghost'}" data-tab="${id}">${name}</button>`).join('')}</nav>${rows||'<p class="center">背包里还没有作物，去小院收获吧。</p>'}`);
  $('#sheet').querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>openShop(b.dataset.tab));
- $('#sheet').querySelectorAll('[data-buy]').forEach(b=>b.onclick=()=>{if(r3DenyVisit())return;const c=r3Item(b.dataset.buy);if(S.coins<c.price)return toast('铜钱不足，出售作物可赚取铜钱');S.coins-=c.price;S.backpack[c.id]=(S.backpack[c.id]||0)+1;r3Commit();if(window.TG_PLAN)r3PlanTray();openShop(tab);toast('已买入'+c.name);});
+ $('#sheet').querySelectorAll('[data-buy]').forEach(b=>b.onclick=()=>{if(r3DenyVisit())return;const c=r3Item(b.dataset.buy);if(S.coins<c.price)return toast('铜钱不足，出售作物可赚取铜钱');S.coins-=c.price;S.backpack[c.id]=(S.backpack[c.id]||0)+1;window.r9OnShopBuy?.(c.id);r3Commit();if(window.TG_PLAN)r3PlanTray();openShop(tab);toast('已买入'+c.name);});
  $('#sheet').querySelectorAll('[data-animal]').forEach(b=>b.onclick=()=>{if(r3BuyAnimal(b.dataset.animal))openShop('animals');});
  function sell(id,all){if(r3DenyVisit())return;const c=CROP_BY_ID[id]||r3ProduceItem(id),count=S.inventory[id]||0;if(!c||count<=0)return;const n=all?count:1;S.inventory[id]-=n;S.coins+=n*(c.sell??(c.value||1)*8);r3Commit();openShop('sell');toast(`已售出 ${c.name} ×${n}`);}
  $('#sheet').querySelectorAll('[data-sell]').forEach(b=>b.onclick=()=>sell(b.dataset.sell,false));$('#sheet').querySelectorAll('[data-sell-all]').forEach(b=>b.onclick=()=>sell(b.dataset.sellAll,true));
@@ -2780,7 +2782,7 @@ function openShop(tab='furniture'){
 function r3OpenBackpack(){
  const items=window.TG_CATALOG.filter(c=>(S.backpack[c.id]||0)>0);
  openModal(`<h2>🧺 背包</h2><h3>作物</h3>${inventoryHTML(false)}${r3ProduceInventoryHTML()}<h3>家具与物品</h3>${items.map(c=>`<div class="r3-row"><span>${c.emoji} ${c.name}</span><b>× ${S.backpack[c.id]}</b></div>`).join('')||'<p>还没有物品，去集市逛逛吧。</p>'}<div class="r3-actions"><button class="btn" id="r3Shop">去商店</button>${r3DecorScene(current)?'<button class="btn" id="r3Arrange">布置房间</button>':''}</div>`);
- $('#r3Shop').onclick=()=>openShop();if($('#r3Arrange'))$('#r3Arrange').onclick=()=>enterPlacement(current);
+ $('#r3Shop').onclick=()=>openShop();if($('#r3Arrange'))$('#r3Arrange').onclick=()=>enterPlacement(current);window.r9BackpackHook?.();
 }
 // The original listener remains installed; this listener renders the extended inventory last.
 $('#pillInv').addEventListener('click',r3OpenBackpack);$('#pillCoins').addEventListener('click',()=>openShop());
@@ -6966,7 +6968,7 @@ r3AnimalProduce=a=>produce[a.kind]?{id:produce[a.kind][0],interval:produce[a.kin
 const prices={egg:4,'duck-egg':4,'goose-egg':5,milk:6,fur:6,wool:8,honey:7,fish:6};R3_PRODUCE.forEach(c=>c.sell=prices[c.id]);
 const merits={cabbage:1,carrot:1,tomato:2,corn:2,peach:3,melon:5,egg:1,milk:2,'duck-egg':1,'goose-egg':2,fur:2,wool:3,honey:3,fish:6,white_chicken:12,roast_duck:16,roast_goose:20,roast_pork:18,beef:28,offering_fish:10,'fruit-plate':4,'incense-set':4,'tea-cup':4};
 const rare={glazed_lamp:1000,ginkgo_bonsai:1400,guqin:1800,koi_screen:2200,golden_buddha:2800};TG_CATALOG.forEach(c=>{if(rare[c.id])c.meritPrice=rare[c.id];if(merits[c.id])c.merit=merits[c.id];});
-const fields=['meritCoins','coinsEarned','stealCoins','meritIncense','meritOffer','meritMuyu','meritSutra','meritZen','meritKoi'];
+const fields=['meritCoins','coinsEarned','sellCoins','sellbackCoins','stealCoins','meritIncense','meritOffer','meritMuyu','meritSutra','meritZen','meritKoi'];
 window.r6Daily=function(d=S){const date=new Date(Date.now()+28800000).toISOString().slice(0,10);if(d.daily?.date!==date)d.daily={date,tasks:{feed:0,harvest:0,incense:0,collect:0},claimed:false};d.daily.tasks??={feed:0,harvest:0,incense:0,collect:0};fields.forEach(k=>{if(!Number.isFinite(d.daily[k]))d.daily[k]=0;});return d.daily;};
 // r5's lexical daily helper still rolls the same date; this wrapper fills all fields.
 window.r5Daily=r6Daily;
@@ -8750,7 +8752,7 @@ var CH=[
   {h:'顶栏',p:'左上角是当前场景名。右边依次是善缘、铜钱和背包，点一下能看数量或打开背包；再往右是登录、声音开关和菜单。'},
   {h:'第一步',p:'进游戏时你站在大厅广场。走到院门口，点「进入院子 →」，就回到自己的心田小院。广场上还有去集市、荷塘和茶会小院的路，以及抽每日寄语、读心笺、赏园景的摊点。'},
   {h:'打开缘堂',p:'小院北边的门通往缘堂。在田里累计收获 3 份作物后门会打开，知道口令也可以直接进。缘堂里可以点灯、摆放心意，两侧是书房和静室。'},
-  {h:'今日事项',p:'每天做完四件事：喂食一次、收获一季、点一盏灯、收取一次产物，可以领 10 铜钱。主人一天从各种途径最多拿 40 铜钱，到上限会提示。'},
+  {h:'今日事项',p:'每天做完四件事：喂食一次、收获一季、点一盏灯、收取一次产物，可以领 10 铜钱。卖作物和产物每天最多换 100 铜钱（未联网时和今日事项、善缘兑换共用 40 铜钱）；今日事项和善缘兑换另算。到上限会提示。'},
   {h:'找不到怎么玩时',p:'菜单里随时能打开这本手册，顶部可以搜索。有建议或遇到问题，用意见箱告诉我们，见最后一章。'}
 ]},
 {id:'controls',icon:'hand',title:'操作',body:[
@@ -8773,7 +8775,7 @@ var CH=[
   {h:'播种',p:'先在种子栏选一种种子，再点空地；或者用「一键播种」把空地都种上。没选种子时会提示你先选。'},
   {h:'浇水',p:'点还在长的作物，或用「全浇水」。每次浇水推进大约四分之一的生长进度，同一块地浇完要等一会儿才能再浇，连着点不会更快。'},
   {h:'收获',p:'成熟后点一下收进背包，或用「一键收获」，每季收 3 份。关掉游戏作物也照常按真实时间长。'},
-  {h:'能种什么',p:'白菜约 15 分钟，萝卜 25 分钟，番茄 40 分钟，玉米 1 小时 40 分，仙桃 6 小时，西瓜 12 小时。在集市商铺卖掉，每份大约 1～8 铜钱，计入每天 40 铜钱的上限。'},
+  {h:'能种什么',p:'白菜约 15 分钟，萝卜 25 分钟，番茄 40 分钟，玉米 1 小时 40 分，仙桃 6 小时，西瓜 12 小时。在集市商铺「卖作物/产物」一栏卖掉，每份大约 1～8 铜钱，计入每天 100 铜钱的出售上限；「全卖」会卖到上限为止。'},
   {h:'收成的用处',p:'卖掉、放到寄售摊，或拿到缘堂摆放心意。累计收获 3 份后缘堂的门会打开。'}
 ]},
 {id:'animals',icon:'paw',title:'动物',body:[
@@ -8790,7 +8792,7 @@ var CH=[
   {h:'书房和静室',p:'书房里誊写一页书，约 2 分钟，得 3 点善缘，每天 3 次。静室里静坐听风铃，约 3 分钟，得 4 点善缘，每天 2 次。中途关掉面板或离开房间不算完成。'},
   {h:'摇风铃',p:'缘堂里的风铃每摇一次得 1 点善缘，每天前 5 次有效。'},
   {h:'荷塘',p:'放锦鲤：每天 3 次，每次 2 点善缘，次数用完还能看动画。采清莲蓬：每天最多 3 枚，放进背包，不能卖。投心愿笺：每次 2 铜钱，每天 3 次，不加善缘。晚上 18:00 到次日 05:59（北京时间）能看到河灯。这些只能在自己的家园里做。'},
-  {h:'祈愿古树',p:'古树在公共广场正中，所有玩家都从这里出发。点古树或「挂祈愿牌」，从背包选一样心意挂上，规则和缘堂托台相同。广场摊位的「抽每日寄语」只给一句诗或一句鼓励的话。缘堂里没有古树。'}
+  {h:'心愿树',p:'心愿树在公共广场正中，所有玩家都从这里出发。点树或「挂心愿牌」，从背包选一样心意挂上，规则和缘堂托台相同。广场摊位的「抽每日寄语」只给一句诗或一句鼓励的话。缘堂里没有古树。'}
 ]},
 {id:'tea',icon:'cup',title:'茶会小院',body:[
   {h:'在哪',p:'大厅广场西侧，跟着路牌走进「茶会小院」。这是公共的院子，谁都可以来。'},
@@ -8800,7 +8802,7 @@ var CH=[
 ]},
 {id:'market',icon:'shop',title:'集市与寄售',body:[
   {h:'在哪',p:'从大厅广场走到集市。这里有集市商铺和寄售摊，摊主会跟你打招呼、介绍货物。'},
-  {h:'集市商铺',p:'买种子、家具和动物，也能卖掉背包里的作物和产物。「善缘阁」一栏用善缘换少见的摆设、配饰、称号和部分坐骑，换来的东西不能再折成铜钱。商铺里还能用 25 点善缘换 1 铜钱，每天最多换 8 枚，计入每天 40 铜钱的上限。'},
+  {h:'集市商铺',p:'买种子、家具和动物，也能卖掉背包里的作物和产物。「善缘阁」一栏用善缘换少见的摆设、配饰、称号和部分坐骑，换来的东西不能再折成铜钱。商铺里还能用 25 点善缘换 1 铜钱，每天最多换 8 枚。在商铺买的家具和装饰，收进背包后可以在「卖作物/产物」一栏按原价一半卖回（摆着的要先收起；初始赠送、善缘换来、寄售或家人那里得来的不能卖）。'},
   {h:'寄售摊',p:'面板有三页：「逛摊」「我要寄售」「我的摊位」。把作物、农产、心意或家具上架，填价格和数量（1～99）。作物和农产每件最多标 50 铜钱，心意和家具最多 2000。同时最多挂 10 件，不能买自己的东西。'},
   {h:'卖出以后',p:'别人买走后铜钱自动到账；当天寄售收入超过 500 铜钱的部分第二天到账。过期或下架的东西会退回背包。'},
   {h:'注意',p:'操作太快时会请你稍等再试。没联网或没登录时，寄售摊可能用不了。'}
@@ -8828,9 +8830,9 @@ var CH=[
 {id:'economy',icon:'coin',title:'善缘与经济',body:[
   {h:'两种货币',p:'铜钱用来买种子、家具、动物和部分坐骑，也用于寄售标价。善缘在缘堂和荷塘慢慢攒，用来在善缘阁换摆设、配饰、称号和少数坐骑。顶栏随时能看到余额。'},
   {h:'善缘怎么来',p:'点灯 1 点（每天 5 盏）、托台心意到期（每天最多 40 点）、摇风铃 1 点（每天 5 次）、书房誊写 3 点（每天 3 次）、静室听风铃 4 点（每天 2 次）、荷塘放锦鲤 2 点（每天 3 次）。全做满一天约 73 点。到上限后还能继续做，只是不再加善缘。'},
-  {h:'铜钱怎么来',p:'卖作物和产物、完成今日事项（10 铜钱）、用 25 点善缘换 1 铜钱（每天最多 8 枚）。这些加起来主人每天最多 40 枚。铜钱不能换成善缘。'},
+  {h:'铜钱怎么来',p:'卖作物和产物、完成今日事项（10 铜钱）、用 25 点善缘换 1 铜钱（每天最多 8 枚）。卖作物和产物每天最多 100 枚；今日事项 10 枚、善缘兑换最多 8 枚另算。在商铺买的家具装饰也能半价卖回，每天最多 400 枚。铜钱不能换成善缘。'},
   {h:'善缘阁',p:'在商铺打开「善缘阁」，能换琉璃灯、银杏盆景、古琴、锦鲤屏风、石灯等摆设，发簪、云肩、玉佩和若干称号，以及白马、白鹿、青牛。换到的东西不能卖回。'},
-  {h:'串门时',p:'不会动主人的善缘、铜钱和次数。如果在别人家顺手收了熟透的作物，收入算进你自己每天 15 铜钱的访客上限，不占主人的 40 枚。'}
+  {h:'串门时',p:'不会动主人的善缘、铜钱和次数。如果在别人家顺手收了熟透的作物，收入算进你自己每天 15 铜钱的访客上限，不占主人的出售上限。'}
 ]},
 {id:'feedback',icon:'mail',title:'意见箱怎么用',body:[
   {h:'在哪',p:'菜单里的「意见箱」。有没看过的回复时，入口上会有一个小红点。'},
@@ -9140,7 +9142,7 @@ const petalData=Array.from({length:176},()=>[(rand()-.5)*13,rand()*10,(rand()-.5
 const moteData=Array.from({length:18},()=>[(rand()-.5)*10,.8+rand()*6,(rand()-.5)*10,.035,.035,.035,0,0,0]);const motes=batch(tree,new TH.SphereGeometry(1,5,3),'#fff0b7',moteData,true);motes.material=new TH.MeshBasicMaterial({color:'#fff0b7'});
 for(const m of [falling,motes]){m.castShadow=m.receiveShadow=false;m.userData.r7Particle=true;}
 tree.userData.r7bWind={ribbonMesh,plaqueMesh,ribbons,plaques,falling,petalData,motes,moteData};
-worldLabel(h.group,'祈愿古树',0,2,1.1,2.5);worldInteract(h,0,1.7,'挂祈愿牌',()=>$('#btnOffer').click(),4);worldInteract(h,0,-12,'挂祈愿牌',()=>$('#btnOffer').click());worldInteract(h,2,2,'点灯',()=>$('#btnIncense').click());
+worldLabel(h.group,'心愿树',0,2,1.1,2.5);worldInteract(h,0,1.7,'挂心愿牌',()=>$('#btnOffer').click(),4);worldInteract(h,0,-12,'挂心愿牌',()=>$('#btnOffer').click());worldInteract(h,2,2,'点灯',()=>$('#btnIncense').click());
 // Tap the tree directly; ordinary movement remains handled by the existing input.
 let down;w.canvas.addEventListener('pointerdown',e=>down=[e.clientX,e.clientY]);w.canvas.addEventListener('pointerup',e=>{if(w.active!=='hall'||worldBlocked()||!down||Math.hypot(e.clientX-down[0],e.clientY-down[1])>8)return;const rect=w.canvas.getBoundingClientRect(),ray=new TH.Raycaster();ray.camera=w.camera;ray.setFromCamera(new TH.Vector2((e.clientX-rect.left)/rect.width*2-1,1-(e.clientY-rect.top)/rect.height*2),w.camera);if(ray.intersectObjects([tree],true).length){worldStop();$('#btnOffer').click();}});
 worldMesh(h.group,'cylinder','#ceaf68',-4,1.4,2,.35,.5,.35);worldMesh(h.group,'box','#80503c',-4,.9,2,1,.12,.7);worldInteract(h,-4,3,'摇风铃',()=>$('#muyu').click());h.r7Built=true;
@@ -9165,7 +9167,7 @@ w.camera.lookAt(target);};
 // Move the real control nodes, retaining every bound listener and element ID.
 const drawer=document.createElement('aside');drawer.id='r7Drawer';drawer.hidden=true;drawer.setAttribute('aria-label','小院工具');$('#app').append(drawer);
 const toggle=document.createElement('button');toggle.id='r7MenuToggle';toggle.className='btn';toggle.textContent='工具 ☰';toggle.setAttribute('aria-expanded','false');toggle.onclick=()=>{drawer.hidden=!drawer.hidden;toggle.setAttribute('aria-expanded',String(!drawer.hidden));};$('#app').append(toggle);
-const moved=new Set();function moveControls(){for(const selector of ['#r6View','#r6AvatarBtn','#seedBar','#yardTools','#hallBtns','.r3-animal-hud','.r3-tools'])for(const node of document.querySelectorAll(selector)){if(moved.has(node))continue;moved.add(node);node.dataset.r7Scene=node.closest('.scene')?.id||'';drawer.append(node);}}
+const moved=new Set();function moveControls(){for(const selector of ['#r6View','#r6AvatarBtn','#seedBar','#yardTools','#hallBtns','.r3-animal-hud','.r3-tools'])for(const node of document.querySelectorAll(selector)){if(moved.has(node))continue;if(node.matches('#market .r3-tools'))continue;/* r9: 集市商铺 stays visible */moved.add(node);node.dataset.r7Scene=node.closest('.scene')?.id||'';drawer.append(node);}}
 moveControls();const enter=worldEnter;worldEnter=function(){const out=enter.apply(this,arguments);moveControls();if(W3.active==='hall'){const h=W3.spaces.hall;if(h.art3Styles?.root)h.art3Styles.root.visible=false;h.blocks=h.blocks.filter(b=>!b.art3Style);}for(const el of drawer.children)el.hidden=!!el.dataset.r7Scene&&el.dataset.r7Scene!==W3.active;drawer.hidden=true;toggle.setAttribute('aria-expanded','false');return out;};
 $('#muyu').textContent='🎐';$('#muyu').title='摇风铃';
 const menu=$('#btnMenu');menu.addEventListener('click',()=>queueMicrotask(()=>{clean($('#sheet'));if($('#r7Feedback'))return;for(const [id,text,api]of [['r7Feedback','意见箱','TG_FEEDBACK'],['r7Manual','游戏手册','TG_MANUAL']]){const b=document.createElement('button');b.id=id;b.className='btn ghost';b.textContent=text;b.onclick=()=>{if(window[api]?.open){closeModal();window[api].open();}else toast(text+'即将开放');};$('#sheet').append(b);}}));
@@ -9230,7 +9232,7 @@ box(g,'#9da597',0,1.38,0,.86,.15,.86);worldMesh(g,'cone','#788375',0,1.58,0,.71,
 for(const c of TG_CATALOG)if(c.id==='golden_buddha')c.name='石灯';
 function rack(h){for(const o of h.group.children)if(o.name==='r7-copper-lamp')o.visible=false;if(h.group.getObjectByName('r7b-wish-rack'))return;const g=new T.Group();g.name='r7b-wish-rack';g.position.set(2.8,0,2);h.group.add(g);for(const x of [-.85,.85]){box(g,'#79503a',x,1.15,0,.12,2.3,.16);box(g,'#79503a',x,.09,0,.4,.18,.72);}for(const y of [1.25,2.1])box(g,'#95694b',0,y,0,1.95,.12,.14);for(let i=0;i<8;i++){const x=-.65+(i%4)*.43,y=i<4?1.89:1.04;box(g,'#bd4341',x,y,0,.05,.32,.025);box(g,'#d5af74',x,y-.26,.02,.25,.25,.045);}merge(g);
 // Keep the lamp transaction at its existing location; the separate rack offers wishes.
-worldInteract(h,2.8,2.5,'挂祈愿牌',()=>$('#btnOffer').click(),1.5);
+worldInteract(h,2.8,2.5,'挂心愿牌',()=>$('#btnOffer').click(),1.5);
 }
 // r6 merged these furnishings; filter only their local triangles, preserving the rug/books.
 function zen(){const s=W3?.spaces?.zen,g=s?.group.getObjectByName('r6-zen-furnishing');if(!g||s.r7bStudy)return;s.r7bStudy=true;
@@ -9353,7 +9355,7 @@ for(const x of [-6,6]){worldBox(h,x,2.6,-2.5,.25,5.2,10.5,'#cbbca1',true);worldB
 for(const [to,x,z]of [['yard',0,7.5],['zen',5.8,3],['study',-5.8,3],['lotus',4,-7.5]]){h.exits.push({x,z,to});if(to!=='yard')worldLabel(h.group,TG_SCENES.find(s=>s.id===to).name,x,2.8,z,1.8);wi(h,x,z,'前往'+TG_SCENES.find(s=>s.id===to).name,()=>go(to));}
 h.plaqueGroup.position.z=0;W3.fruits.position.z=0;worldBox(h,0,1.35,-5.8,5.4,.3,1.5,'#835843',true);for(const x of [-2.3,2.3])worldBox(h,x,.65,-5.8,.25,1.3,1,'#674536');worldLabel(h.group,'家和业兴',0,4,-7.78,4);wi(h,0,-4.4,'摆放心意',()=>$('#btnOffer').click());wi(h,2,2,'点灯',()=>$('#btnIncense').click());wi(h,-4,3,'摇风铃',()=>$('#muyu').click());const lamp=h.group.getObjectByName('r7-copper-lamp');if(lamp)lamp.visible=true;
 p.limit={x:22,z:22};p.floor.scale.set(52,.3,52);p.blocks=p.blocks.filter(b=>!sites.some(a=>Math.abs((b.x+b.X)/2-a[0])<.1&&Math.abs((b.z+b.Z)/2-a[1])<.1));for(const a of sites)p.blocks.push({x:a[2]-1.5,X:a[2]+1.5,z:a[3]-.8,Z:a[3]+.8});p.blocks.push({x:-1.5,X:1.5,z:-1.5,Z:1.5});
-worldLabel(p.group,'祈愿古树',0,3,1.3,4.2);wi(p,0,3,'挂祈愿牌',()=>$('#btnOffer').click(),4.5);wi(p,2.8,2.5,'挂祈愿牌',()=>$('#btnOffer').click(),2);
+worldLabel(p.group,'心愿树',0,3,1.3,4.2);wi(p,0,3,'挂心愿牌',()=>$('#btnOffer').click(),4.5);wi(p,2.8,2.5,'挂心愿牌',()=>$('#btnOffer').click(),2);
 let down;W3.canvas.addEventListener('pointerdown',e=>down=[e.clientX,e.clientY]);W3.canvas.addEventListener('pointerup',e=>{if(W3.active!=='plaza'||worldBlocked()||!down||Math.hypot(e.clientX-down[0],e.clientY-down[1])>8)return;const r=W3.canvas.getBoundingClientRect(),ray=new T.Raycaster();ray.camera=W3.camera;ray.setFromCamera(new T.Vector2((e.clientX-r.left)/r.width*2-1,1-(e.clientY-r.top)/r.height*2),W3.camera);if(ray.intersectObject(tree,true).length){worldStop();$('#btnOffer').click();}});return out;};
 const enter=worldEnter;worldEnter=function(n){entry=null;const out=enter.apply(this,arguments);if(n==='plaza'){entry=W3.player.position.clone();W3.pitch=.42;W3.yaw=0;W3.radius=24;}if(n==='hall'){W3.pitch=.42;W3.radius=10;W3.yaw=0;}return out;};
 const camera=worldCamera;worldCamera=function(){const w=W3;if(w?.active==='plaza'&&entry&&S.view!=='fp'&&!w.r6Plan){if(w.player.position.distanceTo(entry)<.18){const d=w.camera.aspect>1?22:34;w.camera.position.set(0,12,d);w.camera.lookAt(0,4.8,0);if(w.scene.fog){w.scene.fog.near=45;w.scene.fog.far=100;}return;}entry=null;}if(w?.active==='hall'&&S.view!=='fp'&&!w.r6Plan){const target=w.player.position.clone().add(new T.Vector3(0,1.4,0));w.camera.position.copy(target).add(new T.Vector3(Math.sin(w.yaw)*w.radius*Math.cos(w.pitch),Math.sin(w.pitch)*w.radius,Math.cos(w.yaw)*w.radius*Math.cos(w.pitch)));w.camera.lookAt(target);return;}return camera.apply(this,arguments);};
@@ -9721,9 +9723,9 @@ function placeRack(){
   const p=W3.spaces.plaza;
   const rack=p.group.getObjectByName('r7b-wish-rack');
   if(rack)rack.position.set(-16,0,-8);
-  p.items=p.items.filter(it=>!(/挂祈愿牌/.test(it.label||'')&&(Math.hypot(it.x-2.8,it.z-2.5)<2||Math.hypot(it.x,it.z-3)<.8)));
-  worldInteract(p,0,3,'挂祈愿牌',()=>$('#btnOffer').click(),4.5);
-  worldInteract(p,-16,-7.4,'挂祈愿牌',()=>$('#btnOffer').click(),2);
+  p.items=p.items.filter(it=>!(/挂(祈|心)愿牌/.test(it.label||'')&&(Math.hypot(it.x-2.8,it.z-2.5)<2||Math.hypot(it.x,it.z-3)<.8)));
+  worldInteract(p,0,3,'挂心愿牌',()=>$('#btnOffer').click(),4.5);
+  worldInteract(p,-16,-7.4,'挂心愿牌',()=>$('#btnOffer').click(),2);
   p.blocks=p.blocks.filter(b=>{
     const cx=(b.x+b.X)/2,cz=(b.z+b.Z)/2;
     return Math.hypot(cx-2.8,cz-2)>.8&&Math.hypot(cx+16,cz+8)>.8;
@@ -9736,7 +9738,7 @@ function refreshTreeLabel(){
   // hide old labels near the trunk, add a wide one facing the default camera
   p.group.children.forEach(ch=>{
     if((ch.userData&& (ch.userData.wallSign||ch.userData.r41Label)||ch.isSprite||(ch.material&&ch.material.map))
-      && Math.hypot(ch.position.x,ch.position.z-1.3)<2&&/祈愿/.test(ch.userData&&ch.userData.label||'')){
+      && Math.hypot(ch.position.x,ch.position.z-1.3)<2&&/(祈|心)愿/.test(ch.userData&&ch.userData.label||'')){
       ch.visible=false;
     }
   });
@@ -9752,7 +9754,7 @@ function refreshTreeLabel(){
       }catch(e){}
     }
   });
-  worldLabel(p.group,'祈愿古树',0,3.15,2.4,4.6);
+  worldLabel(p.group,'心愿树',0,3.15,2.4,4.6);
 }
 
 function extendPath(){
@@ -10334,12 +10336,12 @@ function hookTitles(){
 /* ---------- TG_WISH: use real client, else a local graceful fallback ---------- */
 const LOCAL={items:[],cbs:[]};
 const REASON={empty:'写一句心愿吧',too_long:'心愿最多 40 个字',link:'不能附带链接',number:'不能留联系方式',blocked:'换个说法吧',
-  slow:'慢一点，稍等几秒再挂',daily:'今天已经挂了 5 块祈愿牌，明天再来',offline:'未联网：这块祈愿牌只有你自己看得到',error:'网络异常，祈愿牌暂未公开'};
+  slow:'慢一点，稍等几秒再挂',daily:'今天已经挂了 5 块心愿牌，明天再来',offline:'未联网：这块心愿牌只有你自己看得到',error:'网络异常，心愿牌暂未公开'};
 function makeStub(){
   const W={
     _r7fStub:true,
     limits:{perDay:5,max:40,gapS:10},
-    reasonText(r){const k=typeof r==='string'?r:r&&r.reason;return REASON[k]||'祈愿牌暂时挂不上';},
+    reasonText(r){const k=typeof r==='string'?r:r&&r.reason;return REASON[k]||'心愿牌暂时挂不上';},
     async hang(text){
       const t=String(text==null?'':text).replace(/\s+/g,' ').trim();
       if(!t)return {ok:false,reason:'empty'};
@@ -10739,7 +10741,7 @@ function showWishInput(){
   closeWishInput();ensureStyle();
   const box=document.createElement('div');box.id='r7fWishInput';
   const h=document.createElement('div');h.className='r7f-h';h.textContent='写一句心愿（可不填）';
-  const p=document.createElement('p');p.textContent='挂在祈愿古树上，最多 40 个字。';
+  const p=document.createElement('p');p.textContent='挂在心愿树上，最多 40 个字。';
   const inp=document.createElement('input');inp.type='text';inp.maxLength=40;inp.placeholder='写一句心愿（可不填）';inp.setAttribute('aria-label','写一句心愿（可不填）');
   const row=document.createElement('div');row.className='r7f-row';
   const skip=document.createElement('button');skip.type='button';skip.className='ghost';skip.textContent='先不写';
@@ -13710,6 +13712,259 @@ const anim=tgAnimate;tgAnimate=function(ts,dt){const out=anim.apply(this,argumen
 R.avoidNow=avoid;R.markAltar=markAltar;
 })();
 
+/* r9 part 1 — 卖作物/产物 + 回收家具 front end (r9-frontend-for-codex.md items 1-5, 8; plan B).
+ * - Crops/produce: own cap 100/day on an r9 server (TG_ECON.left('sell')); otherwise (old server, old client, offline, no backend)
+ *   the shared 40 (d.coinsEarned) exactly as before. 「全卖」 sells as much as fits today.
+ * - Furniture buy-back at floor(price/2) for the 11 shop items, only shop-bought units (S.sellable) that are stowed in the
+ *   backpack; confirm dialog; never while visiting; separate cap 400/day; server credit when the r9 RPCs exist, hidden when the
+ *   server lacks them, local rules when there is no server connection.
+ * - Legacy saves (no sellSeeded flag): one-time seed, flush first, retry on no_save / stale_save.
+ * - Entries: backpack button, 花木铺 prompt, hint after harvest.
+ * The fortune stalls are NOT here (r9-fortune.js, later). window.TG_R9 is the shared namespace for both parts. */
+(()=>{
+const R=window.TG_R9=Object.assign(window.TG_R9||{},{sell:{version:'r9b',mode:'?',cap:40,fb:'?',credit:null,prices:null,sbLeft:null,seed:null,log:[]}});
+const X=R.sell;
+const BUYBACK=['wood-table','bench','cabinet','daybed','altar-table','rocking-chair','vase','lantern','bonsai','screen','cushion'];
+const STARTER={cushion:1,vase:1},SELL_CAP=100,SHARED_CAP=40,SB_CAP=400,SEED_BUDGET=1000,SEED_PER=10;
+const PEND_KEY='templeGarden.r9.sellbackPending';
+X.BUYBACK=BUYBACK;
+const log=(...a)=>{X.log.push(a.join(' '));if(X.log.length>60)X.log.shift();};
+const item=id=>window.TG_CATALOG.find(c=>c.id===id);
+const isBB=id=>BUYBACK.includes(id);
+const unitOf=id=>X.prices&&Number.isFinite(X.prices[id])?X.prices[id]:Math.floor((item(id)?.price|0)/2);
+const econ=()=>window.TG_ECON||null;
+const hasApi=()=>{const e=econ();return !!(e&&typeof e.left==='function'&&typeof e.sellback==='function'&&typeof e.sellbackCredit==='function');};
+const placedOf=(d,id)=>{let n=0;for(const a of Object.values(d.decor||{}))if(Array.isArray(a))for(const e of a)if(e&&e.id===id)n++;return n;};
+const ownedOf=(d,id)=>(Number(d.backpack?.[id])|0)+placedOf(d,id);
+const visiting=()=>{try{return r3IsVisiting();}catch(e){return false;}};
+
+/* ---------- save model: S.sellable sanitize + clamp ---------- */
+function sanitizeSellable(d){
+ const o=d.sellable&&typeof d.sellable==='object'&&!Array.isArray(d.sellable)?d.sellable:{};const out={};
+ for(const id of BUYBACK){const v=Math.floor(Number(o[id]));if(Number.isSafeInteger(v)&&v>0)out[id]=Math.min(v,ownedOf(d,id));}   // placed units keep their credit (they come back on 收起)
+ d.sellable=out;if(d.sellSeeded!==true&&d.sellSeeded!=='local')delete d.sellSeeded;}
+X.sanitize=sanitizeSellable;
+const san=sanitizeR4;sanitizeR4=function(d){const out=san.apply(this,arguments);try{sanitizeSellable(d);}catch(e){}return out;};
+try{sanitizeSellable(S);}catch(e){}
+window.r9OnShopBuy=function(id){   // r3.js coin purchase, after the local debit; offerings and merit items never get credit
+ if(!isBB(id))return;S.sellable??={};S.sellable[id]=(S.sellable[id]|0)+1;
+ // r9b (M2): the cached server credit follows the purchase at once (optimistic +1) and a probe that lands while the log is in
+ // flight keeps that +1 (X.inflight); the server's reply then sets the exact count (ok) or takes the +1 back (rate/offline/error).
+ const opt=X.fb==='server'&&X.credit&&typeof X.credit==='object';if(opt){X.credit[id]=(X.credit[id]|0)+1;X.inflight[id]=(X.inflight[id]|0)+1;}
+ const done=r=>{if(opt)X.inflight[id]=Math.max(0,(X.inflight[id]|0)-1);if(X.credit){
+   if(r&&r.ok&&Number.isFinite(Number(r.credit)))X.credit[id]=Math.max(0,Number(r.credit)|0)+(X.inflight[id]|0);
+   else if(opt)X.credit[id]=Math.max(0,(X.credit[id]|0)-1);}
+  if($('#sheet [data-r9-sell-tab]'))renderSell();};
+ let p=null;try{p=econ()?.shopBuy?.(id,1);}catch(e){}
+ if(p?.then)p.then(r=>{log('shopBuy',id,JSON.stringify(r));done(r);},()=>done(null));else if(opt)done(null);};
+X.inflight={};
+const take=window.TG_INV_TAKE;if(take)window.TG_INV_TAKE=function(k,id,q){const ok=take.apply(this,arguments);if(ok&&isBB(id)&&S.sellable)S.sellable[id]=Math.min(S.sellable[id]|0,S.backpack[id]|0);return ok;};
+// TG_INV_GIVE (market claim / refund), merit, family stow and the starter grant never touch S.sellable.
+
+/* ---------- server mode ---------- */
+const withInflight=c=>{const o={...c};for(const [k,v] of Object.entries(X.inflight))if(v>0)o[k]=(Number(o[k])|0)+v;return o;};
+let probing=null;
+X.probe=function(){if(probing)return probing;probing=(async()=>{
+ const e=econ();
+ if(!e){X.mode='local';X.fb='local';X.cap=SHARED_CAP;return X;}
+ if(!hasApi()){X.mode='old-client';X.fb='hidden';X.cap=SHARED_CAP;return X;}
+ let st=null;try{st=await e.status();}catch(x){}
+ if(st&&typeof st.sell_left==='number'){X.mode='r9';X.cap=Number(st.sell_cap)||SELL_CAP;}
+ else if(st&&st.reason==='offline'){X.mode='offline';X.cap=SHARED_CAP;}
+ else if(st&&st.day){X.mode='old-server';X.cap=SHARED_CAP;}
+ else if(X.mode!=='r9'){X.mode='unknown';X.cap=SHARED_CAP;}
+ let c=null;try{c=await e.sellbackCredit();}catch(x){}
+ if(c&&c.credit&&typeof c.credit==='object'){X.fb='server';X.credit=withInflight(c.credit);X.prices=c.prices&&typeof c.prices==='object'?c.prices:null;X.sbLeft=typeof c.left==='number'?c.left:null;X.seededServer=!!c.seeded;}
+ else if(c&&c.reason==='old_schema'){X.fb='hidden';X.credit=null;}
+ else if(c&&c.reason==='offline'){X.fb='local';X.credit=null;}
+ else if(X.fb!=='server'){X.fb='unknown';}
+ return X;})().finally(()=>{probing=null;});return probing;};
+
+/* ---------- crop / produce cap ---------- */
+function sellCap(){const d=r6Daily(),e=econ();
+ if(X.mode==='r9'){const local=Math.max(0,X.cap-(d.sellCoins|0)),L=e.left('sell');const left=L==null?local:Math.max(0,Math.min(L,local));return {cap:X.cap,left,used:X.cap-left,shared:false};}
+ const local=Math.max(0,SHARED_CAP-(d.coinsEarned|0)),L=typeof e?.left==='function'?e.left('sell'):null;   // old server: the shared earn pool
+ const left=L==null?local:Math.max(0,Math.min(L,local));return {cap:SHARED_CAP,left,used:SHARED_CAP-left,shared:true};}
+X.sellCap=sellCap;
+const earnNet=window.r6EarnCoins;   // kept for reference; the r9 version below replaces both r6 and r6-net paths
+window.r6EarnCoins=function(n,source,exact){
+ if(!r3CanEdit()||!Number.isSafeInteger(n)||n<0)return false;
+ source=source||'task';const d=r6Daily(),sell=source==='sell',e=econ();
+ if(sell){const ci=sellCap();if(n>ci.left){toast(`今日卖作物已满 ${ci.cap} 铜钱，明天再来卖`);return false;}}
+ else if((d.coinsEarned|0)+n>SHARED_CAP){toast('今日铜钱已达上限');return false;}
+ let got=n;
+ if(e?.earn){got=Number(e.earn(n,source,!!exact))||0;if(got<=0){toast(sell?`今日卖作物已满 ${sellCap().cap} 铜钱，明天再来卖`:'今日铜钱已达上限');return false;}}
+ if(sell){d.sellCoins=(d.sellCoins|0)+got;if(X.mode!=='r9')d.coinsEarned=(d.coinsEarned|0)+got;}
+ else d.coinsEarned=(d.coinsEarned|0)+got;
+ S.coins=(S.coins||0)+got;save();renderTop();return true;};
+X.earnNet=earnNet;
+// item 2: the merit exchange reports 'merit' (server 8/day sub-cap), and gives the 25 善缘 back if the coin is refused
+window.r5MeritCoins=function(){if(r3DenyVisit())return false;const d=r6Daily();if(d.meritCoins>=8||d.coinsEarned>=SHARED_CAP)return toast('今日兑换已达上限'),false;if(S.merit<25)return toast('需要 25 善缘'),false;
+ S.merit-=25;d.meritCoins++;if(r6EarnCoins(1,'merit'))return true;S.merit+=25;d.meritCoins--;save();renderTop();return false;};
+// item 1: partial 「全卖」
+function sellCrop(id,all){
+ if(r3DenyVisit())return;const c=CROP_BY_ID[id]||r3ProduceItem?.(id);if(!c)return;
+ const price=c.sell??((c.value||1)*8),stock=S.inventory[id]|0,want=all?stock:Math.min(1,stock);if(want<=0)return;
+ const ci=sellCap(),n=Math.min(want,Math.floor(ci.left/price));
+ if(n<=0){toast(`今日卖作物已满 ${ci.cap} 铜钱，明天再来卖`);return openShop('sell');}
+ if(!r6EarnCoins(n*price,'sell',true))return openShop('sell');
+ S.inventory[id]=stock-n;save();
+ const after=sellCap();
+ toast(n<want?`已卖出 ${c.name}×${n}，得 ${n*price} 铜钱；今日卖作物已满 ${after.cap}，剩下 ${want-n} 份明天再卖`:`已卖出 ${c.name}×${n}，得 ${n*price} 铜钱 · 今日出售 ${after.used}/${after.cap}`);
+ openShop('sell');}
+X.sellCrop=sellCrop;
+
+/* ---------- furniture buy-back ---------- */
+// r9b (M1): every unconfirmed sell-back is its own record keyed by its request id, replayed independently with the same req
+// (the server is idempotent per req). An r9a single-object record is read as a one-item list.
+const okP=p=>p&&typeof p==='object'&&isBB(p.id)&&typeof p.req==='string'&&p.req;
+const getPends=()=>{try{const v=JSON.parse(localStorage.getItem(PEND_KEY)||'null');return (Array.isArray(v)?v:v?[v]:[]).filter(okP);}catch(e){return [];}};
+const putPends=a=>{try{a.length?localStorage.setItem(PEND_KEY,JSON.stringify(a)):localStorage.removeItem(PEND_KEY);}catch(e){}};
+const addPend=p=>{const a=getPends().filter(q=>q.req!==p.req);a.push(p);putPends(a);};
+const dropPend=req=>putPends(getPends().filter(q=>q.req!==req));
+const getPend=()=>getPends()[0]||null;
+X.pending=getPends;
+const seeded=()=>X.fb==='server'?S.sellSeeded===true:!!S.sellSeeded;
+function sellableNow(id){if(!isBB(id))return 0;let n=Math.min(S.sellable?.[id]|0,S.backpack?.[id]|0);if(X.fb==='server'&&X.credit)n=Math.min(n,X.credit[id]|0);return Math.max(0,n);}
+X.sellableNow=sellableNow;
+function reasonOf(id){const c=item(id),bp=S.backpack?.[id]|0,pl=placedOf(S,id);
+ if(!isBB(id))return c?.meritPrice?'善缘换来的，不能折成铜钱':'这件不能卖回商铺';
+ if(visiting())return '串门时不能卖，回自己家再卖';
+ if(!seeded())return '正在核对旧存档里的家具，稍等片刻';
+ if(bp<=0&&pl>0)return `已摆放 ${pl} 件，请先收起再卖`;
+ if(bp<=0)return '背包里没有';
+ const local=Math.min(S.sellable?.[id]|0,bp);
+ if(local<=0)return STARTER[id]?'初始赠送的不能卖；只有在商铺用铜钱买的才能卖回':'寄售、赠送或家人那里得来的，不能卖回商铺';
+ if(X.fb==='server'&&X.credit&&(X.credit[id]|0)<local)return '没有联网时买的，联网后不能卖回';
+ if(getPends().length)return '上一笔卖回还在确认，请稍候';   // r9b (M1): every buy-back waits while any sell is unconfirmed
+ return '';}
+X.reasonOf=reasonOf;
+function applySell(id,granted){const d=r6Daily();S.backpack[id]=Math.max(0,(S.backpack[id]|0)-1);S.sellable[id]=Math.max(0,(S.sellable[id]|0)-1);
+ S.coins=(S.coins||0)+granted;d.sellbackCoins=(d.sellbackCoins|0)+granted;save();renderTop();toast(`已把 ${item(id)?.name||id} 卖回商铺，得 🪙 ${granted}`);}
+const sbUsed=()=>r6Daily().sellbackCoins|0;
+const sbLeft=()=>{const local=Math.max(0,SB_CAP-sbUsed());return X.fb==='server'&&X.sbLeft!=null?Math.min(local,X.sbLeft):local;};
+let retryTimer=0,retrying=null;
+function scheduleRetry(){if(retryTimer)return;retryTimer=setTimeout(()=>{retryTimer=0;retryPending();},15000);}
+function handle(r,p,replay){
+ const id=p.id;X.last=r;log('sellback',id,p.req,JSON.stringify(r));
+ if(r&&r.ok){dropPend(p.req);if((S.backpack[id]|0)<=0){toast('这件已不在背包里，这笔卖回作废');return;}
+  if(X.credit&&typeof r.credit_left==='number')X.credit[id]=r.credit_left;if(typeof r.left==='number')X.sbLeft=r.left;applySell(id,Number(r.granted)|0);return;}
+ const why=r&&r.reason;
+ if(why==='error'||!why){if(!replay)toast('网络不稳，这笔卖回还没确认；稍后会自动再试，先别重复卖');scheduleRetry();return;}
+ if(replay&&why==='offline')return;   // a replay that cannot reach the server stays pending (the 'online' listener retries)
+ dropPend(p.req);
+ if(why==='no_credit'){if(X.credit)X.credit[id]=Number(r.credit)|0;toast('商铺没有这件的购买记录（没联网时买的或别处得来的），不能卖回');}
+ else if(why==='daily_cap'){X.sbLeft=Number(r.left)|0;toast(`今日回收已满 ${SB_CAP} 铜钱，明天再来`);}
+ else if(why==='price_changed'){X.prices??={};if(Number.isFinite(r.unit))X.prices[id]=r.unit;toast('回收价有变动，已刷新，请再确认一次');}
+ else if(why==='not_sellable')toast('这件不能卖回商铺');
+ else if(why==='bad_qty'||why==='bad_req')toast('这笔卖回没有成功，请重新再卖一次');
+ else if(why==='old_schema'){X.fb='hidden';toast('卖回家具暂未开放');}
+ else if(why==='offline'){X.fb='local';return localSell(id,true);}
+ else toast('这笔卖回没有成功，请稍后再试');}
+function retryPending(){if(retrying)return retrying;retrying=(async()=>{
+ if(!getPends().length||visiting())return;if(X.busy){scheduleRetry();return;}const e=econ();if(!e?.sellback)return;
+ if(X.fb!=='server')await X.probe();if(X.fb!=='server')return;
+ X.busy=true;try{for(const p of getPends()){if(!getPends().some(q=>q.req===p.req))continue;let r;try{r=await e.sellback(p.id,p.qty||1,p.unit,p.req);}catch(x){r={ok:false,reason:'error'};}handle(r,p,true);}}
+ finally{X.busy=false;}
+ if($('#sheet [data-r9-sell-tab]'))openShop('sell');})().finally(()=>{retrying=null;});return retrying;}
+X.retryPending=retryPending;
+function localSell(id,quiet){const unit=Math.floor((item(id)?.price|0)/2);if(sbUsed()+unit>SB_CAP){toast(`今日回收已满 ${SB_CAP} 铜钱，明天再来`);return false;}applySell(id,unit);return true;}
+async function sellBack(id){
+ if(visiting()){toast('串门时不能卖回家具，回自己家再卖');return;}
+ if(X.busy||getPends().length)return toast('上一笔卖回还在确认，请稍候');
+ const why=reasonOf(id);if(why||sellableNow(id)<=0){toast(why||'这件现在不能卖');return;}
+ const unit=unitOf(id);if(unit>sbLeft()){toast(`今日回收已满 ${SB_CAP} 铜钱，明天再来`);return;}
+ if(X.fb==='server'){const p={id,qty:1,unit,req:'sell-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,10),at:Date.now()};
+  addPend(p);X.busy=true;let r;try{r=await econ().sellback(id,1,unit,p.req);}catch(e){r={ok:false,reason:'error'};}finally{X.busy=false;}handle(r,p,false);}
+ else if(X.fb==='local')localSell(id);
+ else toast('暂时连不上商铺，稍后再卖');
+ openShop('sell');}
+X.sellBack=sellBack;
+function confirmSell(id){const c=item(id),unit=unitOf(id);if(!c)return;
+ if(visiting())return toast('串门时不能卖回家具，回自己家再卖');
+ openModal(`<h2>卖回商铺</h2><p data-r9-confirm="${id}">把 ${c.emoji||''} ${c.name} ×1 卖回商铺，得 🪙 ${unit}？</p><p class="center" style="font-size:13px">原价 ${c.price} 的一半，卖了就没了。</p><div class="r3-actions"><button class="btn" id="r9SellYes">确认卖出</button><button class="btn ghost" id="r9SellNo">再想想</button></div>`);
+ $('#r9SellYes').onclick=()=>{$('#r9SellYes').disabled=true;sellBack(id);};$('#r9SellNo').onclick=()=>openShop('sell');}
+X.confirmSell=confirmSell;
+
+/* ---------- legacy seed (one time, before any sell-back) ---------- */
+let seeding=null,seedTries=0;
+function localSeedValues(d){const out={};let used=0;
+ for(const id of [...BUYBACK].sort((a,b)=>unitOf(b)-unitOf(a)||a.localeCompare(b))){const unit=Math.floor((item(id)?.price|0)/2);if(unit<=0)continue;
+  let n=Math.max(0,Math.min(ownedOf(d,id),SEED_PER)-(STARTER[id]||0));n=Math.min(n,Math.floor((SEED_BUDGET-used)/unit));if(n>0){out[id]=n;used+=n*unit;}}
+ return {out,used};}
+X.localSeedValues=localSeedValues;
+function applyLocalSeed(flag){const {out,used}=localSeedValues(S);for(const id of BUYBACK){const v=Math.min(ownedOf(S,id),Math.max(S.sellable[id]|0,out[id]|0));if(v>0)S.sellable[id]=v;else delete S.sellable[id];}
+ S.sellSeeded=flag;X.seed={kind:'local',flag,value:used,items:out};save();log('seed local',flag,used);}
+async function alignToServer(){const e=econ();let c=null;try{c=await e.sellbackCredit();}catch(x){}
+ if(c&&c.credit&&typeof c.credit==='object'){X.credit=withInflight(c.credit);X.fb='server';for(const id of BUYBACK){const v=Math.min(ownedOf(S,id),c.credit[id]|0);if(v>0)S.sellable[id]=v;else delete S.sellable[id];}return true;}return false;}
+X.seedNow=function(){if(seeding)return seeding;seeding=(async()=>{
+ if(S.sellSeeded===true||visiting())return 'skip';
+ const st=S,e=econ();
+ if(!e||!hasApi()){applyLocalSeed(e?'local':true);return 'local';}
+ if(X.mode==='?'||X.fb==='?'||X.fb==='unknown')await X.probe();
+ if(X.fb==='local'||X.fb==='hidden'){if(!S.sellSeeded)applyLocalSeed('local');return 'local';}
+ const items={};for(const id of BUYBACK){const n=ownedOf(S,id);if(n>0)items[id]=n;}
+ try{await window.TG_STORAGE?.flush?.();}catch(x){}
+ let r=null;try{r=await e.sellbackSeed(items);}catch(x){r={ok:false,reason:'error'};}
+ if(S!==st||visiting())return 'stale';
+ X.seed={kind:'server',r};log('seed',JSON.stringify(r));
+ const why=r&&r.ok?'ok':r&&r.reason;
+ if(why==='ok'||why==='done'||why==='new_account'){
+  if(!(await alignToServer())&&r&&r.ok&&r.credit)for(const id of BUYBACK){const v=Math.min(ownedOf(S,id),Math.max(S.sellable[id]|0,r.credit[id]|0));if(v>0)S.sellable[id]=v;}
+  S.sellSeeded=true;save();try{await window.TG_STORAGE?.flush?.();}catch(x){}return why;}
+ if(why==='no_save'||why==='stale_save'){try{await window.TG_STORAGE?.flush?.();}catch(x){}if(++seedTries<=6)setTimeout(()=>X.seedNow(),20000*seedTries);return why;}
+ if(why==='offline'||why==='old_schema'){if(!S.sellSeeded)applyLocalSeed('local');return why;}
+ if(++seedTries<=6)setTimeout(()=>X.seedNow(),20000*seedTries);return why||'error';})().finally(()=>{seeding=null;});return seeding;};
+
+/* ---------- 卖作物/产物 tab ---------- */
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function cropRows(ci){return [...CROPS,...R3_PRODUCE].filter(c=>(S.inventory[c.id]|0)>0).map(c=>{const price=c.sell??((c.value||1)*8),stock=S.inventory[c.id]|0,fit=Math.min(stock,Math.floor(ci.left/price)),off=fit<=0;
+ return `<div class="r3-row" data-r9-crop="${c.id}"><span class="r3-emoji">${c.emoji}</span><span><b>${esc(c.name)}</b><small>库存 ${stock} · 单价 🪙 ${price}${off?' · 今日已满':fit<stock?` · 今天还能卖 ${fit} 份`:''}</small></span><button class="btn" data-r9-sell="${c.id}" ${off?'disabled style="opacity:.5"':''}>卖 1</button><button class="btn ghost" data-r9-sell-all="${c.id}" ${off?'disabled style="opacity:.5"':''}>全卖</button></div>`;}).join('');}
+function furnRows(){const ids=new Set();for(const c of window.TG_CATALOG)if(['furniture','decor'].includes(c.cat)&&((S.backpack[c.id]|0)>0||isBB(c.id)&&placedOf(S,c.id)>0))ids.add(c.id);
+ return [...ids].map(id=>{const c=item(id),bp=S.backpack[id]|0,k=sellableNow(id),why=k>0?reasonOf(id):reasonOf(id)||'这件现在不能卖',ok=k>0&&!why;
+  return `<div class="r3-row" data-r9-furn="${id}"><span class="r3-emoji">${c.emoji||'🪑'}</span><span><b>${esc(c.name)}</b><small>背包 ${bp}${isBB(id)?`（可卖 ${k}）· 回收价 🪙 ${unitOf(id)}`:''}${why?`<br>${esc(why)}`:''}</small></span>${isBB(id)?`<button class="btn ghost" data-r9-sellback="${id}" ${ok?'':'disabled style="opacity:.5"'}>卖回 1</button>`:''}</div>`;}).join('');}
+function renderSell(){const sheet=$('#sheet'),nav=sheet?.querySelector('.r3-tabs');if(!nav)return;
+ while(nav.nextSibling)nav.nextSibling.remove();
+ const ci=sellCap(),wrap=document.createElement('div');wrap.dataset.r9SellTab='1';
+ const note=ci.shared?(X.mode==='local'||X.mode==='offline'?'（未联网，和今日事项、善缘兑换共用 40）':'（和今日事项、善缘兑换共用 40）'):'';
+ let html=`<h3>作物 / 产物</h3><p class="r3-balance" id="r9SellCap">今日出售 ${ci.used}/${ci.cap}${note}</p>`+(cropRows(ci)||'<p class="center">背包里还没有作物和产物，去小院收获吧。</p>');
+ if(X.fb!=='hidden'&&X.fb!=='?'){
+  html+=`<h3>回收家具</h3><p class="r3-balance" id="r9SbCap">在商铺买的家具和装饰，收进背包后可按原价一半卖回 · 今日回收 ${sbUsed()}/${SB_CAP}</p>`;
+  if(getPends().length)html+='<p class="center" id="r9SbPend">上一笔卖回还在和商铺确认，确认前先不能卖别的家具。</p>';
+  if(visiting())html+='<p class="center">串门时不能卖，回自己家再卖。</p>';
+  else html+=furnRows()||'<p class="center">背包里没有可以卖回的家具或装饰。摆着的要先收起。</p>';}
+ wrap.innerHTML=html;sheet.append(wrap);
+ wrap.querySelectorAll('[data-r9-sell]').forEach(b=>b.onclick=()=>sellCrop(b.dataset.r9Sell,false));
+ wrap.querySelectorAll('[data-r9-sell-all]').forEach(b=>b.onclick=()=>sellCrop(b.dataset.r9SellAll,true));
+ wrap.querySelectorAll('[data-r9-sellback]').forEach(b=>b.onclick=()=>confirmSell(b.dataset.r9Sellback));}
+X.renderSell=renderSell;
+// r9b (M2): everything the tab shows from the server (mode, credit, quota, prices, pending) — any change re-renders it
+const sig=()=>JSON.stringify([X.fb,X.mode,X.cap,X.credit,X.sbLeft,X.prices,getPends().map(p=>p.req)]);X.sig=sig;
+const shop=openShop;openShop=function(tab){const out=shop.apply(this,arguments);
+ try{if(tab==='sell'){renderSell();
+  const before=sig();X.probe().then(()=>{if(!S.sellSeeded||S.sellSeeded==='local'&&X.fb==='server')X.seedNow().then(()=>{if($('#sheet [data-r9-sell-tab]'))renderSell();});
+   if(getPends().length&&!retryTimer)retryPending();if(sig()!==before&&$('#sheet [data-r9-sell-tab]'))renderSell();});}}catch(e){X.err=String(e&&e.stack||e);}
+ return out;};
+
+/* ---------- entries ---------- */
+const hasGoods=()=>[...CROPS,...R3_PRODUCE].some(c=>(S.inventory[c.id]|0)>0);
+window.r9BackpackHook=function(){const a=$('#sheet .r3-actions');if(!a||a.querySelector('#r9BagSell'))return;
+ const b=document.createElement('button');b.className='btn';b.id='r9BagSell';
+ const furn=X.fb!=='hidden'&&BUYBACK.some(id=>(S.backpack[id]|0)>0);
+ if(!hasGoods()&&!furn)return;b.textContent=hasGoods()?'卖作物换铜钱':'卖回家具';b.onclick=()=>openShop('sell');a.prepend(b);};
+function marketPrompt(){const m=W3?.spaces?.market;if(!m||m.r9Sell)return;const it=m.items.find(i=>i.label==='逛逛商铺'&&Math.abs(i.x+7)<.1&&Math.abs(i.z+2)<.1);if(!it)return;
+ m.r9Sell=true;it.label=()=>hasGoods()?'卖作物 · 换铜钱':'逛逛商铺';it.run=()=>hasGoods()?openShop('sell'):openShop();}
+const enter=worldEnter;worldEnter=function(){const out=enter.apply(this,arguments);try{marketPrompt();}catch(e){}return out;};try{marketPrompt();}catch(e){}
+let lastHint=0;
+const hv=harvest;harvest=function(){const before=Object.values(S.inventory||{}).reduce((a,b)=>a+(b|0),0);const out=hv.apply(this,arguments);
+ Promise.resolve(out).then(()=>{const now=Date.now(),after=Object.values(S.inventory||{}).reduce((a,b)=>a+(b|0),0);
+  if(after>before&&now-lastHint>180000&&sellCap().left>0&&!visiting()){lastHint=now;setTimeout(()=>toast('收获的作物可以到集市花木铺「卖作物 · 换铜钱」，也可从背包直接去卖'),1600);}}).catch(()=>{});return out;};
+
+/* ---------- boot ---------- */
+setTimeout(()=>{X.probe().then(()=>{if(!S.sellSeeded||(S.sellSeeded==='local'&&X.fb==='server'))X.seedNow();if(getPends().length)retryPending();});},4000);
+window.addEventListener('online',()=>{X.probe().then(()=>{if(getPends().length)retryPending();});});
+})();
+
 </script>
 <script>/* 福缘里 garden: 私人菜园 / 串门 / 偷菜 */
 /*!
@@ -15168,6 +15423,10 @@ R.avoidNow=avoid;R.markAltar=markAltar;
  *   inSpace() / active() / head()  state helpers;  sync() push+pull now;  syncDog() push dog state now
  * window.TG_SPACE_SAVE({plots, decor, shrine, animals, inventory?, backpack?, coins?, daily?, economyRev?})  game calls this instead of its own save while TG_VISIT.canEdit;
  *   plots/decor/shrine(incl. shrine.altar)/animals -> shared space; inventory/backpack/coins/daily/economyRev -> the player's own save only
+ * r9 (needs backend/r9.sql; older servers keep the old behaviour): a placed item stowed from the SHARED space is first removed on
+ *   the server with space_take_decor (row-locked: of two members stowing the same item only one gets it). If a family member was
+ *   faster ('gone'), the local +1 in the backpack is undone, the yard is merged with the server's and「这件已被家人收起」is shown.
+ *   space_save answers dropped>0 when it removed an item someone else had stowed: we re-pull at once.
  * Dog: polls window.TG_DOG_ON_DUTY() (game) and stores it on the server (gardens.dog_on_duty) on change + every 60 s.
  */
 (function () {
@@ -15264,12 +15523,58 @@ R.avoidNow=avoid;R.markAltar=markAltar;
       }
     }
   }
+  /* ---------------- r9: stow from the shared space via space_take_decor ---------------- */
+  var NO_TAKE = 0, TAKEREQ = {};
+  function shared() { return !!FV || !!(INFO && INFO.head && F.isSpaceOwner() && INFO.members && INFO.members.length > 1); }
+  function noFn(e) { return !!(e && (e.code === 'PGRST202' || (/space_take_decor/.test(String(e.message || '')) && /function/i.test(String(e.message || ''))))); }
+  function newReq() { return 'take-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10); }
+  function dkey(e) { return e && typeof e === 'object' ? e.id + '|' + Number(e.x).toFixed(2) + '|' + Number(e.z).toFixed(2) : '?'; }
+  function arr(a) { return Array.isArray(a) ? a.filter(function (e) { return e && typeof e === 'object' && e.id; }) : []; }
+  function minus(a, b) { var n = {}; arr(b).forEach(function (e) { n[dkey(e)] = (n[dkey(e)] || 0) + 1; }); return arr(a).filter(function (e) { var k = dkey(e); if (n[k] > 0) { n[k]--; return false; } return true; }); }
+  function removeOne(a, e) { var k = dkey(e), done = false; return arr(a).filter(function (x) { if (!done && dkey(x) === k) { done = true; return false; } return true; }); }
+  // placed in the server snapshot, gone locally, and the count of that id went down (a move = removed + added, cancels out)
+  function stowsOf(base, mine) {
+    var cnt = {}; arr(base).forEach(function (e) { cnt[e.id] = (cnt[e.id] || 0) + 1; }); arr(mine).forEach(function (e) { cnt[e.id] = (cnt[e.id] || 0) - 1; });
+    return minus(base, mine).filter(function (e) { if (cnt[e.id] > 0) { cnt[e.id]--; return true; } return false; });
+  }
+  function merge3(base, mine, theirs) {   // mine, minus what others removed, plus what others added
+    var gone = minus(base, theirs), added = minus(theirs, base), out = arr(mine);
+    gone.forEach(function (e) { out = removeOne(out, e); });
+    return out.concat(clone(added));
+  }
+  async function takeStows(head) {   // -> {skip: {scene: true}} scenes not to push this round (network: retry next sync)
+    var skip = {};
+    if (!shared() || (NO_TAKE && Date.now() - NO_TAKE < 600000) || !SNAP) return skip;
+    var decor = S.decor && typeof S.decor === 'object' ? S.decor : {};
+    var scenes = Object.keys(SNAP.decor || {});
+    for (var si = 0; si < scenes.length; si++) {
+      var k = scenes[si], st = stowsOf(SNAP.decor[k], decor[k]), lost = [], server = null;
+      for (var i = 0; i < st.length; i++) {
+        var e = st[i], tk = k + '|' + dkey(e), req = TAKEREQ[tk] || (TAKEREQ[tk] = newReq()), r;
+        try { r = await rpc('space_take_decor', { p_owner: head, p_scene: k, p_item: String(e.id), p_x: Number(e.x), p_z: Number(e.z), p_req: req }); }
+        catch (err) { if (noFn(err)) { NO_TAKE = Date.now(); return skip; } skip[k] = true; break; }
+        delete TAKEREQ[tk];
+        if (r && Array.isArray(r.decor)) server = r.decor;
+        if (r && r.ok) SNAP.decor[k] = removeOne(SNAP.decor[k], e);
+        else if (r && r.reason === 'gone') lost.push(e);
+      }
+      if (lost.length) {
+        lost.forEach(function (e) { if (S.backpack && (S.backpack[e.id] | 0) > 0) S.backpack[e.id]--; });   // undo the local +1
+        if (server) { S.decor[k] = merge3(SNAP.decor[k], S.decor[k], server); SNAP.decor[k] = clone(server); }
+        safe(function () { if (STORE) STORE.save(S); });
+        note('这件已被家人收起'); F._lostStows = (F._lostStows || 0) + lost.length;
+        rerender();
+      }
+    }
+    return skip;
+  }
   // shrine / decor (per scene) / animals: push what changed since the last server snapshot
   async function pushFields(head) {
     if (!hasS() || !SNAP) return false;
+    var skip = await takeStows(head);   // r9
     var args = { p_owner: head }, any = false, d = {};
     var decor = S.decor && typeof S.decor === 'object' ? S.decor : {};
-    Object.keys(decor).forEach(function (k) { if (J(stripData(decor[k])) !== J((SNAP.decor || {})[k])) { d[k] = stripData(decor[k]); any = true; } });
+    Object.keys(decor).forEach(function (k) { if (skip[k]) return; if (J(stripData(decor[k])) !== J((SNAP.decor || {})[k])) { d[k] = stripData(decor[k]); any = true; } });
     if (Object.keys(d).length) args.p_decor = d;
     if (S.shrine !== undefined && J(stripData(S.shrine)) !== J(SNAP.shrine) && !(SNAP.shrine == null && FV)) { args.p_shrine = stripData(S.shrine); any = true; }
     if (S.animals !== undefined && J(S.animals) !== J(SNAP.animals) && !(SNAP.animals == null && FV)) { args.p_animals = S.animals; any = true; }
@@ -15279,6 +15584,11 @@ R.avoidNow=avoid;R.markAltar=markAltar;
     if (args.p_shrine) SNAP.shrine = clone(args.p_shrine);
     if (args.p_animals) SNAP.animals = clone(args.p_animals);
     SNAP.rev = r && r.rev;
+    if (r && r.dropped > 0) {   // r9: the server removed an item a family member had stowed meanwhile -> re-pull now
+      F._dropped = (F._dropped || 0) + r.dropped;
+      try { await pull(head, false); } catch (e) {}
+      note('家人刚收起了一件家具，已同步');
+    }
     return true;
   }
   function applyFields(sp, initial) {
@@ -15590,6 +15900,11 @@ R.avoidNow=avoid;R.markAltar=markAltar;
  *   open([tab])          panel: 'browse' (逛摊) | 'sell' (我要寄售) | 'mine' (我的摊位)
  *   claim()              collect everything owed (proceeds, cancelled/expired items, bought items); runs at start + every 60 s
  *   list(kind,id,qty,price) / buy(listingId) / cancel(listingId) / browse(kind)   programmatic API (same rules as the UI)
+ *   r9: buy() sends a request id (p_req). Coins are refunded ONLY on an explicit server refusal (gone / own / rate / bad_req).
+ *       Unknown outcome (network) -> {ok:false, reason:'pending'}: kept in localStorage (templeGarden.v1.marketPending) and
+ *       retried with the same req by resume() (start, every 60 s, before each claim); the server replays a committed buy.
+ *       Pre-r9 server (market_buy has no p_req): old 1-arg call; an unknown outcome is settled by the claim's bought list.
+ *   pending() -> [{lid, price, req, t}]   resume() -> Promise
  *
  * Hooks the GAME provides (the market does nothing that needs them until they exist):
  *   TG_INV_TAKE(kind, id, qty) -> boolean   remove qty from the player's inventory; false (and no change) if not enough
@@ -15634,7 +15949,66 @@ R.avoidNow=avoid;R.markAltar=markAltar;
   }
   function coins() { return safe(function () { return typeof window.TG_COINS_GET === 'function' ? window.TG_COINS_GET() : S.coins; }); }
   var REASON = { too_many: '最多同时寄售 10 件', rate: '操作太频繁，歇一会儿再来', bad_price: '价格太高了：作物/农产每件最多 50，点心/家具每件最多 2000', bad_qty: '数量 1～99',
-    bad_item: '这个不能寄售', gone: '手慢了，已经被买走或下架了', own: '不能买自己的东西', not_active: '已经卖出或下架了' };
+    bad_item: '这个不能寄售', gone: '手慢了，已经被买走或下架了', own: '不能买自己的东西', not_active: '已经卖出或下架了',
+    pending: '网络不稳，正在确认这笔购买，确认后自动到货或退回金币' };
+
+  /* ---------------- r9: purchase requests (no refund for a buy the server already made) ---------------- */
+  var PKEY = 'templeGarden.v1.marketPending', NO_REQ = 0, EXPLICIT = { gone: 1, own: 1, rate: 1, bad_req: 1 };
+  function pendAll() { try { var o = JSON.parse(localStorage.getItem(PKEY) || '{}'); return o && typeof o === 'object' ? o : {}; } catch (e) { return {}; } }
+  function pendLoad() { var l = pendAll()[me()]; return Array.isArray(l) ? l : []; }
+  function pendSave(list) { safe(function () { var o = pendAll(); if (list.length) o[me()] = list; else delete o[me()]; localStorage.setItem(PKEY, JSON.stringify(o)); }); }
+  function pendGet(req) { return pendLoad().filter(function (x) { return x.req === req; })[0] || null; }
+  function pendPut(p) { var l = pendLoad().filter(function (x) { return x.req !== p.req; }); l.push(p); pendSave(l); }
+  function pendDrop(req) { pendSave(pendLoad().filter(function (x) { return x.req !== req; })); }
+  function newReq() { return 'mkt-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10); }
+  function noFn(e) { return !!(e && (e.code === 'PGRST202' || (/market_buy/.test(String(e.message || '')) && /function/i.test(String(e.message || ''))))); }
+  async function buyOnce(lid, req) {
+    try {
+      if (!NO_REQ || Date.now() - NO_REQ > 600000) {
+        try { return await rpc('market_buy', { p_id: lid, p_req: req }); }
+        catch (e) { if (!noFn(e)) throw e; NO_REQ = Date.now(); }
+      }
+      var r = await rpc('market_buy', { p_id: lid }); if (r && typeof r === 'object') r.legacy = true; return r;
+    } catch (e) { return { ok: false, reason: 'unknown', message: e && e.message }; }
+  }
+  // settle one pending purchase: ok -> keep the coins (items come via claim); explicit refusal -> refund; unknown -> keep pending
+  async function settle(p, tries) {
+    for (var i = 0; i < (tries || 1); i++) {
+      var r = await buyOnce(p.lid, p.req);
+      if (!pendGet(p.req)) return r && r.ok ? r : { ok: true, delivered: true, id: p.lid };   // a claim already delivered it
+      if (r && r.ok) { pendDrop(p.req); if (typeof r.price === 'number' && r.price !== p.price) window.TG_COINS_ADD(p.price - r.price); return r; }
+      if (r && EXPLICIT[r.reason]) {
+        if (r.legacy && p.uncertain) { p.check = Date.now(); pendPut(p); return { ok: false, reason: 'pending' }; }   // old server: the claim decides
+        pendDrop(p.req); window.TG_COINS_ADD(p.price); return r;                                                     // refused: refund
+      }
+      if (r && r.reason && r.reason !== 'unknown' && !EXPLICIT[r.reason]) { pendDrop(p.req); window.TG_COINS_ADD(p.price); return r; }   // e.g. bad_req shape / not signed in
+      p.uncertain = true; p.tries = (p.tries || 0) + 1; pendPut(p);
+      if (i + 1 < (tries || 1)) await new Promise(function (ok) { setTimeout(ok, 700 * (i + 1)); });
+    }
+    return { ok: false, reason: 'pending' };
+  }
+  M.pending = function () { return pendLoad().slice(); };
+  var resuming = null;
+  M.resume = function () {
+    if (!online() || !hooksReady()) return Promise.resolve(null);
+    if (resuming) return resuming;
+    resuming = (async function () {
+      try { var l = pendLoad().filter(function (p) { return !p.check; }); for (var i = 0; i < l.length; i++) await settle(l[i], 1); return l.length; }
+      finally { resuming = null; }
+    })();
+    return resuming;
+  };
+  function claimSettles(bought) {   // claim delivered these listings: their purchases are done (never refund them)
+    var got = {}; (bought || []).forEach(function (x) { got[x.id] = 1; });
+    var l = pendLoad(), keep = [], refund = 0, now = Date.now();
+    l.forEach(function (p) {
+      if (got[p.lid]) return;                                                                    // delivered: settled, no refund
+      if (p.check && now - p.t > 60000) { refund += p.price; return; }                           // old server: not bought -> refund
+      keep.push(p);
+    });
+    if (keep.length !== l.length) pendSave(keep);
+    if (refund > 0) { window.TG_COINS_ADD(refund); note('🪙 有一笔没买成的寄售品，已退回 ' + refund + ' 金币'); }
+  }
 
   /* ---------------- core ---------------- */
   var claiming = null;
@@ -15645,6 +16019,7 @@ R.avoidNow=avoid;R.markAltar=markAltar;
       try {
         var r = await rpc('market_my_sales_claim', {});
         if (!r) return null;
+        claimSettles(r.bought);   // r9: before giving, so a racing settle() sees the purchase as delivered
         if (r.coins > 0) { window.TG_COINS_ADD(Number(r.coins)); note('💰 寄售卖出 ' + r.sold.length + ' 件，收入 ' + r.coins + ' 金币', true); }
         if (r.pending > 0 && r.pending !== M._pendingSeen) { M._pendingSeen = r.pending; note('⏳ 今日寄售收入已到上限，还有 ' + r.pending + ' 笔明天到账'); }
         (r.returned || []).forEach(function (x) { window.TG_INV_GIVE(x.item_kind, x.item_id, x.qty); });
@@ -15675,11 +16050,10 @@ R.avoidNow=avoid;R.markAltar=markAltar;
     price = Number(price);
     if (!(price > 0)) { var b = await M.browse(); var l = (b.listings || []).find(function (x) { return x.id === lid; }); if (!l) return { ok: false, reason: 'gone' }; price = l.price; }
     if (!window.TG_COINS_ADD(-price)) return { ok: false, reason: 'poor' };   // pay first (game refuses if not enough)
-    var r;
-    try { r = await rpc('market_buy', { p_id: lid }); } catch (e) { r = { ok: false, reason: 'error', message: e && e.message }; }
-    if (!r || !r.ok) { window.TG_COINS_ADD(price); return r; }
-    if (r.price !== price) window.TG_COINS_ADD(price - r.price);   // settle at the server's price
-    await M.claim();   // the bought items arrive through the claim (exactly once, also after a crash)
+    var p = { lid: lid, price: price, req: newReq(), t: Date.now() };
+    pendPut(p);                                       // r9: recorded BEFORE the call, so a crash / lost answer is settled later
+    var r = await settle(p, 3);                       // same req on every try; refund only on an explicit refusal
+    if (r && r.ok) await M.claim();                   // the bought items arrive through the claim (exactly once, also after a crash)
     return r;
   };
   M.cancel = async function (lid) {
@@ -15789,7 +16163,8 @@ R.avoidNow=avoid;R.markAltar=markAltar;
   }
 
   /* ---------------- start ---------------- */
-  function start() { M.claim(); setInterval(function () { if (!document.hidden) M.claim(); }, 60000); }
+  function tick() { return M.resume().catch(function () {}).then(function () { return M.claim(); }); }
+  function start() { tick(); setInterval(function () { if (!document.hidden) tick(); }, 60000); }
   if (AUTH && AUTH.ready) AUTH.ready.then(function () { setTimeout(start, 2500); }); else setTimeout(start, 3000);
   if (window.TG_SOCIAL && TG_SOCIAL.addMenuItem && window.TG_MARKET_MENU_ITEM) TG_SOCIAL.addMenuItem('🏮 寄售摊', function () { M.open(); }, 'tgmMarketItem');
 })();
@@ -15835,7 +16210,14 @@ R.avoidNow=avoid;R.markAltar=markAltar;
  * window.TG_LOTUS    koi() -> SYNC {ok, left, server:Promise | ok:false, reason:'daily'} (3/day; local mirror of the server count; koiAsync() waits)   wish(text) (3/day)   status()
  * window.TG_ECON     earn(coins, source 'sell'|'task'|'merit'|'steal', exact?) -> SYNC granted coins (local mirror of today's server caps,
  *        reported to econ_earn in the background)   earnAsync(...) -> Promise<server-granted coins>   status()
- *   Server daily caps: 40 coins (sell+task+merit), 8 of them via merit, 15 stolen. exact=true: all-or-nothing.
+ *   Server daily caps (r9, 方案 B): sell 100 (crops/produce), task+merit 40 (merit <= 8), stolen 15; furniture sell-back 400.
+ *   exact=true: all-or-nothing. Pre-r9 server: 'sell' still shares the 40 (detected from econ_status; no sell_left).
+ *   r9: left(source) -> today's mirrored allowance or null ('sell'|'task'|'merit'|'earn'|'steal'|'sellback')
+ *       shopBuy(item, qty) -> Promise   log a coin purchase from the shop (fire-and-forget; same req on retry)
+ *       sellback(item, qty, unit, req?) -> Promise<{ok, granted, unit, credit_left, left} | {ok:false, reason, req}>
+ *         reason: no_credit | daily_cap | price_changed | not_sellable | bad_qty | offline | old_schema (r9 not installed:
+ *         offline rules apply) | error (network: result unknown — do NOT apply locally; retry later with the same req)
+ *       sellbackSeed(items) -> Promise (one-time credit for pre-r9 saves; no_save / stale_save = flush the save, retry later)   sellbackCredit() -> Promise<{credit, prices, seeded, left}>
  *   Offline / backend down: returns the full amount (the game's own S.daily caps still apply).
  * Hooks the GAME provides: TG_MERIT_GET() -> number, TG_MERIT_ADD(n) -> bool (n<0 spends; false = no change).
  *   Fallback when missing: S.merit + save().
@@ -16082,12 +16464,13 @@ R.avoidNow=avoid;R.markAltar=markAltar;
   // The game calls TG_LOTUS.koi() and TG_ECON.earn() synchronously (r6-net.js), so both answer at once from a local mirror of the
   // server's daily counters (econ_status / lotus_status, refreshed on login, every 5 min and after each call) and report to the
   // server in the background. The server stays authoritative for its own counters; the *Async variants wait for its answer.
-  var MIR = { day: null, earn: null, merit: null, steal: null, koi: null };
+  var MIR = { day: null, earn: null, merit: null, steal: null, koi: null, sell: null, sellback: null, r9: false };
   function sday() { return new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10); }
-  function mirFresh() { if (MIR.day && MIR.day !== sday()) { MIR = { day: sday(), earn: null, merit: null, steal: null, koi: null }; refreshMir(); } }
+  function mirFresh() { if (MIR.day && MIR.day !== sday()) { MIR = { day: sday(), earn: null, merit: null, steal: null, koi: null, sell: null, sellback: null, r9: MIR.r9 }; refreshMir(); } }
   async function refreshMir() {
     if (!online()) return;
-    try { var e = await rpc('econ_status', {}); if (e && e.day) { MIR.day = e.day; MIR.earn = e.earn_left; MIR.merit = e.merit_coins_left; MIR.steal = e.steal_left; } } catch (x) {}
+    try { var e = await rpc('econ_status', {}); if (e && e.day) { MIR.day = e.day; MIR.earn = e.earn_left; MIR.merit = e.merit_coins_left; MIR.steal = e.steal_left;
+      MIR.r9 = typeof e.sell_left === 'number'; MIR.sell = MIR.r9 ? e.sell_left : null; MIR.sellback = typeof e.sellback_left === 'number' ? e.sellback_left : null; } } catch (x) {}
     try { var l = await rpc('lotus_status', {}); if (l && l.day) MIR.koi = l.koi_left; } catch (x) {}
   }
   setInterval(refreshMir, 300000);
@@ -16096,9 +16479,29 @@ R.avoidNow=avoid;R.markAltar=markAltar;
     if (!online()) return Promise.resolve(coins);
     return call('econ_earn', { p_coins: coins, p_source: source || 'sell', p_exact: !!exact }).then(function (r) {
       if (r && r.reason === 'error') return coins;   // backend down / old schema: client caps only
-      if (r && typeof r.left === 'number') { if ((source || 'sell') === 'steal') MIR.steal = r.left; else MIR.earn = r.left; }
+      if (r && typeof r.left === 'number') MIR[mirKey(source || 'sell')] = r.left;
       return (r && r.granted) | 0;
     });
+  }
+  function mirKey(source) { return source === 'steal' ? 'steal' : (source === 'sell' && MIR.r9) ? 'sell' : 'earn'; }   // r9: sell has its own pool
+  // r9 RPCs: a missing function (r9.sql not applied) must NOT flip NO_R6 (that would park every r6 feature for 10 min)
+  var NO_R9 = 0;
+  async function call9(fn, args) {
+    if (!online()) return { ok: false, reason: 'offline' };
+    if (NO_R9 && Date.now() - NO_R9 < 600000) return { ok: false, reason: 'old_schema' };
+    try {
+      var hook = window.TG_R6_RPC || window.TG_GARDEN_RPC;
+      if (hook) return await Promise.resolve(hook(fn, args || {}));
+      var r = await AUTH.client.rpc(fn, args || {});
+      if (r.error) { if (r.error.code === 'PGRST202') { NO_R9 = Date.now(); return { ok: false, reason: 'old_schema' }; } throw r.error; }
+      return r.data;
+    } catch (e) { if (e && e.code === 'PGRST202') { NO_R9 = Date.now(); return { ok: false, reason: 'old_schema' }; } return { ok: false, reason: 'error', message: e && e.message }; }
+  }
+  function newReq(p) { return p + '-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10); }
+  async function call9Retry(fn, args, tries) {   // same p_req on every try: the server replays a committed call instead of doing it twice
+    var r;
+    for (var i = 0; i < (tries || 3); i++) { r = await call9(fn, args); if (!r || r.reason !== 'error') return r; await new Promise(function (ok) { setTimeout(ok, 600 * (i + 1)); }); }
+    return r;
   }
   function koiAsync() { return call('lotus_koi', {}).then(function (r) { if (r && typeof r.left === 'number') MIR.koi = r.left; if (r && r.reason === 'daily') MIR.koi = 0; return r; }); }
   window.TG_LOTUS = {
@@ -16114,7 +16517,7 @@ R.avoidNow=avoid;R.markAltar=markAltar;
     earn: function (coins, source, exact) {   // sync: number of coins granted now (0 = over today's cap)
       coins = Math.floor(Number(coins) || 0); if (coins <= 0) return 0;
       mirFresh(); source = source || 'sell';
-      var key = source === 'steal' ? 'steal' : 'earn', left = MIR[key], g = coins;
+      var key = mirKey(source), left = MIR[key], g = coins;
       if (left != null) g = Math.min(g, Math.max(0, left));
       if (source === 'merit' && MIR.merit != null) g = Math.min(g, Math.max(0, MIR.merit));
       if (g <= 0 || (exact && g < coins)) return 0;
@@ -16124,7 +16527,27 @@ R.avoidNow=avoid;R.markAltar=markAltar;
       return g;
     },
     earnAsync: econAsync,
-    status: function () { return call('econ_status', {}); }
+    status: function () { return call('econ_status', {}); },
+    // ---- r9 ----
+    left: function (source) {   // today's mirrored allowance (null = unknown / offline)
+      mirFresh(); source = source || 'sell';
+      if (source === 'sellback') return MIR.sellback;
+      if (source === 'merit') return MIR.merit == null ? null : (MIR.earn == null ? MIR.merit : Math.min(MIR.merit, MIR.earn));
+      return MIR[mirKey(source)];
+    },
+    shopBuy: function (item, qty) {
+      qty = Math.floor(Number(qty) || 1);
+      return call9Retry('econ_shop_buy', { p_item: String(item || ''), p_qty: qty, p_req: newReq('buy') }, 3);
+    },
+    sellback: async function (item, qty, unit, req) {
+      qty = Math.floor(Number(qty) || 1); req = req || newReq('sell');
+      var r = await call9Retry('econ_sellback', { p_item: String(item || ''), p_qty: qty, p_unit: unit == null ? null : Math.floor(Number(unit)), p_req: req }, 3);
+      if (r && typeof r.left === 'number') MIR.sellback = r.left;
+      if (r && !r.ok) r.req = req;   // reason 'error': unknown outcome; pass this req back to retry later
+      return r || { ok: false, reason: 'error', req: req };
+    },
+    sellbackSeed: function (items) { return call9Retry('econ_sellback_seed', { p_items: items || {} }, 2); },
+    sellbackCredit: function () { return call9('econ_sellback_credit', {}); }
   };
 
   /* ---------------- fallback 茶馆 wall panel ---------------- */
