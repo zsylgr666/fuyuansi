@@ -1,0 +1,65 @@
+--- /tmp/tg-r6.r9e.js	2026-11-16 10:31:45.994467605 +0000
++++ /workspace/backend/tg-r6.js	2026-11-16 10:31:38.114496922 +0000
+@@ -37,10 +37,11 @@
+  * window.TG_LOTUS    koi() -> SYNC {ok, left, server:Promise | ok:false, reason:'daily'} (3/day; local mirror of the server count; koiAsync() waits)   wish(text) (3/day)   status()
+  * window.TG_ECON     earn(coins, source 'sell'|'task'|'merit'|'steal', exact?) -> SYNC granted coins (local mirror of today's server caps,
+  *        reported to econ_earn in the background)   earnAsync(...) -> Promise<server-granted coins>   status()
+- *   Server caps (r9e): crops/produce have NO daily coin ceiling when econ_status.sell_uncapped is true
++ *   Server caps (r9f): crops/produce have NO daily coin ceiling when econ_status.sell_uncapped is true
+  *   (not a larger number). A status may also carry sell_cap/sell_left 100 for already-open r9 pages;
+  *   those pages have no unlimited signal, and null sell_left makes them share the 40. This client
+- *   ignores the numbers while sell_uncapped is true, and leaves unlimited when the status says false.
++ *   ignores the numbers while sell_uncapped is true. sell_uncapped false with a newer sell_epoch revokes
++ *   unlimited. A reply with an older sell_epoch, or with no sell_epoch after one was applied, does not move the mode.
+  *   task+merit 40 (merit <= 8), stolen 15, furniture sell-back 400 stay.
+  *   exact=true: all-or-nothing. Pre-r9 server: 'sell' still shares the 40 (no sell_left and no sell_uncapped).
+  *   Legacy r9: numeric sell_left is that day's remaining crop coins (usually a 100 cap). Once this page has
+@@ -308,22 +309,27 @@
+     else { MIR.r9 = false; MIR.sellUncapped = false; MIR.sell = null; }
+     return p;
+   }
++  function boundAcct() { try { var A = window.TG_AUTH; if (!A) return 'default'; var u = A.userId; return u ? String(u) : null; } catch (e) { return null; } }
+   async function refreshMir() {
+     if (!online()) return;
+-    try { var e = await rpc('econ_status', {}); if (e && e.day) { MIR.day = e.day; MIR.earn = e.earn_left; MIR.merit = e.merit_coins_left; MIR.steal = e.steal_left;
++    var who = boundAcct();
++    try { var e = await rpc('econ_status', {}); if (boundAcct() !== who) return; if (e && e.day) { MIR.day = e.day; MIR.earn = e.earn_left; MIR.merit = e.merit_coins_left; MIR.steal = e.steal_left;
+       MIR.sellback = typeof e.sellback_left === 'number' ? e.sellback_left : null;
+       var note = window.TG_R9 && TG_R9.sell && TG_R9.sell.noteSellStatus;
+       if (note) adoptSell(note(e));
+       else { MIR.sellUncapped = e.sell_uncapped === true; MIR.r9 = MIR.sellUncapped || typeof e.sell_left === 'number'; MIR.sell = MIR.sellUncapped ? null : (MIR.r9 ? e.sell_left : null); }
+     } } catch (x) {}
+-    try { var l = await rpc('lotus_status', {}); if (l && l.day) MIR.koi = l.koi_left; } catch (x) {}
++    try { var l = await rpc('lotus_status', {}); if (boundAcct() === who && l && l.day) MIR.koi = l.koi_left; } catch (x) {}
+   }
+   setInterval(refreshMir, 300000);
+   function econAsync(coins, source, exact) {
+     coins = Math.floor(Number(coins) || 0); if (coins <= 0) return Promise.resolve(0);
+     if (!online()) return Promise.resolve(coins);
++    var who = boundAcct();
+     return call('econ_earn', { p_coins: coins, p_source: source || 'sell', p_exact: !!exact }).then(function (r) {
+-      if (r && r.sell_uncapped === true && window.TG_R9 && TG_R9.sell && TG_R9.sell.noteSellStatus) TG_R9.sell.noteSellStatus({ sell_uncapped: true, day: r.day || MIR.day || 'earn' });
++      // Never invent sell_uncapped:true. A reply applies its own epoch, and an older epoch cannot move the mode.
++      // A reply that belongs to the account that was signed in when the call started cannot be applied after a switch.
++      if (boundAcct() === who && r && (r.sell_uncapped === true || r.sell_uncapped === false || typeof r.sell_epoch === 'number') && window.TG_R9 && TG_R9.sell && TG_R9.sell.noteSellStatus) TG_R9.sell.noteSellStatus(r);
+       if (r && r.reason === 'error') return coins;   // backend down / old schema: client caps only
+       // A numeric left must not reintroduce a crop ceiling after sell_uncapped. Task/merit/steal still mirror their own pools.
+       if (r && typeof r.left === 'number' && !((source || 'sell') === 'sell' && sellUncapped())) MIR[mirKey(source || 'sell')] = r.left;
+@@ -379,6 +385,17 @@
+     },
+     adoptSell: adoptSell,
+     earnAsync: econAsync,
++    // Server-mode crop sale. Inventory is already reserved by the game. Coins are added only after this resolves.
++    confirmSell: function (rec) {
++      var req = rec && rec.req;
++      var who = boundAcct();
++      return call9Retry('econ_earn', { p_coins: rec && rec.gain, p_source: 'sell', p_exact: true, p_req: req }, 3).then(function (r) {
++        // The game applies coins and the epoch only if the same account is still signed in.
++        if (boundAcct() !== who) return r || { ok: false, reason: 'error', req: req };
++        if (r && (r.sell_uncapped === true || r.sell_uncapped === false || typeof r.sell_epoch === 'number') && window.TG_R9 && TG_R9.sell && TG_R9.sell.noteSellStatus) TG_R9.sell.noteSellStatus(r);
++        return r || { ok: false, reason: 'error', req: req };
++      });
++    },
+     status: function () { return call('econ_status', {}); },
+     // ---- r9 ----
+     left: function (source) {   // today's mirrored allowance. sell returns null when uncapped (no ceiling) and when unknown.

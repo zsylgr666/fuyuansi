@@ -1,0 +1,321 @@
+{
+  "passed": 21,
+  "failed": 0,
+  "total": 21,
+  "results": [
+    {
+      "name": "tg-r6 does not synthesize sell_uncapped true",
+      "ok": true
+    },
+    {
+      "name": "frozen page is r9f and gates on sell_epoch",
+      "ok": true
+    },
+    {
+      "name": "real tg-r6 confirmSell is installed on the r9f page",
+      "ok": true,
+      "detail": {
+        "confirm": true,
+        "earnAsync": true,
+        "flag": true
+      }
+    },
+    {
+      "name": "epoch 1 true then epoch 3 false revokes without reload",
+      "ok": true,
+      "detail": {
+        "mode": "r9",
+        "cap": 100,
+        "uncapped": false,
+        "confirmedUncapped": false,
+        "serverLeft": 60,
+        "epoch": 3,
+        "shared": false
+      }
+    },
+    {
+      "name": "an older true does not undo the rollback",
+      "ok": true,
+      "detail": {
+        "mode": "r9",
+        "cap": 100,
+        "uncapped": false,
+        "confirmedUncapped": false,
+        "serverLeft": 60,
+        "epoch": 3,
+        "shared": false
+      }
+    },
+    {
+      "name": "a true with no epoch does not re-enable",
+      "ok": true,
+      "detail": {
+        "mode": "r9",
+        "cap": 100,
+        "uncapped": false,
+        "confirmedUncapped": false,
+        "serverLeft": 60,
+        "epoch": 3,
+        "shared": false
+      }
+    },
+    {
+      "name": "a false with no epoch does not move a page that already has an epoch",
+      "ok": true,
+      "detail": {
+        "mode": "r9",
+        "cap": 100,
+        "uncapped": false,
+        "confirmedUncapped": false,
+        "serverLeft": 60,
+        "epoch": 3,
+        "shared": false
+      }
+    },
+    {
+      "name": "real earnAsync stale true, with and without an older epoch, does not re-enable",
+      "ok": true,
+      "detail": {
+        "f": {
+          "mode": "r9",
+          "cap": 100,
+          "uncapped": false,
+          "confirmedUncapped": false,
+          "serverLeft": 60,
+          "epoch": 3,
+          "shared": false
+        },
+        "g": {
+          "mode": "r9",
+          "cap": 100,
+          "uncapped": false,
+          "confirmedUncapped": false,
+          "serverLeft": 60,
+          "epoch": 3,
+          "shared": false
+        },
+        "asyncStale": 0,
+        "asyncOld": 0
+      }
+    },
+    {
+      "name": "a newer epoch can turn uncapped back on",
+      "ok": true,
+      "detail": {
+        "mode": "uncapped",
+        "cap": null,
+        "uncapped": true,
+        "confirmedUncapped": true,
+        "serverLeft": null,
+        "epoch": 4,
+        "shared": false
+      }
+    },
+    {
+      "name": "after rollback, injected stale true, sell 80 cabbage pays 60 and keeps 20",
+      "ok": true,
+      "detail": {
+        "before": {
+          "mode": "r9",
+          "cap": 100,
+          "uncapped": false,
+          "confirmedUncapped": false,
+          "serverLeft": 60,
+          "epoch": 5,
+          "shared": false
+        },
+        "ok": true,
+        "inv": 20,
+        "coins": 160,
+        "sell": 100,
+        "earned": 0,
+        "pol": {
+          "mode": "r9",
+          "cap": 100,
+          "uncapped": false,
+          "confirmedUncapped": false,
+          "serverLeft": 0,
+          "epoch": 5,
+          "shared": false
+        },
+        "savedCoins": 160,
+        "savedInv": 20,
+        "pending": 0,
+        "calls": 3
+      }
+    },
+    {
+      "name": "in-flight uncapped sale is reserved before the reply: 80 held, coins unchanged",
+      "ok": true,
+      "detail": {
+        "inv": 0,
+        "coins": 300,
+        "pending": 1,
+        "pol": {
+          "mode": "uncapped",
+          "cap": null,
+          "uncapped": true,
+          "confirmedUncapped": true,
+          "serverLeft": null,
+          "epoch": 6,
+          "shared": false
+        }
+      }
+    },
+    {
+      "name": "refusal after rollback restores the 80 and does not keep coins",
+      "ok": true,
+      "detail": {
+        "mid": {
+          "inv": 0,
+          "coins": 300,
+          "pending": 1
+        },
+        "ok": false,
+        "inv": 80,
+        "coins": 300,
+        "pol": {
+          "mode": "r9",
+          "cap": 100,
+          "uncapped": false,
+          "confirmedUncapped": false,
+          "serverLeft": 60,
+          "epoch": 7,
+          "shared": false
+        },
+        "pending": 0,
+        "savedCoins": 300,
+        "savedInv": 80,
+        "earned": 0
+      }
+    },
+    {
+      "name": "a grant committed before rollback pays 80 and does not restore uncapped",
+      "ok": true,
+      "detail": {
+        "ok": true,
+        "inv": 0,
+        "coins": 480,
+        "pol": {
+          "mode": "r9",
+          "cap": 100,
+          "uncapped": false,
+          "confirmedUncapped": false,
+          "serverLeft": 100,
+          "epoch": 9,
+          "shared": false
+        },
+        "pending": 0,
+        "earned": 0,
+        "sell": 80
+      }
+    },
+    {
+      "name": "a reply that arrives after an account switch does not pay the other account",
+      "ok": true,
+      "detail": {
+        "acct": "B",
+        "coins": 10,
+        "inv": 0,
+        "pending": 1,
+        "epoch": 10
+      }
+    },
+    {
+      "name": "returning to the account settles the same request once",
+      "ok": true,
+      "detail": {
+        "mid": {
+          "acct": "B",
+          "coins": 10,
+          "inv": 0,
+          "pending": 1,
+          "epoch": 10
+        },
+        "once": {
+          "coins": 14,
+          "inv": 0,
+          "pending": 0,
+          "applied": 1
+        },
+        "twice": {
+          "coins": 14,
+          "pending": 0
+        }
+      }
+    },
+    {
+      "name": "a network error keeps the reservation and the retry pays once",
+      "ok": true,
+      "detail": {
+        "mid": {
+          "ok": false,
+          "inv": 0,
+          "coins": 20,
+          "pending": 1
+        },
+        "after": {
+          "inv": 0,
+          "coins": 27,
+          "pending": 0
+        },
+        "again": 27,
+        "reqs": [
+          "crop-mwj4ovl0-sdde5aw2"
+        ]
+      }
+    },
+    {
+      "name": "an unresolved sale is saved with the items reserved and no coins",
+      "ok": true,
+      "detail": {
+        "inv": 0,
+        "coins": 5,
+        "pending": 1,
+        "epoch": "11"
+      }
+    },
+    {
+      "name": "reloading an unresolved sale pays it once and does not pay it again",
+      "ok": true,
+      "detail": {
+        "before": {
+          "inv": 0,
+          "coins": 5,
+          "pending": 1,
+          "epoch": 11
+        },
+        "once": {
+          "inv": 0,
+          "coins": 14,
+          "pending": 0,
+          "applied": 1
+        },
+        "twice": 14
+      }
+    },
+    {
+      "name": "r9f page had no uncaught error",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "name": "old r9b page keeps its own 100 when the r9f status also carries sell_epoch",
+      "ok": true,
+      "detail": {
+        "mode": "r9",
+        "cap": 100,
+        "inv": 20,
+        "coins": 110,
+        "earned": 0,
+        "sell": 100,
+        "line": "今日出售 100/100"
+      }
+    },
+    {
+      "name": "old r9b page had no uncaught error",
+      "ok": true,
+      "detail": []
+    }
+  ]
+}

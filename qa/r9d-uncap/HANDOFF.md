@@ -227,3 +227,63 @@ Same sampler as `smoke-r9c.mjs` section 3b. Page errors 0. Highest entry frame 9
 `qa/r9c/tools/selltest.mjs` against `v4/index.r9e.html`: **84/84, zero assertion edits.** The original mock still does not send `sell_uncapped`, so B1/B2 still require the legacy 100. Categories A–L all pass. `qa/r9e/selltest-r9e.json`.
 
 No fortune stalls. No merge, no deploy, no live SQL.
+
+## Follow-up: r9f, stale earn replies
+
+r9d and r9e are unchanged. r9d sha256 `4ecd25c97847963860755de0e5caf279405b6d413c08adc277492ac3bd811520`, 1,888,370 bytes. r9e sha256 `745f685e65aa324cd0f001aef7f62bd632c1c78dd71ebd217d7c6c3dc468a454`, 1,888,936 bytes.
+
+The audit file named for this round (`/cursor/stores/user/grok-bot/agents/fa69f671-a1f9-4861-b61c-c636c7d7053f/assets/01M7HXHQAW893W30JYNAYYA2T4.md`) is not on this machine. The repro below is the one given in the request, confirmed against the r9e client: `backend/tg-r6.js` used to call `noteSellStatus({ sell_uncapped: true })` on any earn reply that carried the flag, with the epoch stripped off. After a rollback had set the page back to the 100 cap, that late reply turned unlimited on again. The next sale of 80 cabbage was then saved in full. A later server refusal did not take the coins back.
+
+### What r9f does
+
+`public.sell_policy` is one row. `epoch` only increases. `uncapped` is the live crop mode. Forward (`backend/r9f-uncap.sql`) bumps the epoch and sets uncapped true. Rollback (`backend/r9f-uncap-rollback.sql`) bumps the epoch and sets uncapped false. Both files install the same `econ_earn` and `econ_status`. `tg_limit('sell_coins')` stays NULL. While the row is capped, the value passed to the real `tg_take_daily` is the literal 100. There is no larger number.
+
+`econ_earn` is now four arguments. The fourth, `p_req`, defaults to null, and the three-argument function is dropped so PostgREST has one function. Callers that omit `p_req` still run. A successful call with `p_req` is stored in `econ_earn_reqs` together with the epoch it was decided under. Replaying that request returns the stored grant and that old epoch. The replay does not change `sell_policy` and does not take the coins again. A refusal is not stored, so the same request id can be tried again and is judged against the policy at that later moment.
+
+On the page, once this account has applied an epoch of 1 or more, a reply with no `sell_epoch`, or with an older one, cannot change crop mode. `sell_uncapped: false` with a newer epoch revokes unlimited with no reload. A newer epoch with true can turn it back on. The account id is stored with the epoch (`templeGarden.r9.sellEpoch.<account>`). A missing key is not treated as epoch 0. `tg-r6.js` no longer invents `sell_uncapped: true`. It forwards the real reply, and only while the account that started the call is still the signed-in account.
+
+After an epoch has been applied, a crop sale in r9 or uncapped mode reserves the items: the inventory deduction and the request id are written in one save before the server is asked. Coins are added only when that request comes back granted. A hard refusal puts the items back in that same save and adds no coins. A network error keeps the reservation and retries the same request id. Switching account while the reply is in flight does not pay the account now on screen; the reservation stays for the account that started it. Reloading retries the saved reservation once. `S.cropApplied` records the request id in the save, so a second arrival does not pay again. Coins that were never added are not clawed back later.
+
+Before any epoch has been seen, crop sales stay on the synchronous `earn()` path. That is the old three-argument server, and it is what the original 84 mock speaks.
+
+### The repro, on the frozen page
+
+Cabbage sells for 1 coin. After rollback to epoch 5 with 40 already used (60 left), these replies were injected: `sell_uncapped: true` with no epoch, the same flag with epoch 1, and the same flag with epoch 4. Mode stayed r9, epoch 5. Selling 80 cabbage paid 60, left 20, `coinsEarned` stayed 0, and the save matched the screen. `qa/r9f/race.mjs`.
+
+An 80-cabbage sale started while uncapped is held with the items reserved and the coins unchanged. If that call is then refused (`daily_cap`, epoch 7), the 80 return and the coins stay unchanged. If the server had already committed the 80 under epoch 8, the reply pays 80 and the page stays on the newer capped epoch. A reply that arrives after the account has switched does not pay; switching back settles that same request once. Three network errors keep the reservation; the retry of the same request pays once. Reloading with the reservation still in the save pays once and the second retry pays nothing.
+
+The published r9b page (`a328f7c` site HTML), given a status that includes `sell_uncapped: true`, `sell_epoch: 4`, and `sell_left: 100`, stays in r9 at cap 100. With 40 already used, 80 cabbage pays 60 and `coinsEarned` stays 0.
+
+### Counts
+
+- Isolated SQL, real `tg_take_daily` and real `econ_sellback`, then the r9f drafts: **48/48**. `qa/r9f/sql-epoch.mjs`. Furniture still stops at 400 (13×30 = 390, the 14th left 10). Task stops at 40. Merit stops at 8 inside that pool. An uncapped sale of the JS safe integer is granted and writes no `sell_coins` row. After rollback, replaying the pre-rollback grant of 5,000 returns epoch 1 and does not turn the row back to uncapped. An exact 80 against 60 left is refused and the counter stays 40. An exact 60 fills it. Replaying the 60 does not take it twice. Forward again is epoch 3 and grants 250. A second rollback is epoch 4. One `econ_earn` function remains.
+- Adversarial page sequences, including the real `tg-r6.js` on `v4/index.r9f.html`: **21/21**. `qa/r9f/race.mjs`.
+- Original `qa/r9c/tools/selltest.mjs` against `v4/index.r9f.html`: **84/84, zero assertion edits.** The mock still sends no `sell_uncapped` and no `confirmSell`, so B1/B2 still require the legacy 100. `qa/r9f/selltest-r9f.json`.
+- Entry and steady draw, both orientations, nine scenes: errors 0. Highest entry frame 85 (landscape hall). Highest steady frame 79 (landscape tea). Both are at or under 150. `qa/r9f/smoke-entry.json`.
+
+A first 84 run failed 7 cases because a missing epoch key was read as 0, and a status with no epoch was then ignored. The shipped `loadEpoch` treats a missing key as no epoch. The 84/84 figure is the run after that fix.
+
+### Checksums
+
+- `v4/index.r9f.html` sha256 `1e0b4ce1fd29d4403e9c1a527f5d03ed3cf1a00404c2e553fbeb9a93b0654d54`, 1,895,667 bytes
+- site `index.html` sha256 `882cbc7f229d4b3bb42b5e7d138373bc7fa3da01c4fe6e0c702e0990003da0a3`, 2,371,770 bytes
+- snapshot `qa/r9f-uncap/source-snapshot.tar.gz` sha256 `fda0e2a28000f5e911ceb9de8f7950a4bcaa4640e043152a0193a5deccaf7c4e`, 862,436 bytes
+- `backend/r9f-uncap.sql` sha256 `d02c132256055b6adead600a983e8c31875499123afb5a22e477b49467cd0912`, 8,849 bytes
+- `backend/r9f-uncap-rollback.sql` sha256 `9348870fd2b686b131ceef46eaf47a1cf519143afccf64f7c96c333d1ecf59db`, 8,575 bytes
+- `backend/tg-r6.js` sha256 `c30727d8509cc5f12e68fd9a6e4502f3470e814246dca7d25d232799857a9682`, 37,635 bytes
+
+Diffs from r9e: `qa/r9f-uncap/r9-sell-from-r9e.patch`, `qa/r9f-uncap/tg-r6-from-r9e.patch`. Full list: `qa/r9f-uncap/SHA256SUMS.txt`.
+
+### Limits that remain
+
+- An already-open r9b or r9c page has no unlimited signal and still adds crop coins before the server answers. A later refusal on that old page does not remove those coins. Loading r9f is the gate. The 100 in the status is the ceiling those pages already had, so they do not fall onto the shared 40.
+- An r9f page that has already stored an epoch only moves mode for a reply that carries an equal or newer `sell_epoch`. The r9e rollback sets `sell_uncapped` false and carries no epoch, and it creates the three-argument function beside this four-argument one. Use `backend/r9f-uncap-rollback.sql` to roll r9f back. A page that has never stored an epoch still honors a false with no epoch.
+- Crop sales made before the first epoch arrives are still optimistic. That window closes once r9f status has been applied.
+- Two browser tabs can still last-write-wins a crop save. This round does not call that safe. A single tab retries its own reservation one at a time.
+- If adding the granted coins would pass the largest safe integer, the reservation stays and is retried. The items stay reserved while that grant is outstanding.
+- `market_listings`, `tg_market_ttl`, `tg_can_edit`, and showcases are still absent from the executed SQL. `market_buy` was not run. `tg_take_daily` and `econ_sellback` are the upstream bodies. `auth.users` and `auth.uid()` are local scaffolding.
+- Each earn takes a row lock on `sell_policy`, so a policy change and an in-flight earn cannot tear. That is a short lock, not another coin cap.
+- A sale the server already committed under the old epoch is paid when its reply arrives. The reply does not turn uncapped back on.
+
+No fortune stalls. No merge, no deploy, no live SQL, no player-data changes.
+
