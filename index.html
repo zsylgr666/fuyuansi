@@ -13713,7 +13713,7 @@ R.avoidNow=avoid;R.markAltar=markAltar;
 })();
 
 /* r9 part 1 — 卖作物/产物 + 回收家具 front end.
- * r9f hotfix: crops/produce have NO daily coin ceiling once the server says sell_uncapped.
+ * r9g hotfix: crops/produce have NO daily coin ceiling once the server says sell_uncapped.
  *   That is the absence of a cap, not a larger number. Owned quantity still has to be a safe integer,
  *   and the coin total has to stay inside Number.MAX_SAFE_INTEGER.
  *   A positive numeric sell_left (legacy r9, usually 100) is honoured only until this page has seen
@@ -13723,6 +13723,9 @@ R.avoidNow=avoid;R.markAltar=markAltar;
  *   An earn reply carries the epoch it was decided under. A reply whose epoch is older than the
  *   epoch already applied, or a reply with no epoch after one has been applied, cannot change mode.
  *   In server mode a crop sale reserves inventory and adds coins only when that request is confirmed.
+ *   r9g: a signed-in shop does not sell, and does not change coins or inventory, until status has classified
+ *   this account. An earn reply cannot do that classification. A status error stays pending and is retried.
+ *   It is not treated as the offline 40. Once status carries sell_epoch, the first sale uses the reservation too.
  *   While uncapped, a status may also carry sell_cap/sell_left 100. Those numbers are the legacy
  *   advertisement already-open r9b/r9c pages need so they do not fall onto the shared 40.
  *   This page ignores them. Pre-r9 servers, and offline before any uncapped confirmation, keep
@@ -13734,7 +13737,7 @@ R.avoidNow=avoid;R.markAltar=markAltar;
  * - Entries: backpack button, 花木铺 prompt, hint after harvest.
  * The fortune stalls are NOT here. window.TG_R9 is the shared namespace. Save key stays templeGarden.v1. */
 (()=>{
-const R=window.TG_R9=Object.assign(window.TG_R9||{},{sell:{version:'r9f',mode:'?',cap:null,uncapped:false,confirmedUncapped:false,serverLeft:null,epoch:null,fb:'?',credit:null,prices:null,sbLeft:null,seed:null,log:[]}});
+const R=window.TG_R9=Object.assign(window.TG_R9||{},{sell:{version:'r9g',mode:'?',cap:null,uncapped:false,confirmedUncapped:false,serverLeft:null,epoch:null,class:'pending',classified:false,gen:1,fb:'?',credit:null,prices:null,sbLeft:null,seed:null,log:[]}});
 const X=R.sell;
 const BUYBACK=['wood-table','bench','cabinet','daybed','altar-table','rocking-chair','vase','lantern','bonsai','screen','cushion'];
 const STARTER={cushion:1,vase:1},SHARED_CAP=40,SB_CAP=400,SEED_BUDGET=1000,SEED_PER=10;
@@ -13773,15 +13776,34 @@ function applyPolicy(next){X.mode=next.mode;X.cap=next.cap;X.confirmedUncapped=!
  else if(next.kind!=='keep-capped'){X.serverLeft=null;X.serverUsedAt=0;}
  try{window.TG_ECON?.adoptSell?.(policy());}catch(e){}
  return policy();}
-function policy(){return {mode:X.mode,cap:X.cap,uncapped:X.mode==='uncapped'&&!!X.confirmedUncapped,confirmedUncapped:!!X.confirmedUncapped,serverLeft:X.serverLeft,epoch:X.epoch??null,shared:X.mode!=='r9'&&X.mode!=='uncapped'};}
-function noteSellStatus(st){
- // A payload can move the crop policy only when it is at least as new as the epoch already applied
- // for this account. Missing epoch after one has been applied is stale, not a fresh unlimited grant.
- if(st&&typeof st==='object'&&typeof X.epoch==='number'){
-  if(typeof st.sell_epoch!=='number'||!Number.isSafeInteger(st.sell_epoch)||st.sell_epoch<X.epoch)return policy();}
- if(st&&typeof st.sell_epoch==='number'&&Number.isSafeInteger(st.sell_epoch)&&(X.epoch==null||st.sell_epoch>=X.epoch)){
-  X.epoch=st.sell_epoch;
-  try{const a=(typeof acct==='function'?acct():null);if(a)localStorage.setItem('templeGarden.r9.sellEpoch.'+a,String(X.epoch));}catch(e){}}
+function policy(){return {mode:X.mode,cap:X.cap,uncapped:X.mode==='uncapped'&&!!X.confirmedUncapped,confirmedUncapped:!!X.confirmedUncapped,serverLeft:X.serverLeft,epoch:X.epoch??null,class:X.class||'pending',classified:!!X.classified,pending:policyPending(),gen:X.gen|0,shared:X.mode!=='r9'&&X.mode!=='uncapped'&&X.mode!=='pending'};}
+function persistEpoch(){try{const a=(typeof acct==='function'?acct():null);if(a&&typeof X.epoch==='number')localStorage.setItem('templeGarden.r9.sellEpoch.'+a,String(X.epoch));}catch(e){}}
+function statusKind(st){
+ if(!st||typeof st!=='object')return 'error';
+ if(st.reason==='error')return 'error';
+ if(st.reason==='offline')return 'offline';
+ if(typeof st.sell_epoch==='number'&&Number.isSafeInteger(st.sell_epoch)&&st.sell_epoch>=1)return 'epoch';
+ if(st.sell_uncapped===true||st.sell_uncapped===false||typeof st.sell_left==='number'||st.day)return 'legacy';
+ return 'error';}
+function noteSellStatus(st,fromStatus){
+ // Earn replies never classify this account and cannot open unlimited before status has.
+ if(!fromStatus){
+  if(!X.classified||X.class!=='epoch'||typeof X.epoch!=='number')return policy();
+  if(!st||typeof st.sell_epoch!=='number'||!Number.isSafeInteger(st.sell_epoch)||st.sell_epoch<X.epoch)return policy();
+  X.epoch=st.sell_epoch;persistEpoch();
+  return applyPolicy(reduceSellStatus(policy(),st));}
+ const kind=statusKind(st);
+ if(kind==='error'){scheduleStatusRetry();return policy();}
+ if(kind==='offline'){
+  if(typeof X.epoch==='number'){scheduleStatusRetry();return policy();}
+  X.classified=true;X.class='legacy';
+  return applyPolicy(reduceSellStatus(policy(),st));}
+ if(kind==='epoch'){
+  if(typeof X.epoch==='number'&&st.sell_epoch<X.epoch)return policy();
+  X.epoch=st.sell_epoch;persistEpoch();X.classified=true;X.class='epoch';
+  return applyPolicy(reduceSellStatus(policy(),st));}
+ if(typeof X.epoch==='number'){scheduleStatusRetry();return policy();}
+ X.classified=true;X.class='legacy';
  return applyPolicy(reduceSellStatus(policy(),st));}
 X.reduceSellStatus=reduceSellStatus;X.noteSellStatus=noteSellStatus;X.policy=policy;
 function readStock(id){const raw=S.inventory?S.inventory[id]:undefined;
@@ -13842,28 +13864,42 @@ const take=window.TG_INV_TAKE;if(take)window.TG_INV_TAKE=function(k,id,q){
 
 /* ---------- server mode ---------- */
 const withInflight=c=>{const o={...c};for(const [k,v] of Object.entries(X.inflight))if(v>0)o[k]=(Number(o[k])|0)+v;return o;};
+function backendExpected(){
+ if(hasApi())return true;
+ try{const A=window.TG_AUTH;if(A&&A.userId&&A.online!==false)return true;}catch(e){}
+ return false;}
+function policyPending(){return backendExpected()&&!X.classified;}
+let statusTimer=0;
+function scheduleStatusRetry(){if(statusTimer)return;statusTimer=setTimeout(()=>{statusTimer=0;if(policyPending()||(X.class==='epoch'&&typeof X.epoch==='number'))X.probe();},3000);}
 let probing=null;
-X.probe=function(){if(probing)return probing;probing=(async()=>{
+X.probe=function(){
+ syncAccount();
+ const gen=X.gen|0,a0=acct();
+ if(probing&&probing.gen===gen&&probing.acct===a0)return probing.p;
+ const p=(async()=>{
  const e=econ();
- if(!e){if(!X.confirmedUncapped){noteSellStatus({reason:'offline'});X.mode='local';X.fb='local';}return X;}
- if(!hasApi()){if(!X.confirmedUncapped){X.mode='old-client';X.cap=null;}X.fb='hidden';return X;}
- const a0=acct();
- let st=null;try{st=await e.status();}catch(x){st=null;}
- if(a0&&acct()!==a0)return X;
- noteSellStatus(st);
+ if(!backendExpected()){
+  if(!e){X.classified=true;X.class='local';X.mode='local';X.fb='local';X.confirmedUncapped=false;X.uncapped=false;return X;}
+  if(!hasApi()){X.classified=true;X.class='legacy';X.mode='old-client';X.cap=null;X.fb='hidden';X.confirmedUncapped=false;X.uncapped=false;return X;}}
+ if(!e||!hasApi()){X.mode='pending';X.classified=false;X.class='pending';scheduleStatusRetry();return X;}
+ let st=null;try{st=await e.status();}catch(x){st={reason:'error'};}
+ if((X.gen|0)!==gen||(a0&&acct()!==a0))return X;
+ noteSellStatus(st,true);
  let c=null;try{c=await e.sellbackCredit();}catch(x){}
  if(c&&c.credit&&typeof c.credit==='object'){X.fb='server';X.credit=withInflight(c.credit);X.prices=c.prices&&typeof c.prices==='object'?c.prices:null;X.sbLeft=typeof c.left==='number'?c.left:null;X.seededServer=!!c.seeded;}
  else if(c&&c.reason==='old_schema'){X.fb='hidden';X.credit=null;}
  else if(c&&c.reason==='offline'){X.fb='local';X.credit=null;}
  else if(X.fb!=='server'){X.fb='unknown';}
- return X;})().finally(()=>{probing=null;});return probing;};
+ return X;})().finally(()=>{if(probing&&probing.p===p)probing=null;});
+ probing={p,gen,acct:a0};return p;};
 
 /* ---------- crop / produce sale (no numeric ceiling once the server is uncapped) ---------- */
 function sellCap(){const d=r6Daily(),e=econ(),pol=policy();
+ if(pol.pending)return {cap:null,left:0,used:d.sellCoins|0,shared:false,uncapped:false,pending:true};
  if(pol.uncapped)return {cap:null,left:null,used:d.sellCoins|0,shared:false,uncapped:true};
  if(X.mode==='r9'){const used=d.sellCoins|0,cap=positiveInt(X.cap),local=cap==null?null:Math.max(0,cap-used);
   let L=null;try{const v=e?.left?.('sell');if(typeof v==='number'&&Number.isFinite(v))L=Math.max(0,Math.floor(v));}catch(err){}
-  if(L==null&&cap==null&&typeof X.serverLeft==='number')L=Math.max(0,X.serverLeft-Math.max(0,used-(X.serverUsedAt|0)));
+  if(typeof X.serverLeft==='number'){const fromServer=Math.max(0,X.serverLeft-Math.max(0,used-(X.serverUsedAt|0)));L=L==null?fromServer:Math.min(L,fromServer);}
   let left;if(local==null&&L==null)left=0;else if(local==null)left=L;else if(L==null)left=local;else left=Math.max(0,Math.min(L,local));
   const shown=cap==null?(Number.isSafeInteger(used+left)?used+left:null):cap;
   return {cap:shown,left,used:shown==null?used:shown-left,shared:false,uncapped:false};}
@@ -13874,6 +13910,7 @@ const earnNet=window.r6EarnCoins;   // kept for reference; the r9 version below 
 window.r6EarnCoins=function(n,source,exact){
  if(!r3CanEdit()||!Number.isSafeInteger(n)||n<0)return false;
  source=source||'task';const d=r6Daily(),sell=source==='sell',e=econ();
+ if(sell&&(policyPending()||X.class==='epoch')){toast('正在核对今日的出售规则，这次没有卖');return false;}
  if(sell){const ci=sellCap();if(!ci.uncapped&&n>ci.left){toast(`今日卖作物已满 ${ci.cap} 铜钱，明天再来卖`);return false;}}
  else if((d.coinsEarned|0)+n>SHARED_CAP){toast('今日铜钱已达上限');return false;}
  let got=n;
@@ -13887,18 +13924,19 @@ X.earnNet=earnNet;
 window.r5MeritCoins=function(){if(r3DenyVisit())return false;const d=r6Daily();if(d.meritCoins>=8||d.coinsEarned>=SHARED_CAP)return toast('今日兑换已达上限'),false;if(S.merit<25)return toast('需要 25 善缘'),false;
  S.merit-=25;d.meritCoins++;if(r6EarnCoins(1,'merit'))return true;S.merit+=25;d.meritCoins--;save();renderTop();return false;};
 // item 1: partial 「全卖」
-function saleToast(reason,ci){if(reason==='empty')return toast('背包里没有这份');if(reason==='excess')return toast('不能卖得比拥有的多');if(reason==='bad_qty'||reason==='bad_price')return toast('背包里的数量不对，不能卖');if(reason==='bad_coins'||reason==='unsafe_arith')return toast('数量太大，算不过来，这次没有卖');if(reason==='daily_cap'||reason==='no_room')return toast(`今日卖作物已满 ${ci&&ci.cap!=null?ci.cap:''} 铜钱，明天再来卖`);return toast('这次没有卖成');}
+function saleToast(reason,ci){if(reason==='empty')return toast('背包里没有这份');if(reason==='excess')return toast('不能卖得比拥有的多');if(reason==='bad_qty'||reason==='bad_price')return toast('背包里的数量不对，不能卖');if(reason==='bad_coins'||reason==='unsafe_arith')return toast('数量太大，算不过来，这次没有卖');if(reason==='policy_pending')return toast('正在核对今日的出售规则，这次没有卖');if(reason==='need_confirm')return toast('出售规则还没核对完，这次没有卖');if(reason==='daily_cap'||reason==='no_room')return toast(`今日卖作物已满 ${ci&&ci.cap!=null?ci.cap:''} 铜钱，明天再来卖`);return toast('这次没有卖成');}
 function sellQty(id,qty){
- if(r3DenyVisit())return false;const c=CROP_BY_ID[id]||r3ProduceItem?.(id);if(!c)return false;
+ if(r3DenyVisit())return false;syncAccount();
+ if(policyPending()){saleToast('policy_pending');return false;}
+ const c=CROP_BY_ID[id]||r3ProduceItem?.(id);if(!c)return false;
  const price=c.sell??((c.value||1)*8),ci=sellCap(),coins=coinsNow();
  if(coins==null){saleToast('bad_coins',ci);return false;}
  const stock=readStock(id);if(!stock.ok){saleToast(stock.reason,ci);return openShop('sell'),false;}
  const plan=cropSalePlan({stock:stock.qty,price,qty,coins,policy:ci});
  if(!plan.ok){saleToast(plan.reason,ci);return openShop('sell'),false;}
  const again=readStock(id);if(!again.ok||again.qty<plan.n){saleToast('bad_qty',ci);return openShop('sell'),false;}
- // Server-confirmed settlement only after this account has applied a sell_epoch. Without one, the
- // server is still the old 3-argument econ_earn and the synchronous earn() path stays (the original tests).
- if(typeof X.epoch==='number'&&typeof econ()?.confirmSell==='function'&&(ci.uncapped||X.mode==='r9'))return settleCrop(id,c,plan);
+ // Epoch protocol: reserve first, including the first sale after status. No synchronous coin credit.
+ if(X.class==='epoch'){if(typeof econ()?.confirmSell!=='function'){saleToast('need_confirm');return false;}return settleCrop(id,c,plan);}
  if(!r6EarnCoins(plan.gain,'sell',true))return openShop('sell'),false;
  const live=readStock(id);
  if(!live.ok||live.qty<plan.n){const d=r6Daily();S.coins=Math.max(0,(S.coins||0)-plan.gain);d.sellCoins=Math.max(0,(d.sellCoins|0)-plan.gain);if(!policy().uncapped&&X.mode!=='r9')d.coinsEarned=Math.max(0,(d.coinsEarned|0)-plan.gain);save();renderTop();toast('背包里的数量变了，这笔出售已取消');return openShop('sell'),false;}
@@ -13918,6 +13956,11 @@ X.sellQty=sellQty;X.sellCrop=sellCrop;
 const okP=p=>p&&typeof p==='object'&&isBB(p.id)&&typeof p.req==='string'&&p.req;
 const acct=()=>{try{const A=window.TG_AUTH;if(!A)return 'default';const u=A.userId;return u?String(u):null;}catch(e){return null;}};   // no auth module at all → one local slot; signed out → none
 function loadEpoch(){const a=acct();if(!a){X.epoch=null;return;}try{const raw=localStorage.getItem('templeGarden.r9.sellEpoch.'+a);if(raw==null||raw===''){X.epoch=null;return;}const n=Number(raw);X.epoch=Number.isSafeInteger(n)&&n>=1?n:null;}catch(e){X.epoch=null;}}
+function syncAccount(){const a=acct();if(a===X.boundAcct)return false;X.boundAcct=a;X.gen=(X.gen|0)+1;X.classified=false;X.confirmedUncapped=false;X.uncapped=false;X.cap=null;X.serverLeft=null;X.epoch=null;
+ if(!backendExpected()){X.classified=true;X.class=econ()?'legacy':'local';X.mode=econ()?'old-client':'local';}
+ else{X.class='pending';X.mode='pending';loadEpoch();}
+ return true;}
+X.syncAccount=syncAccount;
 function cropRecOk(x){return !!(x&&typeof x==='object'&&typeof x.req==='string'&&x.req.length>=8&&x.req.length<=64&&typeof x.id==='string'&&Number.isSafeInteger(x.n)&&x.n>0&&Number.isSafeInteger(x.gain)&&x.gain>0&&Number.isSafeInteger(x.price)&&x.price>0&&typeof x.acct==='string');}
 const CROP_KEY=a=>'templeGarden.r9.cropPending.'+a;
 function readCrops(a){try{const v=JSON.parse(localStorage.getItem(CROP_KEY(a))||'[]');return Array.isArray(v)?v.filter(cropRecOk):[];}catch(e){return [];}}
@@ -13938,7 +13981,12 @@ async function applyCropResult(rec,r){
  if(cropApplied(rec.req)){forgetCrop(rec.acct,rec.req);return true;}   // coins were already saved with this request id; do not pay or restore again
  if(r.ok&&(r.granted|0)>0){
   const g=r.granted|0,next=(S.coins||0)+g;
-  if(!Number.isSafeInteger(next)){scheduleCrop();saleToast('unsafe_arith');return false;}   // leave the reservation; do not put the items back while the server grant is still outstanding
+  if(!Number.isSafeInteger(next)){
+   rec.overflows=(rec.overflows|0)+1;rec.pause=rec.overflows>=3?'overflow':rec.pause||'';
+   const cur=(Array.isArray(S.cropPending)?S.cropPending:[]).map(x=>x.req===rec.req?Object.assign({},x,{overflows:rec.overflows,pause:rec.pause}):x);
+   S.cropPending=cur;save();syncCropKey(rec.acct);
+   if(rec.pause==='overflow'){if(cropTimer){clearTimeout(cropTimer);cropTimer=0;}toast('这笔出售商铺已经收下，但铜钱多到加不进去。先花掉一些，再点确认。自动重试已停。');if($('#sheet [data-r9-sell-tab]'))renderSell();return false;}
+   scheduleCrop();toast('铜钱太多，这笔出售还押着。先花掉一些，会再试几次。');return false;}
   const d=r6Daily();S.coins=next;d.sellCoins=(d.sellCoins|0)+g;if(!policy().uncapped&&X.mode!=='r9')d.coinsEarned=(d.coinsEarned|0)+g;markCrop(rec.req);
   const paid=rec.price>0?Math.floor(g/rec.price):rec.n,back=Math.max(0,rec.n-paid);
   if(back>0)S.inventory[rec.id]=(S.inventory[rec.id]|0)+back;
@@ -13961,12 +14009,14 @@ async function retryCrops(){
  const run=(async()=>{
   const a=acct();if(!a||typeof X.epoch!=='number')return;const e=econ();if(typeof e?.confirmSell!=='function')return;
   for(const rec of readPending(a)){if(acct()!==a)return;
+   if(rec.pause==='overflow')continue;
    if(cropApplied(rec.req)){forgetCrop(a,rec.req);continue;}
    if(!(Array.isArray(S.cropPending)&&S.cropPending.some(x=>x.req===rec.req))){S.cropPending=[...(S.cropPending||[]),rec];save();}
    let r;try{r=await e.confirmSell(rec);}catch(err){r={ok:false,reason:'error'};}
    await applyCropResult(rec,r);}})();
  cropRetrying=run.finally(()=>{cropRetrying=null;});return cropRetrying;}
-X.retryCrops=retryCrops;X.loadEpoch=loadEpoch;X.readPending=readPending;
+function resumeCrops(){const a=acct();if(!a)return;S.cropPending=(Array.isArray(S.cropPending)?S.cropPending:[]).map(x=>x&&x.acct===a?Object.assign({},x,{pause:'',overflows:0}):x);save();syncCropKey(a);return retryCrops();}
+X.retryCrops=retryCrops;X.resumeCrops=resumeCrops;X.loadEpoch=loadEpoch;X.readPending=readPending;
 const pkey=a=>PEND_KEY+'.'+a;
 const readList=k=>{try{const v=JSON.parse(localStorage.getItem(k)||'null');return (Array.isArray(v)?v:v?[v]:[]).filter(okP);}catch(e){return [];}};
 function migrateLegacy(a){if(!a)return;let old;try{old=localStorage.getItem(PEND_KEY);}catch(e){return;}if(old==null)return;
@@ -14114,9 +14164,10 @@ X.seedNow=function(){if(seeding)return seeding;seeding=(async()=>{
 
 /* ---------- 卖作物/产物 tab ---------- */
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function cropHoldText(){const a=acct();return (readPending(a)||[]).some(x=>x.pause==='overflow')?'这笔出售商铺已经收下，但铜钱多到加不进去。先花掉一些，再点确认。自动重试已停。':((readPending(a)||[]).length?'有一笔作物出售还在和商铺确认，确认前铜钱还没加上。':'');}
 function cropRows(ci){return [...CROPS,...R3_PRODUCE].filter(c=>{const raw=S.inventory[c.id];return typeof raw==='number'&&Number.isFinite(raw)&&raw!==0;}).map(c=>{const price=c.sell??((c.value||1)*8),raw=S.inventory[c.id],ok=Number.isSafeInteger(raw)&&raw>0;
-  const fit=!ci.uncapped&&ok&&price>0?Math.min(raw,Math.floor((ci.left||0)/price)):raw,off=!ok||(!ci.uncapped&&fit<=0);
-  const note=!ok?' · 数量不对，不能卖':ci.uncapped?'':off?' · 今日已满':fit<raw?` · 今天还能卖 ${fit} 份`:'';
+  const fit=!ci.pending&&!ci.uncapped&&ok&&price>0?Math.min(raw,Math.floor((ci.left||0)/price)):raw,off=!!ci.pending||!ok||(!ci.uncapped&&fit<=0);
+  const note=ci.pending?'':!ok?' · 数量不对，不能卖':ci.uncapped?'':off?' · 今日已满':fit<raw?` · 今天还能卖 ${fit} 份`:'';
   return `<div class="r3-row" data-r9-crop="${c.id}"><span class="r3-emoji">${c.emoji}</span><span><b>${esc(c.name)}</b><small>库存 ${esc(raw)} · 单价 🪙 ${price}${note}</small></span><button class="btn" data-r9-sell="${c.id}" ${off?'disabled style="opacity:.5"':''}>卖 1</button><button class="btn ghost" data-r9-sell-all="${c.id}" ${off?'disabled style="opacity:.5"':''}>全卖</button></div>`;}).join('');}
 function furnRows(){const ids=new Set();for(const c of window.TG_CATALOG)if(['furniture','decor'].includes(c.cat)&&((S.backpack[c.id]|0)>0||isBB(c.id)&&placedOf(S,c.id)>0))ids.add(c.id);
  return [...ids].map(id=>{const c=item(id),bp=S.backpack[id]|0,k=sellableNow(id),why=k>0?reasonOf(id):reasonOf(id)||'这件现在不能卖',ok=k>0&&!why;
@@ -14125,20 +14176,24 @@ function renderSell(){const sheet=$('#sheet'),nav=sheet?.querySelector('.r3-tabs
  while(nav.nextSibling)nav.nextSibling.remove();
  const ci=sellCap(),wrap=document.createElement('div');wrap.dataset.r9SellTab='1';
  const note=ci.uncapped?'':ci.shared?(X.mode==='local'||X.mode==='offline'?'（未联网，和今日事项、善缘兑换共用 40）':'（和今日事项、善缘兑换共用 40）'):'';
- const capLine=ci.uncapped?'按背包数量出售，没有每日铜钱上限':`今日出售 ${ci.used}/${ci.cap}${note}`;
- let html=`<h3>作物 / 产物</h3><p class="r3-balance" id="r9SellCap">${capLine}</p>`+(cropRows(ci)||'<p class="center">背包里还没有作物和产物，去小院收获吧。</p>');
+ const hold=cropHoldText();
+ const capLine=ci.pending?'正在核对今日的出售规则，请稍候':ci.uncapped?'按背包数量出售，没有每日铜钱上限':`今日出售 ${ci.used}/${ci.cap}${note}`;
+ let html=`<h3>作物 / 产物</h3><p class="r3-balance" id="r9SellCap">${capLine}</p>`;
+ if(hold)html+=`<p class="center" id="r9CropHold">${esc(hold)}</p>`+(hold.indexOf('自动重试已停')>=0?'<p class="center"><button class="btn" id="r9CropResume">花掉一些后再确认</button></p>':'');
+ html+=cropRows(ci)||'<p class="center">背包里还没有作物和产物，去小院收获吧。</p>';
  if(X.fb!=='hidden'&&X.fb!=='?'){
   html+=`<h3>回收家具</h3><p class="r3-balance" id="r9SbCap">在商铺买的家具和装饰，收进背包后可按原价一半卖回 · 今日回收 ${sbUsed()}/${SB_CAP}</p>`;
   if(getPends().length)html+=`<p class="center" id="r9SbPend">${serverUp()?'上一笔卖回还在和商铺确认，确认前先不能卖别的家具。':'没有联网：上一笔卖回要等联网后自动确认，确认前先不能卖别的家具。'}</p>`;
   if(visiting())html+='<p class="center">串门时不能卖，回自己家再卖。</p>';
   else html+=furnRows()||'<p class="center">背包里没有可以卖回的家具或装饰。摆着的要先收起。</p>';}
  wrap.innerHTML=html;sheet.append(wrap);
+ const resume=wrap.querySelector('#r9CropResume');if(resume)resume.onclick=()=>{resume.disabled=true;resumeCrops();};
  wrap.querySelectorAll('[data-r9-sell]').forEach(b=>b.onclick=()=>sellCrop(b.dataset.r9Sell,false));
  wrap.querySelectorAll('[data-r9-sell-all]').forEach(b=>b.onclick=()=>sellCrop(b.dataset.r9SellAll,true));
  wrap.querySelectorAll('[data-r9-sellback]').forEach(b=>b.onclick=()=>confirmSell(b.dataset.r9Sellback));}
 X.renderSell=renderSell;
 // r9b (M2): everything the tab shows from the server (mode, credit, quota, prices, pending) — any change re-renders it
-const sig=()=>JSON.stringify([acct(),serverUp(),X.fb,X.mode,X.cap,X.credit,X.sbLeft,X.prices,getPends().map(p=>p.req)]);X.sig=sig;
+const sig=()=>JSON.stringify([acct(),serverUp(),X.fb,X.mode,X.class,X.classified,X.epoch,X.cap,X.credit,X.sbLeft,X.prices,getPends().map(p=>p.req),cropHoldText()]);X.sig=sig;
 const shop=openShop;openShop=function(tab){const out=shop.apply(this,arguments);
  try{if(tab==='sell'){renderSell();
   const before=sig();X.probe().then(()=>{if(!S.sellSeeded||S.sellSeeded==='local'&&X.fb==='server')X.seedNow().then(()=>{if($('#sheet [data-r9-sell-tab]'))renderSell();});
@@ -14163,7 +14218,9 @@ const hv=harvest;harvest=function(){const before=Object.values(S.inventory||{}).
 X.debugState=function(){const d=r6Daily();return {coins:S.coins,merit:S.merit,inventory:Object.assign({},S.inventory),backpack:Object.assign({},S.backpack),sellable:Object.assign({},S.sellable),sellSeeded:S.sellSeeded,sellApplied:(S.sellApplied||[]).slice(),cropApplied:(S.cropApplied||[]).slice(),cropPending:(S.cropPending||[]).slice(),epoch:X.epoch??null,daily:{coinsEarned:d.coinsEarned|0,sellCoins:d.sellCoins|0,sellbackCoins:d.sellbackCoins|0,meritCoins:d.meritCoins|0}};};
 X.debugPatch=function(p){if(!p)return X.debugState();if('coins' in p)S.coins=p.coins;if('merit' in p)S.merit=p.merit;if(p.inventory)S.inventory=Object.assign({},p.inventory);if(p.backpack)S.backpack=Object.assign({},p.backpack);if(p.sellable)S.sellable=Object.assign({},p.sellable);if('sellSeeded' in p)S.sellSeeded=p.sellSeeded;if(p.sellApplied)S.sellApplied=p.sellApplied.slice();if(p.daily){const d=r6Daily();for(const k of ['coinsEarned','sellCoins','sellbackCoins','meritCoins'])if(k in p.daily)d[k]=p.daily[k];}return X.debugState();};
 /* ---------- boot ---------- */
-loadEpoch();
+X.boundAcct=acct();X.gen=1;X.classified=false;X.class='pending';
+if(!backendExpected()){X.classified=true;X.class=econ()?'legacy':'local';X.mode=econ()?'old-client':'local';if(!econ())X.fb='local';else X.fb='hidden';}
+else{X.mode='pending';loadEpoch();}
 setTimeout(()=>{X.probe().then(()=>{if(!S.sellSeeded||(S.sellSeeded==='local'&&X.fb==='server'))X.seedNow();if(getPends().length)retryPending();retryCrops();});},4000);
 window.addEventListener('online',()=>{X.probe().then(()=>{if(getPends().length)retryPending();retryCrops();});});
 window.addEventListener('offline',()=>{if($('#sheet [data-r9-sell-tab]'))renderSell();});
@@ -14172,8 +14229,7 @@ const RES_MSG='这件正在卖回商铺确认中，先不能摆放';
 const pe=window.r3PlacementError;if(typeof pe==='function')r3PlacementError=function(sceneId,it,ignore=-1,restoring=false){if(it&&ignore<0&&!restoring&&isBB(it.id)&&(S.backpack?.[it.id]|0)-reserved(it.id)<=0)return RES_MSG;return pe.apply(this,arguments);};
 const pe6=window.r6PlacementError;if(typeof pe6==='function')window.r6PlacementError=r6PlacementError=function(scene,it,ignore=-1){if(it&&ignore<0&&isBB(it.id)&&(S.backpack?.[it.id]|0)-reserved(it.id)<=0)return RES_MSG;return pe6.apply(this,arguments);};
 // r9c (L1): sign-in / account switch → re-render for the new account and replay only its own records
-let lastAcct=acct();const onAcct=()=>{const a=acct();if(a===lastAcct)return;lastAcct=a;log('acct',a);if(retryTimer){clearTimeout(retryTimer);retryTimer=0;}
- loadEpoch();
+let lastAcct=acct();const onAcct=()=>{if(!syncAccount())return;if(retryTimer){clearTimeout(retryTimer);retryTimer=0;}log('acct',X.boundAcct);
  X.probe().then(()=>{if($('#sheet [data-r9-sell-tab]'))renderSell();if(getPends().length)retryPending();retryCrops();});};
 try{window.TG_AUTH?.onChange?.(()=>setTimeout(onAcct,0));}catch(e){}setInterval(onAcct,5000);
 // another tab finished or added a record → refresh the open tab

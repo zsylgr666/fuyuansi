@@ -1,0 +1,313 @@
+{
+  "passed": 16,
+  "failed": 0,
+  "total": 16,
+  "results": [
+    {
+      "name": "frozen r9g page waits for status and keeps r9f bytes off this file",
+      "ok": true
+    },
+    {
+      "name": "fresh page with status held does not sell or save coins",
+      "ok": true,
+      "detail": {
+        "sold": false,
+        "line": "正在核对今日的出售规则，请稍候",
+        "pol": {
+          "mode": "pending",
+          "cap": null,
+          "uncapped": false,
+          "confirmedUncapped": false,
+          "serverLeft": null,
+          "epoch": null,
+          "class": "pending",
+          "classified": false,
+          "pending": true,
+          "gen": 1,
+          "shared": false
+        },
+        "inv": 80,
+        "coins": 100,
+        "savedCoins": 100,
+        "savedInv": 80,
+        "earn": 80,
+        "sellEarns": 0
+      }
+    },
+    {
+      "name": "an earn reply before the first status does not turn unlimited on",
+      "ok": true,
+      "detail": {
+        "mode": "pending",
+        "cap": null,
+        "uncapped": false,
+        "confirmedUncapped": false,
+        "serverLeft": null,
+        "epoch": null,
+        "class": "pending",
+        "classified": false,
+        "pending": true,
+        "gen": 1,
+        "shared": false
+      }
+    },
+    {
+      "name": "rollback status, arriving first, caps the page and the following 80 pays 60",
+      "ok": true,
+      "detail": {
+        "after": {
+          "pol": {
+            "mode": "r9",
+            "cap": 100,
+            "uncapped": false,
+            "confirmedUncapped": false,
+            "serverLeft": 60,
+            "epoch": 2,
+            "class": "epoch",
+            "classified": true,
+            "pending": false,
+            "gen": 1,
+            "shared": false
+          },
+          "inv": 80,
+          "coins": 100
+        },
+        "end": {
+          "inv": 20,
+          "coins": 160,
+          "earned": 0,
+          "sell": 60,
+          "pol": {
+            "mode": "r9",
+            "cap": 100,
+            "uncapped": false,
+            "confirmedUncapped": false,
+            "serverLeft": 0,
+            "epoch": 2,
+            "class": "epoch",
+            "classified": true,
+            "pending": false,
+            "gen": 1,
+            "shared": false
+          },
+          "savedCoins": 160,
+          "savedInv": 20,
+          "pending": 0
+        }
+      }
+    },
+    {
+      "name": "delayed-status page had no uncaught error",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "name": "a refused first settlement restores the crop and does not keep coins",
+      "ok": true,
+      "detail": {
+        "mid": {
+          "inv": 0,
+          "coins": 50,
+          "pending": 1,
+          "pol": {
+            "mode": "uncapped",
+            "cap": null,
+            "uncapped": true,
+            "confirmedUncapped": true,
+            "serverLeft": null,
+            "epoch": 4,
+            "class": "epoch",
+            "classified": true,
+            "pending": false,
+            "gen": 1,
+            "shared": false
+          }
+        },
+        "ok": false,
+        "inv": 30,
+        "coins": 50,
+        "savedCoins": 50,
+        "savedInv": 30,
+        "pol": {
+          "mode": "uncapped",
+          "cap": null,
+          "uncapped": true,
+          "confirmedUncapped": true,
+          "serverLeft": null,
+          "epoch": 4,
+          "class": "epoch",
+          "classified": true,
+          "pending": false,
+          "gen": 1,
+          "shared": false
+        }
+      }
+    },
+    {
+      "name": "refusal page had no uncaught error",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "name": "a first status error stays pending and does not sell",
+      "ok": true,
+      "detail": {
+        "pol": {
+          "mode": "pending",
+          "cap": null,
+          "uncapped": false,
+          "confirmedUncapped": false,
+          "serverLeft": null,
+          "epoch": null,
+          "class": "pending",
+          "classified": false,
+          "pending": true,
+          "gen": 1,
+          "shared": false
+        },
+        "sold": false,
+        "inv": 12,
+        "coins": 7
+      }
+    },
+    {
+      "name": "status retry then an unlimited first sale pays the whole stack",
+      "ok": true,
+      "detail": {
+        "afterErr": {
+          "pol": {
+            "mode": "pending",
+            "cap": null,
+            "uncapped": false,
+            "confirmedUncapped": false,
+            "serverLeft": null,
+            "epoch": null,
+            "class": "pending",
+            "classified": false,
+            "pending": true,
+            "gen": 1,
+            "shared": false
+          },
+          "sold": false,
+          "inv": 12,
+          "coins": 7
+        },
+        "ok": true,
+        "inv": 0,
+        "coins": 19,
+        "pol": {
+          "mode": "uncapped",
+          "cap": null,
+          "uncapped": true,
+          "confirmedUncapped": true,
+          "serverLeft": null,
+          "epoch": 6,
+          "class": "epoch",
+          "classified": true,
+          "pending": false,
+          "gen": 1,
+          "shared": false
+        }
+      }
+    },
+    {
+      "name": "status-error page had no uncaught error",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "name": "switching account before the first status drops the previous policy",
+      "ok": true,
+      "detail": {
+        "pol": {
+          "mode": "pending",
+          "cap": null,
+          "uncapped": false,
+          "confirmedUncapped": false,
+          "serverLeft": null,
+          "epoch": null,
+          "class": "pending",
+          "classified": false,
+          "pending": true,
+          "gen": 2,
+          "shared": false
+        },
+        "acct": "B",
+        "soldB": false,
+        "inv": 9,
+        "coins": 3
+      }
+    },
+    {
+      "name": "the new account sells only after its own status, and the first sale pays",
+      "ok": true,
+      "detail": {
+        "mid": {
+          "pol": {
+            "mode": "pending",
+            "cap": null,
+            "uncapped": false,
+            "confirmedUncapped": false,
+            "serverLeft": null,
+            "epoch": null,
+            "class": "pending",
+            "classified": false,
+            "pending": true,
+            "gen": 2,
+            "shared": false
+          },
+          "acct": "B",
+          "soldB": false,
+          "inv": 9,
+          "coins": 3
+        },
+        "ok": true,
+        "inv": 0,
+        "coins": 12,
+        "pol": {
+          "mode": "uncapped",
+          "cap": null,
+          "uncapped": true,
+          "confirmedUncapped": true,
+          "serverLeft": null,
+          "epoch": 8,
+          "class": "epoch",
+          "classified": true,
+          "pending": false,
+          "gen": 2,
+          "shared": false
+        }
+      }
+    },
+    {
+      "name": "account-switch page had no uncaught error",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "name": "a grant that does not fit stops retrying and shows why, without adding coins",
+      "ok": true,
+      "detail": {
+        "coins": 9007199254740991,
+        "inv": 3,
+        "pending": 1,
+        "text": "这笔出售商铺已经收下，但铜钱多到加不进去。先花掉一些，再点确认。自动重试已停。",
+        "btn": true
+      }
+    },
+    {
+      "name": "after coins are spent, one confirmation pays the reserved crop",
+      "ok": true,
+      "detail": {
+        "coins": 11,
+        "inv": 3,
+        "pending": 0
+      }
+    },
+    {
+      "name": "overflow page had no uncaught error",
+      "ok": true,
+      "detail": []
+    }
+  ]
+}

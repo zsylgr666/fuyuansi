@@ -287,3 +287,57 @@ Diffs from r9e: `qa/r9f-uncap/r9-sell-from-r9e.patch`, `qa/r9f-uncap/tg-r6-from-
 
 No fortune stalls. No merge, no deploy, no live SQL, no player-data changes.
 
+## Follow-up: r9g, no sale before status
+
+r9f is unchanged: `v4/index.r9f.html` sha256 `1e0b4ce1fd29d4403e9c1a527f5d03ed3cf1a00404c2e553fbeb9a93b0654d54`, 1,895,667 bytes. `backend/tg-r6.js` is unchanged, sha256 `c30727d8509cc5f12e68fd9a6e4502f3470e814246dca7d25d232799857a9682`. There is no new SQL. The r9f epoch drafts are still the server protocol. Isolated SQL was re-run: **48/48**.
+
+r9f left a hole on the new page. Until the first `sell_epoch` arrived, a crop sale used the synchronous `earn()` path. Selling before status returned, or while status was delayed, could save coins the server later refused. That gate was not closed.
+
+### What r9g does
+
+A shop that can answer `status`, and a signed-in account whose client is not loaded yet, does not sell crops until status has classified that account. Inventory and coins stay as they were. The crop tab says `正在核对今日的出售规则，请稍候` and the sell buttons are disabled. An earn reply cannot perform that classification. `sell_uncapped: true` arriving before status does not turn unlimited on.
+
+A status `error`, or a thrown status call, stays pending and is retried. It is not turned into the offline shared 40. A status that omits `sell_epoch` after this account has already stored one does not downgrade the account to the synchronous path either.
+
+Once status carries `sell_epoch`, the class is `epoch` and every crop sale, including the first, reserves the items and adds coins only when that request is granted. A hard refusal puts the items back in the same save.
+
+Switching account bumps a generation, clears the in-memory mode, and loads only the new account's stored epoch. The previous account's in-flight status is dropped. The new account cannot sell until its own status arrives, so it does not inherit unlimited and it does not get an optimistic window.
+
+These paths stay on the old rules, and only after they have been told apart from a pending shop:
+
+- No shop client at all, and nobody is signed in: local shared 40.
+- Shop client without the r9 functions: old-client shared 40.
+- Status with a numeric `sell_left` and no `sell_epoch`: the legacy r9 cap, synchronous `earn()`.
+- Status with a day and no sell fields: old-server shared 40.
+- Explicit `offline`, and this account has never stored an epoch: offline shared 40.
+
+The original 84 assertions were not edited. That harness already awaits `probe()` before it sells, so it never sits in the new waiting state. **84/84.**
+
+If a confirmed grant does not fit in the safe integer range, the reservation stays and the items stay reserved. Automatic retry stops on the third overflow. The tab shows `这笔出售商铺已经收下，但铜钱多到加不进去。先花掉一些，再点确认。自动重试已停。` and a button. Spending coins and pressing it pays once.
+
+### Counts on r9g
+
+- First-status sequences, fresh storage, real `tg-r6.js`: **16/16**. `qa/r9g/first-status.mjs`. Covered: status held, stale earn before status, rollback as the first status then 80 cabbage pays 60, refused settlement restores the stack, status error then retry, account switch before the first response, unlimited first sale, overflow stop and one later confirmation.
+- Original selltest: **84/84**, no assertion edits. `qa/r9g/selltest-r9g.json`.
+- Entry and steady draw, both orientations: errors 0. Highest entry frame 98 (portrait plaza). Highest steady frame 80 (landscape plaza). `qa/r9g/smoke-entry.json`.
+
+### Checksums
+
+- `v4/index.r9g.html` sha256 `b19a1d8b44f9a47625c3c4304c4317acf7129ec02716ad0fcab4a89311245028`, 1,900,574 bytes
+- site `index.html` sha256 `c8920f16c44dfa331ad0801fa6a1870ce4032d2733aaafc6de8c6503580a0c90`, 2,376,677 bytes
+- snapshot `qa/r9g-uncap/source-snapshot.tar.gz` sha256 `edaf8c83406692009c947cd5436e8b3fb257ae3b35a737401e6eae22aaa47f87`, 847,851 bytes
+
+Diff from r9f: `qa/r9g-uncap/r9-sell-from-r9f.patch`.
+
+### Limits that remain
+
+- After status has classified the server as legacy (no `sell_epoch`), crop sales still credit through synchronous `earn()`. A later refusal on that old server can still leave coins. The new page does not do that before classification, and it does not do that once `sell_epoch` is known.
+- An already-open r9b page still credits before the server answers. Loading r9g is the gate.
+- An account that has stored an epoch keeps waiting if a later status has no epoch. Sales stay blocked instead of falling back to the shared 40.
+- Explicit offline with no stored epoch still uses the shared 40. That is the offline rule the original tests require.
+- Two browser tabs can still last-write-wins a crop save.
+- The r9e rollback still has no epoch. Roll r9f/r9g back with `backend/r9f-uncap-rollback.sql`.
+
+No fortune stalls. No merge, no deploy, no live SQL, no player-data changes.
+
+
