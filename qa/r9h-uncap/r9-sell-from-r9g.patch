@@ -1,0 +1,134 @@
+--- /workspace/qa/r9g-uncap/src/r9-sell.js	2026-11-16 11:04:08.132601395 +0000
++++ /workspace/qa/r9h-uncap/src/r9-sell.js	2026-11-16 11:39:31.483287316 +0000
+@@ -1,5 +1,5 @@
+ /* r9 part 1 — 卖作物/产物 + 回收家具 front end.
+- * r9g hotfix: crops/produce have NO daily coin ceiling once the server says sell_uncapped.
++ * r9h hotfix: crops/produce have NO daily coin ceiling once the server says sell_uncapped.
+  *   That is the absence of a cap, not a larger number. Owned quantity still has to be a safe integer,
+  *   and the coin total has to stay inside Number.MAX_SAFE_INTEGER.
+  *   A positive numeric sell_left (legacy r9, usually 100) is honoured only until this page has seen
+@@ -9,9 +9,9 @@
+  *   An earn reply carries the epoch it was decided under. A reply whose epoch is older than the
+  *   epoch already applied, or a reply with no epoch after one has been applied, cannot change mode.
+  *   In server mode a crop sale reserves inventory and adds coins only when that request is confirmed.
+- *   r9g: a signed-in shop does not sell, and does not change coins or inventory, until status has classified
+- *   this account. An earn reply cannot do that classification. A status error stays pending and is retried.
+- *   It is not treated as the offline 40. Once status carries sell_epoch, the first sale uses the reservation too.
++ *   r9h: only a status() reply may change crop mode. An earn reply settles its own grant and cannot
++ *   reopen or revoke unlimited, even when its sell_epoch is equal or newer. Grants are full safe integers;
++ *   a value above 2^31-1 is not a failure. Crop receipts are stored so a save merge can keep them.
+  *   While uncapped, a status may also carry sell_cap/sell_left 100. Those numbers are the legacy
+  *   advertisement already-open r9b/r9c pages need so they do not fall onto the shared 40.
+  *   This page ignores them. Pre-r9 servers, and offline before any uncapped confirmation, keep
+@@ -23,7 +23,7 @@
+  * - Entries: backpack button, 花木铺 prompt, hint after harvest.
+  * The fortune stalls are NOT here. window.TG_R9 is the shared namespace. Save key stays templeGarden.v1. */
+ (()=>{
+-const R=window.TG_R9=Object.assign(window.TG_R9||{},{sell:{version:'r9g',mode:'?',cap:null,uncapped:false,confirmedUncapped:false,serverLeft:null,epoch:null,class:'pending',classified:false,gen:1,fb:'?',credit:null,prices:null,sbLeft:null,seed:null,log:[]}});
++const R=window.TG_R9=Object.assign(window.TG_R9||{},{sell:{version:'r9h',mode:'?',cap:null,uncapped:false,confirmedUncapped:false,serverLeft:null,epoch:null,class:'pending',classified:false,gen:1,fb:'?',credit:null,prices:null,sbLeft:null,seed:null,log:[]}});
+ const X=R.sell;
+ const BUYBACK=['wood-table','bench','cabinet','daybed','altar-table','rocking-chair','vase','lantern','bonsai','screen','cushion'];
+ const STARTER={cushion:1,vase:1},SHARED_CAP=40,SB_CAP=400,SEED_BUDGET=1000,SEED_PER=10;
+@@ -71,13 +71,11 @@
+  if(typeof st.sell_epoch==='number'&&Number.isSafeInteger(st.sell_epoch)&&st.sell_epoch>=1)return 'epoch';
+  if(st.sell_uncapped===true||st.sell_uncapped===false||typeof st.sell_left==='number'||st.day)return 'legacy';
+  return 'error';}
++function asCount(v){const n=typeof v==='number'?v:(typeof v==='string'&&/^(?:0|[1-9]\d*)$/.test(v)?Number(v):NaN);return Number.isSafeInteger(n)&&n>=0?n:null;}
++X.asCount=asCount;
+ function noteSellStatus(st,fromStatus){
+- // Earn replies never classify this account and cannot open unlimited before status has.
+- if(!fromStatus){
+-  if(!X.classified||X.class!=='epoch'||typeof X.epoch!=='number')return policy();
+-  if(!st||typeof st.sell_epoch!=='number'||!Number.isSafeInteger(st.sell_epoch)||st.sell_epoch<X.epoch)return policy();
+-  X.epoch=st.sell_epoch;persistEpoch();
+-  return applyPolicy(reduceSellStatus(policy(),st));}
++ // Provenance: an earn/confirm reply never changes mode or epoch. Only status() may.
++ if(!fromStatus)return policy();
+  const kind=statusKind(st);
+  if(kind==='error'){scheduleStatusRetry();return policy();}
+  if(kind==='offline'){
+@@ -126,8 +124,11 @@
+  d.sellable=out;if(d.sellSeeded!==true&&d.sellSeeded!=='local')delete d.sellSeeded;
+  // r9c (L3): request ids this save has already been credited for (kept with the save, last 64)
+  if(Array.isArray(d.sellApplied))d.sellApplied=d.sellApplied.filter(x=>typeof x==='string'&&x.length<=64).slice(-64);else delete d.sellApplied;
+- if(Array.isArray(d.cropApplied))d.cropApplied=d.cropApplied.filter(x=>typeof x==='string'&&x.length<=64).slice(-64);else delete d.cropApplied;
+- if(Array.isArray(d.cropPending))d.cropPending=d.cropPending.filter(cropRecOk).slice(-16);else delete d.cropPending;}
++ if(Array.isArray(d.cropApplied)){const o={};for(const x of d.cropApplied)if(typeof x==='string'&&x.length<=64)o[x]=1;d.cropApplied=o;}
++ else if(d.cropApplied&&typeof d.cropApplied==='object'){const o={};for(const k of Object.keys(d.cropApplied))if(typeof k==='string'&&k.length<=64&&d.cropApplied[k])o[k]=1;d.cropApplied=o;}
++ else delete d.cropApplied;
++ const plist=Array.isArray(d.cropPending)?d.cropPending:(d.cropPending&&typeof d.cropPending==='object'?Object.keys(d.cropPending).map(k=>d.cropPending[k]):[]);
++ const pmap={};for(const rec of plist)if(cropRecOk(rec))pmap[rec.req]=rec;if(Object.keys(pmap).length)d.cropPending=pmap;else delete d.cropPending;}
+ X.sanitize=sanitizeSellable;
+ const san=sanitizeR4;sanitizeR4=function(d){const out=san.apply(this,arguments);try{sanitizeSellable(d);}catch(e){}return out;};
+ try{sanitizeSellable(S);}catch(e){}
+@@ -251,33 +252,34 @@
+ const CROP_KEY=a=>'templeGarden.r9.cropPending.'+a;
+ function readCrops(a){try{const v=JSON.parse(localStorage.getItem(CROP_KEY(a))||'[]');return Array.isArray(v)?v.filter(cropRecOk):[];}catch(e){return [];}}
+ function writeCrops(a,l){try{l&&l.length?localStorage.setItem(CROP_KEY(a),JSON.stringify(l)):localStorage.removeItem(CROP_KEY(a));}catch(e){}}
+-function cropApplied(req){return Array.isArray(S.cropApplied)&&S.cropApplied.includes(req);}
+-function markCrop(req){S.cropApplied=[...(S.cropApplied||[]).filter(x=>x!==req),req].slice(-64);}
+-function syncCropKey(a){writeCrops(a,(Array.isArray(S.cropPending)?S.cropPending:[]).filter(x=>x&&x.acct===a));}
+-function rememberCrop(rec){S.cropPending=[...(Array.isArray(S.cropPending)?S.cropPending:[]).filter(x=>x.req!==rec.req),rec].slice(-16);save();syncCropKey(rec.acct);}
+-function forgetCrop(a,req){S.cropPending=(Array.isArray(S.cropPending)?S.cropPending:[]).filter(x=>x.req!==req);if(!S.cropPending.length)delete S.cropPending;save();syncCropKey(a);}
+-function readPending(a){const fromS=(Array.isArray(S.cropPending)?S.cropPending:[]).filter(x=>x&&x.acct===a&&cropRecOk(x));const map=new Map(readCrops(a).map(x=>[x.req,x]));for(const x of fromS)map.set(x.req,x);return [...map.values()];}
++function cropApplied(req){const a=S.cropApplied;if(Array.isArray(a))return a.includes(req);return !!(a&&typeof a==='object'&&a[req]);}
++function markCrop(req){const o=S.cropApplied&&typeof S.cropApplied==='object'&&!Array.isArray(S.cropApplied)?Object.assign({},S.cropApplied):{};if(Array.isArray(S.cropApplied))for(const x of S.cropApplied)if(typeof x==='string')o[x]=1;o[req]=1;const keys=Object.keys(o);if(keys.length>64)for(const k of keys.slice(0,keys.length-64))delete o[k];S.cropApplied=o;}
++function pendingMap(raw){const o={};const list=Array.isArray(raw)?raw:(raw&&typeof raw==='object'?Object.keys(raw).map(k=>raw[k]):[]);for(const rec of list)if(cropRecOk(rec))o[rec.req]=rec;return o;}
++function syncCropKey(a){writeCrops(a,Object.values(pendingMap(S.cropPending)).filter(x=>x.acct===a));}
++function rememberCrop(rec){const o=pendingMap(S.cropPending);o[rec.req]=rec;S.cropPending=o;save();syncCropKey(rec.acct);}
++function forgetCrop(a,req){const o=pendingMap(S.cropPending);delete o[req];if(Object.keys(o).length)S.cropPending=o;else delete S.cropPending;save();syncCropKey(a);}
++function readPending(a){const map=new Map(readCrops(a).map(x=>[x.req,x]));for(const rec of Object.values(pendingMap(S.cropPending)))if(rec.acct===a)map.set(rec.req,rec);return [...map.values()];}
+ let cropTimer=0;
+ function scheduleCrop(){if(cropTimer)return;cropTimer=setTimeout(()=>{cropTimer=0;retryCrops();},5000);}
+ async function applyCropResult(rec,r){
+  if(!rec||!rec.acct)return false;
+  if(acct()!==rec.acct)return false;   // another account is on screen; the reservation stays for the account that started it
+  if(!r||r.reason==='error'||r.reason==='offline'){scheduleCrop();return false;}
+- if(r.sell_uncapped===true||r.sell_uncapped===false||typeof r.sell_epoch==='number')noteSellStatus(r);
+  if(cropApplied(rec.req)){forgetCrop(rec.acct,rec.req);return true;}   // coins were already saved with this request id; do not pay or restore again
+- if(r.ok&&(r.granted|0)>0){
+-  const g=r.granted|0,next=(S.coins||0)+g;
++ const g=asCount(r.granted);
++ if(r.ok&&g!=null&&g>0){
++  const coins=asCount(S.coins)??0,next=coins+g;
+   if(!Number.isSafeInteger(next)){
+    rec.overflows=(rec.overflows|0)+1;rec.pause=rec.overflows>=3?'overflow':rec.pause||'';
+-   const cur=(Array.isArray(S.cropPending)?S.cropPending:[]).map(x=>x.req===rec.req?Object.assign({},x,{overflows:rec.overflows,pause:rec.pause}):x);
++   const cur=pendingMap(S.cropPending);if(cur[rec.req])cur[rec.req]=Object.assign({},cur[rec.req],{overflows:rec.overflows,pause:rec.pause});
+    S.cropPending=cur;save();syncCropKey(rec.acct);
+    if(rec.pause==='overflow'){if(cropTimer){clearTimeout(cropTimer);cropTimer=0;}toast('这笔出售商铺已经收下，但铜钱多到加不进去。先花掉一些，再点确认。自动重试已停。');if($('#sheet [data-r9-sell-tab]'))renderSell();return false;}
+    scheduleCrop();toast('铜钱太多，这笔出售还押着。先花掉一些，会再试几次。');return false;}
+-  const d=r6Daily();S.coins=next;d.sellCoins=(d.sellCoins|0)+g;if(!policy().uncapped&&X.mode!=='r9')d.coinsEarned=(d.coinsEarned|0)+g;markCrop(rec.req);
++  const d=r6Daily();S.coins=next;const sold=asCount(d.sellCoins)??0;if(Number.isSafeInteger(sold+g))d.sellCoins=sold+g;if(!policy().uncapped&&X.mode!=='r9'){const earned=asCount(d.coinsEarned)??0;if(Number.isSafeInteger(earned+g))d.coinsEarned=earned+g;}markCrop(rec.req);
+   const paid=rec.price>0?Math.floor(g/rec.price):rec.n,back=Math.max(0,rec.n-paid);
+-  if(back>0)S.inventory[rec.id]=(S.inventory[rec.id]|0)+back;
++  if(back>0){const have=asCount(S.inventory[rec.id])??0;S.inventory[rec.id]=have+back;}
+   forgetCrop(rec.acct,rec.req);renderTop();toast(`已卖出 ${rec.name}×${paid}，得 ${g} 铜钱`);return true;}
+- S.inventory[rec.id]=(S.inventory[rec.id]|0)+rec.n;forgetCrop(rec.acct,rec.req);renderTop();
++ const have=asCount(S.inventory[rec.id])??0;S.inventory[rec.id]=have+rec.n;forgetCrop(rec.acct,rec.req);renderTop();
+  saleToast(r.reason==='daily_cap'?'daily_cap':'bad_qty',sellCap());return false;}
+ async function settleCrop(id,c,plan){
+  const a=acct();if(!a){saleToast('bad_qty');return false;}
+@@ -297,11 +299,11 @@
+   for(const rec of readPending(a)){if(acct()!==a)return;
+    if(rec.pause==='overflow')continue;
+    if(cropApplied(rec.req)){forgetCrop(a,rec.req);continue;}
+-   if(!(Array.isArray(S.cropPending)&&S.cropPending.some(x=>x.req===rec.req))){S.cropPending=[...(S.cropPending||[]),rec];save();}
++   if(!pendingMap(S.cropPending)[rec.req]){const o=pendingMap(S.cropPending);o[rec.req]=rec;S.cropPending=o;save();}
+    let r;try{r=await e.confirmSell(rec);}catch(err){r={ok:false,reason:'error'};}
+    await applyCropResult(rec,r);}})();
+  cropRetrying=run.finally(()=>{cropRetrying=null;});return cropRetrying;}
+-function resumeCrops(){const a=acct();if(!a)return;S.cropPending=(Array.isArray(S.cropPending)?S.cropPending:[]).map(x=>x&&x.acct===a?Object.assign({},x,{pause:'',overflows:0}):x);save();syncCropKey(a);return retryCrops();}
++function resumeCrops(){const a=acct();if(!a)return;const o=pendingMap(S.cropPending);for(const rec of Object.values(o))if(rec.acct===a){rec.pause='';rec.overflows=0;}S.cropPending=o;save();syncCropKey(a);return retryCrops();}
+ X.retryCrops=retryCrops;X.resumeCrops=resumeCrops;X.loadEpoch=loadEpoch;X.readPending=readPending;
+ const pkey=a=>PEND_KEY+'.'+a;
+ const readList=k=>{try{const v=JSON.parse(localStorage.getItem(k)||'null');return (Array.isArray(v)?v:v?[v]:[]).filter(okP);}catch(e){return [];}};
+@@ -501,7 +503,7 @@
+   const room=sellCap();if(after>before&&now-lastHint>180000&&(room.uncapped||room.left>0)&&!visiting()){lastHint=now;setTimeout(()=>toast('收获的作物可以到集市花木铺「卖作物 · 换铜钱」，也可从背包直接去卖'),1600);}}).catch(()=>{});return out;};
+ 
+ // Test seam. Reads and writes the save the sale code already closes over. It does not change prices, caps, or request-id rules.
+-X.debugState=function(){const d=r6Daily();return {coins:S.coins,merit:S.merit,inventory:Object.assign({},S.inventory),backpack:Object.assign({},S.backpack),sellable:Object.assign({},S.sellable),sellSeeded:S.sellSeeded,sellApplied:(S.sellApplied||[]).slice(),cropApplied:(S.cropApplied||[]).slice(),cropPending:(S.cropPending||[]).slice(),epoch:X.epoch??null,daily:{coinsEarned:d.coinsEarned|0,sellCoins:d.sellCoins|0,sellbackCoins:d.sellbackCoins|0,meritCoins:d.meritCoins|0}};};
++X.debugState=function(){const d=r6Daily();return {coins:S.coins,merit:S.merit,inventory:Object.assign({},S.inventory),backpack:Object.assign({},S.backpack),sellable:Object.assign({},S.sellable),sellSeeded:S.sellSeeded,sellApplied:(S.sellApplied||[]).slice(),cropApplied:S.cropApplied&&typeof S.cropApplied==='object'&&!Array.isArray(S.cropApplied)?Object.keys(S.cropApplied):(Array.isArray(S.cropApplied)?S.cropApplied.slice():[]),cropPending:Object.values(pendingMap(S.cropPending)),epoch:X.epoch??null,daily:{coinsEarned:d.coinsEarned|0,sellCoins:d.sellCoins|0,sellbackCoins:d.sellbackCoins|0,meritCoins:d.meritCoins|0}};};
+ X.debugPatch=function(p){if(!p)return X.debugState();if('coins' in p)S.coins=p.coins;if('merit' in p)S.merit=p.merit;if(p.inventory)S.inventory=Object.assign({},p.inventory);if(p.backpack)S.backpack=Object.assign({},p.backpack);if(p.sellable)S.sellable=Object.assign({},p.sellable);if('sellSeeded' in p)S.sellSeeded=p.sellSeeded;if(p.sellApplied)S.sellApplied=p.sellApplied.slice();if(p.daily){const d=r6Daily();for(const k of ['coinsEarned','sellCoins','sellbackCoins','meritCoins'])if(k in p.daily)d[k]=p.daily[k];}return X.debugState();};
+ /* ---------- boot ---------- */
+ X.boundAcct=acct();X.gen=1;X.classified=false;X.class='pending';

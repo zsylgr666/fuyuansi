@@ -1,0 +1,165 @@
+{
+ "results": [
+  {
+   "name": "N1 uncapped true ignores the advertised 100 and sells the whole stack",
+   "ok": true,
+   "detail": {
+    "sold": true,
+    "inv": 0,
+    "coins": 500,
+    "earned": 0,
+    "pol": {
+     "mode": "uncapped",
+     "cap": null,
+     "uncapped": true,
+     "confirmedUncapped": true,
+     "serverLeft": null,
+     "shared": false
+    }
+   }
+  },
+  {
+   "name": "N2 a stale numeric status does not restore the cap",
+   "ok": true,
+   "detail": {
+    "soldStale": true,
+    "inv": 0,
+    "coins": 530,
+    "pol": {
+     "mode": "uncapped",
+     "cap": null,
+     "uncapped": true,
+     "confirmedUncapped": true,
+     "serverLeft": null,
+     "shared": false
+    }
+   }
+  },
+  {
+   "name": "N3 explicit sell_uncapped false revokes unlimited with no reload",
+   "ok": true,
+   "detail": {
+    "beforeCap": {
+     "cap": 100,
+     "left": 100,
+     "used": 0,
+     "shared": false,
+     "uncapped": false
+    },
+    "pol": {
+     "mode": "r9",
+     "cap": 100,
+     "uncapped": false,
+     "confirmedUncapped": false,
+     "serverLeft": 0,
+     "shared": false
+    },
+    "cap": {
+     "cap": 100,
+     "left": 0,
+     "used": 100,
+     "shared": false,
+     "uncapped": false
+    },
+    "soldBack": true,
+    "inv": 50,
+    "coins": 630,
+    "earned": 0,
+    "sellCoins": 100
+   }
+  },
+  {
+   "name": "N4 new page had no uncaught error",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "name": "O1 old page + null sell_left falls onto the shared 40 and records coinsEarned",
+   "ok": true,
+   "detail": {
+    "mode": "old-server",
+    "cap": 40,
+    "line": "今日出售 40/40（和今日事项、善缘兑换共用 40）",
+    "melon": 5,
+    "earned": 40,
+    "sell": 40,
+    "coins": 90
+   }
+  },
+  {
+   "name": "O2 old page + numeric sell_left 100 sells past 40 and does not touch the task pool",
+   "ok": true,
+   "detail": {
+    "mid": {
+     "mode": "r9",
+     "cap": 100,
+     "melon": 8,
+     "earned": 0,
+     "sell": 96,
+     "coins": 146,
+     "line": "今日出售 96/100"
+    },
+    "melon": 8,
+    "cabbage": 6,
+    "earned": 0,
+    "sell": 100,
+    "coins": 150
+   }
+  },
+  {
+   "name": "O3 old page still stops at its own 100",
+   "ok": true,
+   "detail": {
+    "mid": {
+     "mode": "r9",
+     "cap": 100,
+     "melon": 8,
+     "earned": 0,
+     "sell": 96,
+     "coins": 146,
+     "line": "今日出售 96/100"
+    },
+    "melon": 8,
+    "cabbage": 6,
+    "earned": 0,
+    "sell": 100,
+    "coins": 150
+   }
+  },
+  {
+   "name": "O4 old page lost sell-back reply keeps the item, retry pays once",
+   "ok": true,
+   "detail": {
+    "before": {
+     "coins": 100,
+     "bp": 1,
+     "fb": "server"
+    },
+    "mid": {
+     "coins": 100,
+     "bp": 1,
+     "pend": 1,
+     "fb": "server",
+     "last": {
+      "ok": false,
+      "reason": "error",
+      "req": "sell-mwj35bsw-avo5vm9t"
+     },
+     "calls": 3,
+     "why": "上一笔卖回还在确认，请稍候",
+     "now": 1
+    },
+    "after": {
+     "coins": 130,
+     "bp": 0,
+     "pend": 0
+    }
+   }
+  },
+  {
+   "name": "O5 old page had no uncaught error",
+   "ok": true,
+   "detail": []
+  }
+ ]
+}

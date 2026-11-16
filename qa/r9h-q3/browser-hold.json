@@ -1,0 +1,1176 @@
+{
+  "passed": 12,
+  "failed": 0,
+  "total": 12,
+  "results": [
+    {
+      "name": "device A saves through real save_put and a pre-hold grant is stored",
+      "ok": true,
+      "detail": {
+        "rev": 1,
+        "status": "synced",
+        "epoch": 1,
+        "pre": {
+          "ok": true,
+          "cap": 100,
+          "left": 100,
+          "granted": 5,
+          "sell_cap": 100,
+          "crop_hold": false,
+          "sell_left": 100,
+          "sell_epoch": 1,
+          "sell_uncapped": true
+        }
+      }
+    },
+    {
+      "name": "device B boots onto the cloud save without a pause",
+      "ok": true,
+      "detail": {
+        "q": false,
+        "coins": 100,
+        "cabbage": 12
+      }
+    },
+    {
+      "name": "device B adopts the current revision",
+      "ok": true,
+      "detail": {
+        "rev": 2,
+        "coins": 100,
+        "cabbage": 12,
+        "q": false,
+        "epoch": 1
+      }
+    },
+    {
+      "name": "both directions of the conflict are stored and the committed state is not merged",
+      "ok": true,
+      "detail": {
+        "rev": "3",
+        "state": {
+          "v": 1,
+          "tea": {
+            "messages": []
+          },
+          "_wid": "mwjd6qz6-06pxacib",
+          "muyu": 0,
+          "view": "tp",
+          "coins": 90,
+          "daily": {
+            "date": "2026-11-16",
+            "tasks": {
+              "feed": 0,
+              "collect": 0,
+              "harvest": 0,
+              "incense": 0
+            },
+            "claimed": false,
+            "meritKoi": 0,
+            "meritZen": 0,
+            "meritMuyu": 0,
+            "sellCoins": 0,
+            "meritCoins": 0,
+            "meritOffer": 0,
+            "meritSutra": 0,
+            "stealCoins": 0,
+            "coinsEarned": 0,
+            "meritIncense": 0,
+            "sellbackCoins": 0
+          },
+          "decor": {
+            "home": [],
+            "yard": []
+          },
+          "lotus": {
+            "date": "",
+            "pods": 0
+          },
+          "merit": 9,
+          "plots": [
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+          ],
+          "scene": "plaza",
+          "avatar": {
+            "v": 1,
+            "acc": {
+              "back": "none",
+              "hand": "none",
+              "head": "none",
+              "neck": "none",
+              "waist": "none"
+            },
+            "face": "oval",
+            "hair": "bun",
+            "name": "",
+            "skin": "#f0cba8",
+            "trim": "#d8ae55",
+            "build": "normal",
+            "plate": "gold",
+            "title": "",
+            "color1": "#f1e6cf",
+            "color2": "#3f5d6b",
+            "height": 100,
+            "outfit": "daopao",
+            "capeColor": "#b8322a",
+            "hairColor": "#1b1512"
+          },
+          "mounts": {
+            "owned": [],
+            "riding": null,
+            "passenger": null
+          },
+          "shrine": {
+            "altar": [],
+            "style": "wood",
+            "plaques": [
+              {
+                "img": "",
+                "name": "家和业兴"
+              },
+              {
+                "img": "",
+                "name": "福泽绵长"
+              },
+              {
+                "img": "",
+                "name": "家和业兴"
+              }
+            ]
+          },
+          "animals": [],
+          "incense": {
+            "total": 0,
+            "sticks": []
+          },
+          "ownerId": "self",
+          "_savedAt": 1794839652114,
+          "backpack": {
+            "vase": 1,
+            "cushion": 1
+          },
+          "lastSign": null,
+          "sellable": {},
+          "unlocked": true,
+          "avatarInv": {
+            "titles": [],
+            "equipped": {},
+            "accessories": []
+          },
+          "inventory": {
+            "cabbage": 7
+          },
+          "offerings": [],
+          "economyRev": 6,
+          "sellSeeded": true,
+          "cropApplied": {
+            "crop-prehold-0001": 1
+          },
+          "cropPending": {
+            "crop-dev-a-0001": {
+              "n": 5,
+              "id": "cabbage",
+              "req": "crop-dev-a-0001",
+              "acct": "00000000-0000-0000-0000-0000000000a1",
+              "gain": 5,
+              "name": "白菜",
+              "epoch": 1,
+              "price": 1
+            }
+          },
+          "harvestTotal": 0,
+          "selectedSeed": "cabbage"
+        },
+        "crop_hold": true,
+        "hold_local": {
+          "coins": 80,
+          "merit": 9,
+          "inventory": {
+            "cabbage": 8
+          },
+          "cropApplied": {
+            "crop-dev-a-0001": 1
+          },
+          "cropPending": {
+            "crop-dev-b-0001": {
+              "n": 4,
+              "id": "cabbage",
+              "req": "crop-dev-b-0001",
+              "acct": "00000000-0000-0000-0000-0000000000a1",
+              "gain": 4,
+              "name": "白菜",
+              "epoch": 1,
+              "price": 1
+            },
+            "crop-prehold-0001": {
+              "n": 5,
+              "id": "cabbage",
+              "req": "crop-prehold-0001",
+              "acct": "00000000-0000-0000-0000-0000000000a1",
+              "gain": 5,
+              "name": "白菜",
+              "epoch": 1,
+              "price": 1
+            }
+          }
+        },
+        "hold_remote": {
+          "coins": 90,
+          "merit": 9,
+          "inventory": {
+            "cabbage": 7
+          },
+          "cropApplied": {
+            "crop-prehold-0001": 1
+          },
+          "cropPending": {
+            "crop-dev-a-0001": {
+              "n": 5,
+              "id": "cabbage",
+              "req": "crop-dev-a-0001",
+              "acct": "00000000-0000-0000-0000-0000000000a1",
+              "gain": 5,
+              "name": "白菜",
+              "epoch": 1,
+              "price": 1
+            }
+          }
+        },
+        "hold_base": {
+          "coins": 100,
+          "merit": 9,
+          "inventory": {
+            "cabbage": 12
+          },
+          "cropApplied": null,
+          "cropPending": null
+        },
+        "hold_device": "dev-q4i2bbffsl0g",
+        "hold_source": "save_conflict"
+      }
+    },
+    {
+      "name": "the paused device does not pay or restore, and the old grant is unchanged",
+      "ok": true,
+      "detail": {
+        "replay": {
+          "before": {
+            "coins": 80,
+            "cabbage": 8
+          },
+          "after": {
+            "coins": 80,
+            "cabbage": 8
+          },
+          "sold": false,
+          "earned": false,
+          "offline": false,
+          "q": true
+        },
+        "grants": [
+          {
+            "req": "crop-prehold-0001",
+            "granted": "5"
+          }
+        ]
+      }
+    },
+    {
+      "name": "the other device discovers the hold and cannot write",
+      "ok": true,
+      "detail": {
+        "aRetry": {
+          "q": true,
+          "coins": 90,
+          "same": true
+        },
+        "rev": "3"
+      }
+    },
+    {
+      "name": "reload keeps the pause and does not pay",
+      "ok": true,
+      "detail": {
+        "q": true,
+        "coins": 80,
+        "after": 80,
+        "cabbage": 8,
+        "afterCabbage": 8
+      }
+    },
+    {
+      "name": "a fresh device discovers the server hold and cannot overwrite it",
+      "ok": true,
+      "detail": {
+        "third": {
+          "q": true,
+          "sold": false,
+          "before": {
+            "coins": 90,
+            "cabbage": 7
+          },
+          "after": {
+            "coins": 90,
+            "cabbage": 7
+          },
+          "localCoins": 80,
+          "remoteCoins": 90
+        },
+        "device": "dev-q4i2bbffsl0g"
+      }
+    },
+    {
+      "name": "reset does not clear the hold or the snapshots",
+      "ok": true,
+      "detail": {
+        "reset": {
+          "q": true
+        },
+        "afterReset": {
+          "rev": "3",
+          "crop_hold": true,
+          "state": {
+            "v": 1,
+            "tea": {
+              "messages": []
+            },
+            "_wid": "mwjd6qz6-06pxacib",
+            "muyu": 0,
+            "view": "tp",
+            "coins": 90,
+            "daily": {
+              "date": "2026-11-16",
+              "tasks": {
+                "feed": 0,
+                "collect": 0,
+                "harvest": 0,
+                "incense": 0
+              },
+              "claimed": false,
+              "meritKoi": 0,
+              "meritZen": 0,
+              "meritMuyu": 0,
+              "sellCoins": 0,
+              "meritCoins": 0,
+              "meritOffer": 0,
+              "meritSutra": 0,
+              "stealCoins": 0,
+              "coinsEarned": 0,
+              "meritIncense": 0,
+              "sellbackCoins": 0
+            },
+            "decor": {
+              "home": [],
+              "yard": []
+            },
+            "lotus": {
+              "date": "",
+              "pods": 0
+            },
+            "merit": 9,
+            "plots": [
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null
+            ],
+            "scene": "plaza",
+            "avatar": {
+              "v": 1,
+              "acc": {
+                "back": "none",
+                "hand": "none",
+                "head": "none",
+                "neck": "none",
+                "waist": "none"
+              },
+              "face": "oval",
+              "hair": "bun",
+              "name": "",
+              "skin": "#f0cba8",
+              "trim": "#d8ae55",
+              "build": "normal",
+              "plate": "gold",
+              "title": "",
+              "color1": "#f1e6cf",
+              "color2": "#3f5d6b",
+              "height": 100,
+              "outfit": "daopao",
+              "capeColor": "#b8322a",
+              "hairColor": "#1b1512"
+            },
+            "mounts": {
+              "owned": [],
+              "riding": null,
+              "passenger": null
+            },
+            "shrine": {
+              "altar": [],
+              "style": "wood",
+              "plaques": [
+                {
+                  "img": "",
+                  "name": "家和业兴"
+                },
+                {
+                  "img": "",
+                  "name": "福泽绵长"
+                },
+                {
+                  "img": "",
+                  "name": "家和业兴"
+                }
+              ]
+            },
+            "animals": [],
+            "incense": {
+              "total": 0,
+              "sticks": []
+            },
+            "ownerId": "self",
+            "_savedAt": 1794839652114,
+            "backpack": {
+              "vase": 1,
+              "cushion": 1
+            },
+            "lastSign": null,
+            "sellable": {},
+            "unlocked": true,
+            "avatarInv": {
+              "titles": [],
+              "equipped": {},
+              "accessories": []
+            },
+            "inventory": {
+              "cabbage": 7
+            },
+            "offerings": [],
+            "economyRev": 6,
+            "sellSeeded": true,
+            "cropApplied": {
+              "crop-prehold-0001": 1
+            },
+            "cropPending": {
+              "crop-dev-a-0001": {
+                "n": 5,
+                "id": "cabbage",
+                "req": "crop-dev-a-0001",
+                "acct": "00000000-0000-0000-0000-0000000000a1",
+                "gain": 5,
+                "name": "白菜",
+                "epoch": 1,
+                "price": 1
+              }
+            },
+            "harvestTotal": 0,
+            "selectedSeed": "cabbage"
+          },
+          "hold_local": {
+            "coins": 80,
+            "merit": 9,
+            "inventory": {
+              "cabbage": 8
+            },
+            "cropApplied": {
+              "crop-dev-a-0001": 1
+            },
+            "cropPending": {
+              "crop-dev-b-0001": {
+                "n": 4,
+                "id": "cabbage",
+                "req": "crop-dev-b-0001",
+                "acct": "00000000-0000-0000-0000-0000000000a1",
+                "gain": 4,
+                "name": "白菜",
+                "epoch": 1,
+                "price": 1
+              },
+              "crop-prehold-0001": {
+                "n": 5,
+                "id": "cabbage",
+                "req": "crop-prehold-0001",
+                "acct": "00000000-0000-0000-0000-0000000000a1",
+                "gain": 5,
+                "name": "白菜",
+                "epoch": 1,
+                "price": 1
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "raw save_put and a new earn are refused; the old grant replays",
+      "ok": true,
+      "detail": {
+        "rawPut": {
+          "ok": false,
+          "rev": 3,
+          "state": {
+            "v": 1,
+            "tea": {
+              "messages": []
+            },
+            "_wid": "mwjd6qz6-06pxacib",
+            "muyu": 0,
+            "view": "tp",
+            "coins": 90,
+            "daily": {
+              "date": "2026-11-16",
+              "tasks": {
+                "feed": 0,
+                "collect": 0,
+                "harvest": 0,
+                "incense": 0
+              },
+              "claimed": false,
+              "meritKoi": 0,
+              "meritZen": 0,
+              "meritMuyu": 0,
+              "sellCoins": 0,
+              "meritCoins": 0,
+              "meritOffer": 0,
+              "meritSutra": 0,
+              "stealCoins": 0,
+              "coinsEarned": 0,
+              "meritIncense": 0,
+              "sellbackCoins": 0
+            },
+            "decor": {
+              "home": [],
+              "yard": []
+            },
+            "lotus": {
+              "date": "",
+              "pods": 0
+            },
+            "merit": 9,
+            "plots": [
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null
+            ],
+            "scene": "plaza",
+            "avatar": {
+              "v": 1,
+              "acc": {
+                "back": "none",
+                "hand": "none",
+                "head": "none",
+                "neck": "none",
+                "waist": "none"
+              },
+              "face": "oval",
+              "hair": "bun",
+              "name": "",
+              "skin": "#f0cba8",
+              "trim": "#d8ae55",
+              "build": "normal",
+              "plate": "gold",
+              "title": "",
+              "color1": "#f1e6cf",
+              "color2": "#3f5d6b",
+              "height": 100,
+              "outfit": "daopao",
+              "capeColor": "#b8322a",
+              "hairColor": "#1b1512"
+            },
+            "mounts": {
+              "owned": [],
+              "riding": null,
+              "passenger": null
+            },
+            "shrine": {
+              "altar": [],
+              "style": "wood",
+              "plaques": [
+                {
+                  "img": "",
+                  "name": "家和业兴"
+                },
+                {
+                  "img": "",
+                  "name": "福泽绵长"
+                },
+                {
+                  "img": "",
+                  "name": "家和业兴"
+                }
+              ]
+            },
+            "animals": [],
+            "incense": {
+              "total": 0,
+              "sticks": []
+            },
+            "ownerId": "self",
+            "_savedAt": 1794839652114,
+            "backpack": {
+              "vase": 1,
+              "cushion": 1
+            },
+            "lastSign": null,
+            "sellable": {},
+            "unlocked": true,
+            "avatarInv": {
+              "titles": [],
+              "equipped": {},
+              "accessories": []
+            },
+            "inventory": {
+              "cabbage": 7
+            },
+            "offerings": [],
+            "economyRev": 6,
+            "sellSeeded": true,
+            "cropApplied": {
+              "crop-prehold-0001": 1
+            },
+            "cropPending": {
+              "crop-dev-a-0001": {
+                "n": 5,
+                "id": "cabbage",
+                "req": "crop-dev-a-0001",
+                "acct": "00000000-0000-0000-0000-0000000000a1",
+                "gain": 5,
+                "name": "白菜",
+                "epoch": 1,
+                "price": 1
+              }
+            },
+            "harvestTotal": 0,
+            "selectedSeed": "cabbage"
+          },
+          "reason": "quarantine",
+          "hold_at": "2026-11-16T14:34:13.462423+00:00",
+          "hold_rev": 3,
+          "crop_hold": true,
+          "hold_base": {
+            "coins": 100,
+            "merit": 9,
+            "inventory": {
+              "cabbage": 12
+            },
+            "cropApplied": null,
+            "cropPending": null
+          },
+          "hold_local": {
+            "coins": 80,
+            "merit": 9,
+            "inventory": {
+              "cabbage": 8
+            },
+            "cropApplied": {
+              "crop-dev-a-0001": 1
+            },
+            "cropPending": {
+              "crop-dev-b-0001": {
+                "n": 4,
+                "id": "cabbage",
+                "req": "crop-dev-b-0001",
+                "acct": "00000000-0000-0000-0000-0000000000a1",
+                "gain": 4,
+                "name": "白菜",
+                "epoch": 1,
+                "price": 1
+              },
+              "crop-prehold-0001": {
+                "n": 5,
+                "id": "cabbage",
+                "req": "crop-prehold-0001",
+                "acct": "00000000-0000-0000-0000-0000000000a1",
+                "gain": 5,
+                "name": "白菜",
+                "epoch": 1,
+                "price": 1
+              }
+            }
+          },
+          "updated_at": "2026-11-16T14:34:12.119152+00:00",
+          "hold_device": "dev-q4i2bbffsl0g",
+          "hold_reason": "save_conflict",
+          "hold_remote": {
+            "coins": 90,
+            "merit": 9,
+            "inventory": {
+              "cabbage": 7
+            },
+            "cropApplied": {
+              "crop-prehold-0001": 1
+            },
+            "cropPending": {
+              "crop-dev-a-0001": {
+                "n": 5,
+                "id": "cabbage",
+                "req": "crop-dev-a-0001",
+                "acct": "00000000-0000-0000-0000-0000000000a1",
+                "gain": 5,
+                "name": "白菜",
+                "epoch": 1,
+                "price": 1
+              }
+            }
+          },
+          "hold_source": "save_conflict"
+        },
+        "rawEarn": {
+          "ok": false,
+          "reason": "quarantine",
+          "granted": 0,
+          "hold_rev": 3,
+          "sell_cap": 100,
+          "crop_hold": true,
+          "sell_left": 100,
+          "sell_epoch": 1,
+          "hold_device": "dev-q4i2bbffsl0g",
+          "hold_source": "save_conflict",
+          "sell_uncapped": true
+        },
+        "rawReplay": {
+          "ok": true,
+          "cap": 100,
+          "left": 100,
+          "replay": true,
+          "granted": 5,
+          "sell_cap": 100,
+          "crop_hold": true,
+          "sell_left": 100,
+          "sell_epoch": 1,
+          "sell_uncapped": true
+        }
+      }
+    },
+    {
+      "name": "another account is not held, and switching back on the paused page stays paused",
+      "ok": true,
+      "detail": {
+        "switched": {
+          "mid": {
+            "q": false,
+            "sold": true,
+            "coins": 11,
+            "cabbage": 2
+          },
+          "back": {
+            "q": true,
+            "blocked": false,
+            "same": true
+          }
+        },
+        "otherSale": {
+          "q": false,
+          "sold": true,
+          "coins": 11,
+          "cabbage": 2
+        },
+        "b": {
+          "v": 1,
+          "tea": {
+            "messages": []
+          },
+          "_wid": "mwjd9pfy-nsz31yti",
+          "muyu": 0,
+          "view": "tp",
+          "coins": 11,
+          "daily": {
+            "date": "2026-11-16",
+            "tasks": {
+              "feed": 0,
+              "collect": 0,
+              "harvest": 0,
+              "incense": 0
+            },
+            "claimed": false,
+            "meritKoi": 0,
+            "meritZen": 0,
+            "meritMuyu": 0,
+            "sellCoins": 1,
+            "meritCoins": 0,
+            "meritOffer": 0,
+            "meritSutra": 0,
+            "stealCoins": 0,
+            "coinsEarned": 0,
+            "meritIncense": 0,
+            "sellbackCoins": 0
+          },
+          "decor": {
+            "home": [],
+            "yard": []
+          },
+          "lotus": {
+            "date": "",
+            "pods": 0
+          },
+          "merit": 0,
+          "plots": [
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+          ],
+          "scene": "plaza",
+          "avatar": {
+            "v": 1,
+            "acc": {
+              "back": "none",
+              "hand": "none",
+              "head": "none",
+              "neck": "none",
+              "waist": "none"
+            },
+            "face": "oval",
+            "hair": "bun",
+            "name": "",
+            "skin": "#f0cba8",
+            "trim": "#d8ae55",
+            "build": "normal",
+            "plate": "gold",
+            "title": "",
+            "color1": "#f1e6cf",
+            "color2": "#3f5d6b",
+            "height": 100,
+            "outfit": "daopao",
+            "capeColor": "#b8322a",
+            "hairColor": "#1b1512"
+          },
+          "mounts": {
+            "owned": [],
+            "riding": null,
+            "passenger": null
+          },
+          "shrine": {
+            "altar": [],
+            "style": "wood",
+            "plaques": [
+              {
+                "img": "",
+                "name": "家和业兴"
+              },
+              {
+                "img": "",
+                "name": "福泽绵长"
+              },
+              {
+                "img": "",
+                "name": "家和业兴"
+              }
+            ]
+          },
+          "animals": [],
+          "incense": {
+            "total": 0,
+            "sticks": []
+          },
+          "ownerId": "self",
+          "_savedAt": 1794839790094,
+          "backpack": {
+            "vase": 1,
+            "cushion": 1
+          },
+          "lastSign": null,
+          "sellable": {},
+          "unlocked": true,
+          "avatarInv": {
+            "titles": [],
+            "equipped": {},
+            "accessories": []
+          },
+          "inventory": {
+            "cabbage": 2
+          },
+          "offerings": [],
+          "economyRev": 6,
+          "sellSeeded": true,
+          "cropApplied": {
+            "crop-mwjd9pfn-c1es2fa5": 1
+          },
+          "harvestTotal": 0,
+          "selectedSeed": "cabbage"
+        },
+        "aHold": 80
+      }
+    },
+    {
+      "name": "deleting the local pause key does not resume selling while the server hold remains",
+      "ok": true,
+      "detail": {
+        "deleted": {
+          "q": true,
+          "sold": false,
+          "coins": 1,
+          "cabbage": 2,
+          "key": true
+        },
+        "refused": {
+          "ok": false,
+          "reason": "quarantine",
+          "granted": 0,
+          "hold_rev": 3,
+          "sell_cap": 100,
+          "crop_hold": true,
+          "sell_left": 100,
+          "sell_epoch": 1,
+          "hold_device": "dev-q4i2bbffsl0g",
+          "hold_source": "save_conflict",
+          "sell_uncapped": true
+        },
+        "saved": {
+          "ok": false,
+          "rev": 3,
+          "state": {
+            "v": 1,
+            "tea": {
+              "messages": []
+            },
+            "_wid": "mwjd6qz6-06pxacib",
+            "muyu": 0,
+            "view": "tp",
+            "coins": 90,
+            "daily": {
+              "date": "2026-11-16",
+              "tasks": {
+                "feed": 0,
+                "collect": 0,
+                "harvest": 0,
+                "incense": 0
+              },
+              "claimed": false,
+              "meritKoi": 0,
+              "meritZen": 0,
+              "meritMuyu": 0,
+              "sellCoins": 0,
+              "meritCoins": 0,
+              "meritOffer": 0,
+              "meritSutra": 0,
+              "stealCoins": 0,
+              "coinsEarned": 0,
+              "meritIncense": 0,
+              "sellbackCoins": 0
+            },
+            "decor": {
+              "home": [],
+              "yard": []
+            },
+            "lotus": {
+              "date": "",
+              "pods": 0
+            },
+            "merit": 9,
+            "plots": [
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null
+            ],
+            "scene": "plaza",
+            "avatar": {
+              "v": 1,
+              "acc": {
+                "back": "none",
+                "hand": "none",
+                "head": "none",
+                "neck": "none",
+                "waist": "none"
+              },
+              "face": "oval",
+              "hair": "bun",
+              "name": "",
+              "skin": "#f0cba8",
+              "trim": "#d8ae55",
+              "build": "normal",
+              "plate": "gold",
+              "title": "",
+              "color1": "#f1e6cf",
+              "color2": "#3f5d6b",
+              "height": 100,
+              "outfit": "daopao",
+              "capeColor": "#b8322a",
+              "hairColor": "#1b1512"
+            },
+            "mounts": {
+              "owned": [],
+              "riding": null,
+              "passenger": null
+            },
+            "shrine": {
+              "altar": [],
+              "style": "wood",
+              "plaques": [
+                {
+                  "img": "",
+                  "name": "家和业兴"
+                },
+                {
+                  "img": "",
+                  "name": "福泽绵长"
+                },
+                {
+                  "img": "",
+                  "name": "家和业兴"
+                }
+              ]
+            },
+            "animals": [],
+            "incense": {
+              "total": 0,
+              "sticks": []
+            },
+            "ownerId": "self",
+            "_savedAt": 1794839652114,
+            "backpack": {
+              "vase": 1,
+              "cushion": 1
+            },
+            "lastSign": null,
+            "sellable": {},
+            "unlocked": true,
+            "avatarInv": {
+              "titles": [],
+              "equipped": {},
+              "accessories": []
+            },
+            "inventory": {
+              "cabbage": 7
+            },
+            "offerings": [],
+            "economyRev": 6,
+            "sellSeeded": true,
+            "cropApplied": {
+              "crop-prehold-0001": 1
+            },
+            "cropPending": {
+              "crop-dev-a-0001": {
+                "n": 5,
+                "id": "cabbage",
+                "req": "crop-dev-a-0001",
+                "acct": "00000000-0000-0000-0000-0000000000a1",
+                "gain": 5,
+                "name": "白菜",
+                "epoch": 1,
+                "price": 1
+              }
+            },
+            "harvestTotal": 0,
+            "selectedSeed": "cabbage"
+          },
+          "reason": "quarantine",
+          "hold_at": "2026-11-16T14:34:13.462423+00:00",
+          "hold_rev": 3,
+          "crop_hold": true,
+          "hold_base": {
+            "coins": 100,
+            "merit": 9,
+            "inventory": {
+              "cabbage": 12
+            },
+            "cropApplied": null,
+            "cropPending": null
+          },
+          "hold_local": {
+            "coins": 80,
+            "merit": 9,
+            "inventory": {
+              "cabbage": 8
+            },
+            "cropApplied": {
+              "crop-dev-a-0001": 1
+            },
+            "cropPending": {
+              "crop-dev-b-0001": {
+                "n": 4,
+                "id": "cabbage",
+                "req": "crop-dev-b-0001",
+                "acct": "00000000-0000-0000-0000-0000000000a1",
+                "gain": 4,
+                "name": "白菜",
+                "epoch": 1,
+                "price": 1
+              },
+              "crop-prehold-0001": {
+                "n": 5,
+                "id": "cabbage",
+                "req": "crop-prehold-0001",
+                "acct": "00000000-0000-0000-0000-0000000000a1",
+                "gain": 5,
+                "name": "白菜",
+                "epoch": 1,
+                "price": 1
+              }
+            }
+          },
+          "updated_at": "2026-11-16T14:34:12.119152+00:00",
+          "hold_device": "dev-q4i2bbffsl0g",
+          "hold_reason": "save_conflict",
+          "hold_remote": {
+            "coins": 90,
+            "merit": 9,
+            "inventory": {
+              "cabbage": 7
+            },
+            "cropApplied": {
+              "crop-prehold-0001": 1
+            },
+            "cropPending": {
+              "crop-dev-a-0001": {
+                "n": 5,
+                "id": "cabbage",
+                "req": "crop-dev-a-0001",
+                "acct": "00000000-0000-0000-0000-0000000000a1",
+                "gain": 5,
+                "name": "白菜",
+                "epoch": 1,
+                "price": 1
+              }
+            }
+          },
+          "hold_source": "save_conflict"
+        }
+      }
+    }
+  ]
+}

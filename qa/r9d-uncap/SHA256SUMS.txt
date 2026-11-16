@@ -1,0 +1,18 @@
+4ecd25c97847963860755de0e5caf279405b6d413c08adc277492ac3bd811520     1888370  v4/index.r9d.html
+1bef3f5f3a290d79d089bd7af8eb928d4abe44ced4cff5302d12c7ce33b15313     2362729  index.html
+e60a221f92987687534a0f4e9cbde20188a716c8a7ef08a9afaa12bc033ef560      803780  qa/r9d-uncap/source-snapshot.tar.gz
+0aa2d6981800e3ffb2aea73f0077fd6ae857216dc4760f8371201c4531394b4c       40573  qa/r9d-uncap/src/r9-sell.js
+d18ab4f23c422ffa4dd7a5d4730408f1f1c3e7d168e56efe7d0a277395c82109       35891  backend/tg-r6.js
+7022210713963f8e96fe176ca903420285f0e91e3b9741b65a8ae5eb149b19dd        5983  backend/r9d-uncap.sql
+02500488be12926d31b2f9aaf44a0a2c7414ac76f23934c049f2daad75a00bd4        4824  backend/r9d-uncap-rollback.sql
+2111d07608efb782f7d8879d1c418384e4102fc94531a8aeb5d6513e948e3aa3       23399  qa/r9d-uncap/r9-sell.patch
+3efdc71e87a19970e0b999824ee060e7fe672ece8df358efe10f631c052a7458        8344  qa/r9d-uncap/tg-r6.patch
+969eb93d1fbb89b8bf8bc64a9c57fabcc6c3322e200f9cb4f9e5a832a7ada587       33643  protected/audio.js unchanged
+2c3d0095152411084ce5628394cb1c314c0c433bc40e726297899252c1ef1ce6       21685  protected/npc.js unchanged
+6372c473f8a3da772372979756899069d407d0eb89f1b40021b74cc20b3af1df       27212  protected/realism.js unchanged
+160440037697d9bd8b1e1f4a6ca90289fbac5f8c62a39ee286ed5d38d29eb9d3       57618  protected/avatar.js unchanged
+db8cc9fdc782026cdf6490392eb514671e374487743615382b5ec5aaf7b70bf5       45937  protected/teahouse-assets.js unchanged
+165bd786c0b45ccb0d1c3af9815b80e509e09e66061907e0ee82009beb0f22ad       50301  protected/mounts.js unchanged
+c57b82bad89f4ed509c6ece4ecd936139dc1e692d35ef63a8ce2fcc23287305d       16340  protected/animals2.js unchanged
+f6f5fb047146f6f441c5bff19af3b13362b5f2c1af30433b77a2ffdbe09032ae       44193  protected/art3.js unchanged
+697a1c744f503a86c6411aeaa259096298c751b639f216782e1a944df01e7bf9       20968  protected/suggest.js unchanged

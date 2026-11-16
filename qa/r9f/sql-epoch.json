@@ -1,0 +1,247 @@
+{
+  "passed": 48,
+  "failed": 0,
+  "total": 48,
+  "results": [
+    {
+      "name": "forward and rollback install the same econ_earn and econ_status",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "neither draft sets a numeric sell_coins limit",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "capped mode passes the literal 100 to tg_take_daily",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "loaded tg_take_daily is the upstream body",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "loaded econ_sellback is the upstream body",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "forward epoch 1 uncapped",
+      "ok": true,
+      "detail": "{\"epoch\":1,\"uncapped\":true}"
+    },
+    {
+      "name": "limits: sell NULL, earn 40, sellback 400, merit 8",
+      "ok": true,
+      "detail": "{\"sell\":null,\"earn\":40,\"sb\":400,\"merit\":8}"
+    },
+    {
+      "name": "status advertises legacy 100, uncapped, epoch 1",
+      "ok": true,
+      "detail": "{\"day\":\"2026-11-16\",\"crops\":{\"corn\":6000000,\"melon\":43200000,\"peach\":21600000,\"carrot\":1500000,\"tomato\":2400000,\"cabbage\":900000},\"earn_cap\":40,\"sell_cap\":100,\"earn_left\":40,\"sell_left\":100,\"steal_cap\":15,\"market_cap\":500,\"sell_epoch\":1,\"steal_left\":15,\"market_left\":500,\"sellback_cap\":400,\"sell_uncapped\":true,\"sellback_left\":400,\"merit_coins_left\":8}"
+    },
+    {
+      "name": "uncapped sale stores its grant and epoch 1",
+      "ok": true,
+      "detail": "{\"ok\":true,\"cap\":100,\"left\":100,\"granted\":5000,\"sell_cap\":100,\"sell_left\":100,\"sell_epoch\":1,\"sell_uncapped\":true}"
+    },
+    {
+      "name": "uncapped sale writes no sell_coins row",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "uncapped per-call bound still grants the JS safe integer",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "one past the JS safe integer is bad_amount",
+      "ok": true,
+      "detail": "{\"ok\":false,\"reason\":\"bad_amount\"}"
+    },
+    {
+      "name": "those calls still wrote no sell_coins row",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "task 40 granted by real tg_take_daily",
+      "ok": true,
+      "detail": "{\"ok\":true,\"cap\":40,\"left\":0,\"granted\":40,\"sell_cap\":100,\"sell_left\":100,\"sell_epoch\":1,\"sell_uncapped\":true}"
+    },
+    {
+      "name": "task past 40 refused",
+      "ok": true,
+      "detail": "{\"ok\":false,\"left\":0,\"reason\":\"daily_cap\",\"granted\":0,\"sell_cap\":100,\"sell_left\":100,\"merit_left\":null,\"sell_epoch\":1,\"sell_uncapped\":true}"
+    },
+    {
+      "name": "a full task pool does not block an uncapped crop sale",
+      "ok": true,
+      "detail": "{\"ok\":true,\"cap\":100,\"left\":100,\"granted\":80,\"sell_cap\":100,\"sell_left\":100,\"sell_epoch\":1,\"sell_uncapped\":true}"
+    },
+    {
+      "name": "merit grants 8",
+      "ok": true,
+      "detail": "8"
+    },
+    {
+      "name": "merit 9th refused",
+      "ok": true,
+      "detail": "{\"ok\":false,\"left\":32,\"reason\":\"daily_cap\",\"granted\":0,\"sell_cap\":100,\"sell_left\":100,\"merit_left\":0,\"sell_epoch\":1,\"sell_uncapped\":true}"
+    },
+    {
+      "name": "merit consumed the shared earn pool",
+      "ok": true,
+      "detail": "{\"n\":8}"
+    },
+    {
+      "name": "real shop_buy credits 14 wood tables",
+      "ok": true,
+      "detail": "{\"ok\":true,\"item\":\"wood-table\",\"price\":60,\"credit\":14}"
+    },
+    {
+      "name": "real econ_sellback stops at 400 (13 grants, 14th daily_cap)",
+      "ok": true,
+      "detail": "{\"sold\":13,\"blocked\":{\"ok\":false,\"left\":10,\"reason\":\"daily_cap\"}}"
+    },
+    {
+      "name": "sellback counter is 390",
+      "ok": true,
+      "detail": "{\"n\":390}"
+    },
+    {
+      "name": "same sellback request replays once",
+      "ok": true,
+      "detail": "{\"replay\":{\"ok\":true,\"left\":10,\"unit\":30,\"replay\":true,\"granted\":30,\"credit_left\":1},\"qty\":1,\"ledger\":{\"n\":1}}"
+    },
+    {
+      "name": "another account does not replay the first account sellback",
+      "ok": true,
+      "detail": "{\"ok\":false,\"credit\":0,\"reason\":\"no_credit\"}"
+    },
+    {
+      "name": "another account does not replay the first account crop request",
+      "ok": true,
+      "detail": "{\"ok\":true,\"cap\":100,\"left\":100,\"granted\":10,\"sell_cap\":100,\"sell_left\":100,\"sell_epoch\":1,\"sell_uncapped\":true}"
+    },
+    {
+      "name": "rollback bumps the epoch and clears uncapped",
+      "ok": true,
+      "detail": "{\"epoch\":2,\"uncapped\":false}"
+    },
+    {
+      "name": "rollback status is explicit false, epoch 2, left 100",
+      "ok": true,
+      "detail": "{\"day\":\"2026-11-16\",\"crops\":{\"corn\":6000000,\"melon\":43200000,\"peach\":21600000,\"carrot\":1500000,\"tomato\":2400000,\"cabbage\":900000},\"earn_cap\":40,\"sell_cap\":100,\"earn_left\":0,\"sell_left\":100,\"steal_cap\":15,\"market_cap\":500,\"sell_epoch\":2,\"steal_left\":15,\"market_left\":500,\"sellback_cap\":400,\"sell_uncapped\":false,\"sellback_left\":10,\"merit_coins_left\":8}"
+    },
+    {
+      "name": "replay of the pre-rollback grant returns epoch 1 and does not re-uncap",
+      "ok": true,
+      "detail": "{\"ok\":true,\"cap\":100,\"left\":100,\"replay\":true,\"granted\":5000,\"sell_cap\":100,\"sell_left\":100,\"sell_epoch\":1,\"sell_uncapped\":true}"
+    },
+    {
+      "name": "that replay left the policy capped at epoch 2",
+      "ok": true,
+      "detail": "{\"epoch\":2,\"uncapped\":false}"
+    },
+    {
+      "name": "that replay did not write sell_coins",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "after rollback a 40 sell is granted under epoch 2",
+      "ok": true,
+      "detail": "{\"ok\":true,\"cap\":100,\"left\":60,\"granted\":40,\"sell_cap\":100,\"sell_left\":60,\"sell_epoch\":2,\"sell_uncapped\":false}"
+    },
+    {
+      "name": "capped sell uses the real counter",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "exact 80 against 60 left is refused and stored nothing",
+      "ok": true,
+      "detail": "{\"ok\":false,\"cap\":100,\"left\":60,\"reason\":\"daily_cap\",\"granted\":0,\"sell_cap\":100,\"sell_left\":60,\"sell_epoch\":2,\"sell_uncapped\":false}"
+    },
+    {
+      "name": "the refusal did not move the counter",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "retrying the refused request id re-evaluates and still refuses",
+      "ok": true,
+      "detail": "{\"ok\":false,\"cap\":100,\"left\":60,\"reason\":\"daily_cap\",\"granted\":0,\"sell_cap\":100,\"sell_left\":60,\"sell_epoch\":2,\"sell_uncapped\":false}"
+    },
+    {
+      "name": "exact 60 of the remaining 60 is granted",
+      "ok": true,
+      "detail": "{\"ok\":true,\"cap\":100,\"left\":0,\"granted\":60,\"sell_cap\":100,\"sell_left\":0,\"sell_epoch\":2,\"sell_uncapped\":false}"
+    },
+    {
+      "name": "replaying the 60 does not take it twice",
+      "ok": true,
+      "detail": "{\"ok\":true,\"cap\":100,\"left\":0,\"replay\":true,\"granted\":60,\"sell_cap\":100,\"sell_left\":0,\"sell_epoch\":2,\"sell_uncapped\":false}"
+    },
+    {
+      "name": "the next coin is refused",
+      "ok": true,
+      "detail": "{\"ok\":false,\"cap\":100,\"left\":0,\"reason\":\"daily_cap\",\"granted\":0,\"sell_cap\":100,\"sell_left\":0,\"sell_epoch\":2,\"sell_uncapped\":false}"
+    },
+    {
+      "name": "a short request id is bad_req",
+      "ok": true,
+      "detail": "{\"ok\":false,\"reason\":\"bad_req\"}"
+    },
+    {
+      "name": "rollback leaves sell NULL, sellback 400, earn 40",
+      "ok": true,
+      "detail": "{\"sb\":400,\"earn\":40,\"sell\":null}"
+    },
+    {
+      "name": "forward again bumps the epoch and restores uncapped",
+      "ok": true,
+      "detail": "{\"epoch\":3,\"uncapped\":true}"
+    },
+    {
+      "name": "re-forward status is uncapped epoch 3 and advertises 100",
+      "ok": true,
+      "detail": "{\"day\":\"2026-11-16\",\"crops\":{\"corn\":6000000,\"melon\":43200000,\"peach\":21600000,\"carrot\":1500000,\"tomato\":2400000,\"cabbage\":900000},\"earn_cap\":40,\"sell_cap\":100,\"earn_left\":0,\"sell_left\":100,\"steal_cap\":15,\"market_cap\":500,\"sell_epoch\":3,\"steal_left\":15,\"market_left\":500,\"sellback_cap\":400,\"sell_uncapped\":true,\"sellback_left\":10,\"merit_coins_left\":8}"
+    },
+    {
+      "name": "active uncapped mode grants past the old 100",
+      "ok": true,
+      "detail": "{\"ok\":true,\"cap\":100,\"left\":100,\"granted\":250,\"sell_cap\":100,\"sell_left\":100,\"sell_epoch\":3,\"sell_uncapped\":true}"
+    },
+    {
+      "name": "re-uncap did not add to the capped counter",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "replay of the capped 40 still reports epoch 2 and false",
+      "ok": true,
+      "detail": "{\"ok\":true,\"cap\":100,\"left\":60,\"replay\":true,\"granted\":40,\"sell_cap\":100,\"sell_left\":60,\"sell_epoch\":2,\"sell_uncapped\":false}"
+    },
+    {
+      "name": "that old replay did not turn the row back to capped",
+      "ok": true,
+      "detail": "{\"epoch\":3,\"uncapped\":true}"
+    },
+    {
+      "name": "second rollback is epoch 4 and capped",
+      "ok": true,
+      "detail": "{\"epoch\":4,\"uncapped\":false}"
+    },
+    {
+      "name": "only one econ_earn function remains",
+      "ok": true,
+      "detail": "{\"n\":1}"
+    }
+  ]
+}

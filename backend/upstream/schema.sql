@@ -1,0 +1,10 @@
+create table if not exists public.profiles (id uuid primary key references auth.users on delete cascade, nickname text, created_at timestamptz default now());
+create table if not exists public.saves (user_id uuid primary key references auth.users on delete cascade, state jsonb not null default '{}'::jsonb, merit int default 0, updated_at timestamptz default now());
+alter table public.profiles enable row level security;
+alter table public.saves enable row level security;
+create policy "profiles read all" on public.profiles for select using (true);
+create policy "profiles own write" on public.profiles for insert with check (auth.uid() = id);
+create policy "profiles own update" on public.profiles for update using (auth.uid() = id);
+create policy "saves own select" on public.saves for select using (auth.uid() = user_id);
+create policy "saves own insert" on public.saves for insert with check (auth.uid() = user_id);
+create policy "saves own update" on public.saves for update using (auth.uid() = user_id);

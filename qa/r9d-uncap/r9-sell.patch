@@ -1,0 +1,214 @@
+--- /tmp/crop-baseline-ref/qa/r9c/src/r9-sell.js	2026-11-15 11:57:44.000000000 +0000
++++ /tmp/r9d-build/src/r9-sell.js	2026-11-16 03:14:20.952245977 +0000
+@@ -1,19 +1,76 @@
+-/* r9 part 1 — 卖作物/产物 + 回收家具 front end (r9-frontend-for-codex.md items 1-5, 8; plan B).
+- * - Crops/produce: own cap 100/day on an r9 server (TG_ECON.left('sell')); otherwise (old server, old client, offline, no backend)
+- *   the shared 40 (d.coinsEarned) exactly as before. 「全卖」 sells as much as fits today.
++/* r9 part 1 — 卖作物/产物 + 回收家具 front end.
++ * r9d hotfix: crops/produce have NO daily coin ceiling once the server says sell_uncapped.
++ *   That is the absence of a cap, not a larger number. Owned quantity still has to be a safe integer,
++ *   and the coin total has to stay inside Number.MAX_SAFE_INTEGER.
++ *   A positive numeric sell_left (legacy r9, usually 100) is honoured only until this page has seen
++ *   sell_uncapped:true. After that, offline / error / a stale status that still carries sell_left
++ *   does NOT put the old 100 back. A full reload reads the server again (so an exact SQL rollback
++ *   applies on the next load). Pre-r9 servers, and offline before any uncapped confirmation, keep
++ *   the shared 40 with 今日事项 / 善缘兑换.
+  * - Furniture buy-back at floor(price/2) for the 11 shop items, only shop-bought units (S.sellable) that are stowed in the
+  *   backpack; confirm dialog; never while visiting; separate cap 400/day; server credit when the r9 RPCs exist, hidden when the
+- *   server lacks them, local rules when there is no server connection.
++ *   server lacks them, local rules when there is no server connection. Request-id idempotence is unchanged.
+  * - Legacy saves (no sellSeeded flag): one-time seed, flush first, retry on no_save / stale_save.
+  * - Entries: backpack button, 花木铺 prompt, hint after harvest.
+- * The fortune stalls are NOT here (r9-fortune.js, later). window.TG_R9 is the shared namespace for both parts. */
++ * The fortune stalls are NOT here. window.TG_R9 is the shared namespace. Save key stays templeGarden.v1. */
+ (()=>{
+-const R=window.TG_R9=Object.assign(window.TG_R9||{},{sell:{version:'r9c',mode:'?',cap:40,fb:'?',credit:null,prices:null,sbLeft:null,seed:null,log:[]}});
++const R=window.TG_R9=Object.assign(window.TG_R9||{},{sell:{version:'r9d',mode:'?',cap:null,uncapped:false,confirmedUncapped:false,serverLeft:null,fb:'?',credit:null,prices:null,sbLeft:null,seed:null,log:[]}});
+ const X=R.sell;
+ const BUYBACK=['wood-table','bench','cabinet','daybed','altar-table','rocking-chair','vase','lantern','bonsai','screen','cushion'];
+-const STARTER={cushion:1,vase:1},SELL_CAP=100,SHARED_CAP=40,SB_CAP=400,SEED_BUDGET=1000,SEED_PER=10;
++const STARTER={cushion:1,vase:1},SHARED_CAP=40,SB_CAP=400,SEED_BUDGET=1000,SEED_PER=10;
++// SELL_CAP is not a live ceiling. It exists only so a test can see the retired number is not substituted.
+ const PEND_KEY='templeGarden.r9.sellbackPending';
++const RETIRED_SELL_CAP=100; // documentation only — never used as a fallback
++X.RETIRED_SELL_CAP=RETIRED_SELL_CAP;
+ X.BUYBACK=BUYBACK;
++function positiveInt(v){const n=Number(v);return Number.isSafeInteger(n)&&n>0?n:null;}
++function reduceSellStatus(prev,st){
++ const p=prev&&typeof prev==='object'?prev:{mode:'?',cap:null,confirmedUncapped:false};
++ const confirmed=!!p.confirmedUncapped;
++ const keep=()=>({mode:'uncapped',cap:null,confirmedUncapped:true,serverLeft:null,shared:false,uncapped:true,kind:'keep-uncapped'});
++ const capped=(status,kind)=>{const left=Math.max(0,Math.floor(Number(status.sell_left)));
++  return {mode:'r9',cap:positiveInt(status.sell_cap),confirmedUncapped:false,serverLeft:left,shared:false,uncapped:false,kind};};
++ if(!st||typeof st!=='object'){
++  if(confirmed)return keep();
++  if(p.mode==='r9')return {mode:'r9',cap:positiveInt(p.cap),confirmedUncapped:false,serverLeft:typeof p.serverLeft==='number'?p.serverLeft:null,shared:false,uncapped:false,kind:'keep-capped'};
++  if(p.mode==='offline'||p.mode==='local'||p.mode==='old-server'||p.mode==='old-client'||p.mode==='unknown')return {mode:p.mode,cap:null,confirmedUncapped:false,serverLeft:null,shared:true,uncapped:false,kind:'keep-shared'};
++  return {mode:'unknown',cap:null,confirmedUncapped:false,serverLeft:null,shared:true,uncapped:false,kind:'ambiguous'};}
++ if(st.sell_uncapped===true)return {mode:'uncapped',cap:null,confirmedUncapped:true,serverLeft:null,shared:false,uncapped:true,kind:'uncapped'};
++ if(st.reason==='offline'||st.reason==='error'){if(confirmed)return keep();return {mode:'offline',cap:null,confirmedUncapped:false,serverLeft:null,shared:true,uncapped:false,kind:'offline'};}
++ if(st.sell_uncapped===false&&typeof st.sell_left==='number'&&Number.isFinite(st.sell_left))return capped(st,'explicit-cap');
++ if(typeof st.sell_left==='number'&&Number.isFinite(st.sell_left)){if(confirmed)return keep();return capped(st,'capped');}
++ if(st.day){if(confirmed)return keep();return {mode:'old-server',cap:null,confirmedUncapped:false,serverLeft:null,shared:true,uncapped:false,kind:'old-server'};}
++ if(confirmed)return keep();
++ if(p.mode==='r9')return {mode:'r9',cap:positiveInt(p.cap),confirmedUncapped:false,serverLeft:typeof p.serverLeft==='number'?p.serverLeft:null,shared:false,uncapped:false,kind:'keep-capped'};
++ return {mode:'unknown',cap:null,confirmedUncapped:false,serverLeft:null,shared:true,uncapped:false,kind:'ambiguous'};}
++function applyPolicy(next){X.mode=next.mode;X.cap=next.cap;X.confirmedUncapped=!!next.confirmedUncapped;X.uncapped=!!next.uncapped;X.shared=!!next.shared;
++ if(next.kind==='capped'||next.kind==='explicit-cap'){let used=0,day=null;try{const d=r6Daily();used=d.sellCoins|0;day=d.date||null;}catch(e){}
++  const prev=day!==X.serverDay||typeof X.serverLeft!=='number'?null:X.serverLeft-Math.max(0,used-(X.serverUsedAt|0));
++  if(prev==null||next.serverLeft<=prev){X.serverLeft=next.serverLeft;X.serverUsedAt=used;X.serverDay=day;}}
++ else if(next.uncapped){X.serverLeft=null;X.serverUsedAt=0;}
++ else if(next.kind!=='keep-capped'){X.serverLeft=null;X.serverUsedAt=0;}
++ try{window.TG_ECON?.adoptSell?.(policy());}catch(e){}
++ return policy();}
++function noteSellStatus(st){return applyPolicy(reduceSellStatus(policy(),st));}
++function policy(){return {mode:X.mode,cap:X.cap,uncapped:X.mode==='uncapped'&&!!X.confirmedUncapped,confirmedUncapped:!!X.confirmedUncapped,serverLeft:X.serverLeft,shared:X.mode!=='r9'&&X.mode!=='uncapped'};}
++X.reduceSellStatus=reduceSellStatus;X.noteSellStatus=noteSellStatus;X.policy=policy;
++function readStock(id){const raw=S.inventory?S.inventory[id]:undefined;
++ if(typeof raw!=='number'||!Number.isFinite(raw)||!Number.isSafeInteger(raw)||raw<0)return {ok:false,reason:'bad_qty'};
++ return {ok:true,qty:raw};}
++function coinsNow(){if(S.coins==null)return 0;if(typeof S.coins!=='number'||!Number.isSafeInteger(S.coins)||S.coins<0)return null;return S.coins;}
++function cropSalePlan(o){const stock=o.stock,price=o.price,qty=o.qty,coins=o.coins,pol=o.policy||{};
++ if(typeof stock!=='number'||!Number.isSafeInteger(stock)||stock<0)return {ok:false,reason:'bad_qty',n:0,gain:0};
++ if(stock===0)return {ok:false,reason:'empty',n:0,gain:0};
++ if(typeof qty!=='number'||!Number.isSafeInteger(qty)||qty<=0)return {ok:false,reason:'bad_qty',n:0,gain:0};
++ if(qty>stock)return {ok:false,reason:'excess',n:0,gain:0};
++ if(typeof price!=='number'||!Number.isSafeInteger(price)||price<0)return {ok:false,reason:'bad_price',n:0,gain:0};
++ if(typeof coins!=='number'||!Number.isSafeInteger(coins)||coins<0)return {ok:false,reason:'bad_coins',n:0,gain:0};
++ let n=qty;
++ if(!pol.uncapped){const left=pol.left;if(typeof left!=='number'||!Number.isSafeInteger(left)||left<0)return {ok:false,reason:'no_room',n:0,gain:0};
++  if(price>0){const fit=Math.floor(left/price);if(fit<=0)return {ok:false,reason:'daily_cap',n:0,gain:0};if(fit<n)n=fit;}}
++ const gain=n*price;if(!Number.isSafeInteger(gain)||!Number.isSafeInteger(coins+gain))return {ok:false,reason:'unsafe_arith',n:0,gain:0};
++ return {ok:true,n,gain,partial:n<qty,reason:n<qty?'partial_cap':'ok'};}
++X.readStock=readStock;X.cropSalePlan=cropSalePlan;
+ const log=(...a)=>{X.log.push(a.join(' '));if(X.log.length>60)X.log.shift();};
+ const item=id=>window.TG_CATALOG.find(c=>c.id===id);
+ const isBB=id=>BUYBACK.includes(id);
+@@ -56,13 +113,10 @@
+ let probing=null;
+ X.probe=function(){if(probing)return probing;probing=(async()=>{
+  const e=econ();
+- if(!e){X.mode='local';X.fb='local';X.cap=SHARED_CAP;return X;}
+- if(!hasApi()){X.mode='old-client';X.fb='hidden';X.cap=SHARED_CAP;return X;}
+- let st=null;try{st=await e.status();}catch(x){}
+- if(st&&typeof st.sell_left==='number'){X.mode='r9';X.cap=Number(st.sell_cap)||SELL_CAP;}
+- else if(st&&st.reason==='offline'){X.mode='offline';X.cap=SHARED_CAP;}
+- else if(st&&st.day){X.mode='old-server';X.cap=SHARED_CAP;}
+- else if(X.mode!=='r9'){X.mode='unknown';X.cap=SHARED_CAP;}
++ if(!e){if(!X.confirmedUncapped){noteSellStatus({reason:'offline'});X.mode='local';X.fb='local';}return X;}
++ if(!hasApi()){if(!X.confirmedUncapped){X.mode='old-client';X.cap=null;}X.fb='hidden';return X;}
++ let st=null;try{st=await e.status();}catch(x){st=null;}
++ noteSellStatus(st);
+  let c=null;try{c=await e.sellbackCredit();}catch(x){}
+  if(c&&c.credit&&typeof c.credit==='object'){X.fb='server';X.credit=withInflight(c.credit);X.prices=c.prices&&typeof c.prices==='object'?c.prices:null;X.sbLeft=typeof c.left==='number'?c.left:null;X.seededServer=!!c.seeded;}
+  else if(c&&c.reason==='old_schema'){X.fb='hidden';X.credit=null;}
+@@ -70,39 +124,53 @@
+  else if(X.fb!=='server'){X.fb='unknown';}
+  return X;})().finally(()=>{probing=null;});return probing;};
+ 
+-/* ---------- crop / produce cap ---------- */
+-function sellCap(){const d=r6Daily(),e=econ();
+- if(X.mode==='r9'){const local=Math.max(0,X.cap-(d.sellCoins|0)),L=e.left('sell');const left=L==null?local:Math.max(0,Math.min(L,local));return {cap:X.cap,left,used:X.cap-left,shared:false};}
+- const local=Math.max(0,SHARED_CAP-(d.coinsEarned|0)),L=typeof e?.left==='function'?e.left('sell'):null;   // old server: the shared earn pool
+- const left=L==null?local:Math.max(0,Math.min(L,local));return {cap:SHARED_CAP,left,used:SHARED_CAP-left,shared:true};}
++/* ---------- crop / produce sale (no numeric ceiling once the server is uncapped) ---------- */
++function sellCap(){const d=r6Daily(),e=econ(),pol=policy();
++ if(pol.uncapped)return {cap:null,left:null,used:d.sellCoins|0,shared:false,uncapped:true};
++ if(X.mode==='r9'){const used=d.sellCoins|0,cap=positiveInt(X.cap),local=cap==null?null:Math.max(0,cap-used);
++  let L=null;try{const v=e?.left?.('sell');if(typeof v==='number'&&Number.isFinite(v))L=Math.max(0,Math.floor(v));}catch(err){}
++  if(L==null&&cap==null&&typeof X.serverLeft==='number')L=Math.max(0,X.serverLeft-Math.max(0,used-(X.serverUsedAt|0)));
++  let left;if(local==null&&L==null)left=0;else if(local==null)left=L;else if(L==null)left=local;else left=Math.max(0,Math.min(L,local));
++  const shown=cap==null?(Number.isSafeInteger(used+left)?used+left:null):cap;
++  return {cap:shown,left,used:shown==null?used:shown-left,shared:false,uncapped:false};}
++ const local=Math.max(0,SHARED_CAP-(d.coinsEarned|0));let L=null;try{const v=typeof e?.left==='function'?e.left('sell'):null;if(typeof v==='number'&&Number.isFinite(v))L=Math.max(0,Math.floor(v));}catch(err){}
++ const left=L==null?local:Math.max(0,Math.min(L,local));return {cap:SHARED_CAP,left,used:SHARED_CAP-left,shared:true,uncapped:false};}
+ X.sellCap=sellCap;
+ const earnNet=window.r6EarnCoins;   // kept for reference; the r9 version below replaces both r6 and r6-net paths
+ window.r6EarnCoins=function(n,source,exact){
+  if(!r3CanEdit()||!Number.isSafeInteger(n)||n<0)return false;
+  source=source||'task';const d=r6Daily(),sell=source==='sell',e=econ();
+- if(sell){const ci=sellCap();if(n>ci.left){toast(`今日卖作物已满 ${ci.cap} 铜钱，明天再来卖`);return false;}}
++ if(sell){const ci=sellCap();if(!ci.uncapped&&n>ci.left){toast(`今日卖作物已满 ${ci.cap} 铜钱，明天再来卖`);return false;}}
+  else if((d.coinsEarned|0)+n>SHARED_CAP){toast('今日铜钱已达上限');return false;}
+  let got=n;
+- if(e?.earn){got=Number(e.earn(n,source,!!exact))||0;if(got<=0){toast(sell?`今日卖作物已满 ${sellCap().cap} 铜钱，明天再来卖`:'今日铜钱已达上限');return false;}}
+- if(sell){d.sellCoins=(d.sellCoins|0)+got;if(X.mode!=='r9')d.coinsEarned=(d.coinsEarned|0)+got;}
++ if(e?.earn){got=Number(e.earn(n,source,!!exact))||0;if(got<=0||((!!exact||(sell&&sellCap().uncapped))&&got!==n)){toast(sell?(sellCap().uncapped?'出售没有完成，铜钱没有加上':`今日卖作物已满 ${sellCap().cap} 铜钱，明天再来卖`):'今日铜钱已达上限');return false;}}
++ if(sell){d.sellCoins=(d.sellCoins|0)+got;if(!policy().uncapped&&X.mode!=='r9')d.coinsEarned=(d.coinsEarned|0)+got;}
+  else d.coinsEarned=(d.coinsEarned|0)+got;
+- S.coins=(S.coins||0)+got;save();renderTop();return true;};
++ const next=(S.coins||0)+got;if(!Number.isSafeInteger(next)){if(sell){d.sellCoins=(d.sellCoins|0)-got;if(!policy().uncapped&&X.mode!=='r9')d.coinsEarned=(d.coinsEarned|0)-got;}else d.coinsEarned=(d.coinsEarned|0)-got;toast('铜钱太多，先花掉一些再卖');return false;}
++ S.coins=next;save();renderTop();return true;};
+ X.earnNet=earnNet;
+ // item 2: the merit exchange reports 'merit' (server 8/day sub-cap), and gives the 25 善缘 back if the coin is refused
+ window.r5MeritCoins=function(){if(r3DenyVisit())return false;const d=r6Daily();if(d.meritCoins>=8||d.coinsEarned>=SHARED_CAP)return toast('今日兑换已达上限'),false;if(S.merit<25)return toast('需要 25 善缘'),false;
+  S.merit-=25;d.meritCoins++;if(r6EarnCoins(1,'merit'))return true;S.merit+=25;d.meritCoins--;save();renderTop();return false;};
+ // item 1: partial 「全卖」
+-function sellCrop(id,all){
+- if(r3DenyVisit())return;const c=CROP_BY_ID[id]||r3ProduceItem?.(id);if(!c)return;
+- const price=c.sell??((c.value||1)*8),stock=S.inventory[id]|0,want=all?stock:Math.min(1,stock);if(want<=0)return;
+- const ci=sellCap(),n=Math.min(want,Math.floor(ci.left/price));
+- if(n<=0){toast(`今日卖作物已满 ${ci.cap} 铜钱，明天再来卖`);return openShop('sell');}
+- if(!r6EarnCoins(n*price,'sell',true))return openShop('sell');
+- S.inventory[id]=stock-n;save();
++function saleToast(reason,ci){if(reason==='empty')return toast('背包里没有这份');if(reason==='excess')return toast('不能卖得比拥有的多');if(reason==='bad_qty'||reason==='bad_price')return toast('背包里的数量不对，不能卖');if(reason==='bad_coins'||reason==='unsafe_arith')return toast('数量太大，算不过来，这次没有卖');if(reason==='daily_cap'||reason==='no_room')return toast(`今日卖作物已满 ${ci&&ci.cap!=null?ci.cap:''} 铜钱，明天再来卖`);return toast('这次没有卖成');}
++function sellQty(id,qty){
++ if(r3DenyVisit())return false;const c=CROP_BY_ID[id]||r3ProduceItem?.(id);if(!c)return false;
++ const price=c.sell??((c.value||1)*8),ci=sellCap(),coins=coinsNow();
++ if(coins==null){saleToast('bad_coins',ci);return false;}
++ const stock=readStock(id);if(!stock.ok){saleToast(stock.reason,ci);return openShop('sell'),false;}
++ const plan=cropSalePlan({stock:stock.qty,price,qty,coins,policy:ci});
++ if(!plan.ok){saleToast(plan.reason,ci);return openShop('sell'),false;}
++ const again=readStock(id);if(!again.ok||again.qty<plan.n){saleToast('bad_qty',ci);return openShop('sell'),false;}
++ if(!r6EarnCoins(plan.gain,'sell',true))return openShop('sell'),false;
++ const live=readStock(id);
++ if(!live.ok||live.qty<plan.n){const d=r6Daily();S.coins=Math.max(0,(S.coins||0)-plan.gain);d.sellCoins=Math.max(0,(d.sellCoins|0)-plan.gain);if(!policy().uncapped&&X.mode!=='r9')d.coinsEarned=Math.max(0,(d.coinsEarned|0)-plan.gain);save();renderTop();toast('背包里的数量变了，这笔出售已取消');return openShop('sell'),false;}
++ S.inventory[id]=live.qty-plan.n;if(!S.inventory[id])delete S.inventory[id];save();
+  const after=sellCap();
+- toast(n<want?`已卖出 ${c.name}×${n}，得 ${n*price} 铜钱；今日卖作物已满 ${after.cap}，剩下 ${want-n} 份明天再卖`:`已卖出 ${c.name}×${n}，得 ${n*price} 铜钱 · 今日出售 ${after.used}/${after.cap}`);
+- openShop('sell');}
+-X.sellCrop=sellCrop;
++ toast(plan.partial?`已卖出 ${c.name}×${plan.n}，得 ${plan.gain} 铜钱；今日卖作物已满 ${after.cap}，剩下 ${qty-plan.n} 份明天再卖`:(after.uncapped?`已卖出 ${c.name}×${plan.n}，得 ${plan.gain} 铜钱`:`已卖出 ${c.name}×${plan.n}，得 ${plan.gain} 铜钱 · 今日出售 ${after.used}/${after.cap}`));
++ openShop('sell');return true;}
++function sellCrop(id,all){const stock=readStock(id);const qty=all===true?(stock.ok?stock.qty:0):1;return sellQty(id,qty);}
++X.sellQty=sellQty;X.sellCrop=sellCrop;
+ 
+ /* ---------- furniture buy-back ---------- */
+ // r9b (M1): every unconfirmed sell-back is its own record keyed by its request id, replayed independently with the same req
+@@ -259,16 +327,19 @@
+ 
+ /* ---------- 卖作物/产物 tab ---------- */
+ const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+-function cropRows(ci){return [...CROPS,...R3_PRODUCE].filter(c=>(S.inventory[c.id]|0)>0).map(c=>{const price=c.sell??((c.value||1)*8),stock=S.inventory[c.id]|0,fit=Math.min(stock,Math.floor(ci.left/price)),off=fit<=0;
+- return `<div class="r3-row" data-r9-crop="${c.id}"><span class="r3-emoji">${c.emoji}</span><span><b>${esc(c.name)}</b><small>库存 ${stock} · 单价 🪙 ${price}${off?' · 今日已满':fit<stock?` · 今天还能卖 ${fit} 份`:''}</small></span><button class="btn" data-r9-sell="${c.id}" ${off?'disabled style="opacity:.5"':''}>卖 1</button><button class="btn ghost" data-r9-sell-all="${c.id}" ${off?'disabled style="opacity:.5"':''}>全卖</button></div>`;}).join('');}
++function cropRows(ci){return [...CROPS,...R3_PRODUCE].filter(c=>{const raw=S.inventory[c.id];return typeof raw==='number'&&Number.isFinite(raw)&&raw!==0;}).map(c=>{const price=c.sell??((c.value||1)*8),raw=S.inventory[c.id],ok=Number.isSafeInteger(raw)&&raw>0;
++  const fit=!ci.uncapped&&ok&&price>0?Math.min(raw,Math.floor((ci.left||0)/price)):raw,off=!ok||(!ci.uncapped&&fit<=0);
++  const note=!ok?' · 数量不对，不能卖':ci.uncapped?'':off?' · 今日已满':fit<raw?` · 今天还能卖 ${fit} 份`:'';
++  return `<div class="r3-row" data-r9-crop="${c.id}"><span class="r3-emoji">${c.emoji}</span><span><b>${esc(c.name)}</b><small>库存 ${esc(raw)} · 单价 🪙 ${price}${note}</small></span><button class="btn" data-r9-sell="${c.id}" ${off?'disabled style="opacity:.5"':''}>卖 1</button><button class="btn ghost" data-r9-sell-all="${c.id}" ${off?'disabled style="opacity:.5"':''}>全卖</button></div>`;}).join('');}
+ function furnRows(){const ids=new Set();for(const c of window.TG_CATALOG)if(['furniture','decor'].includes(c.cat)&&((S.backpack[c.id]|0)>0||isBB(c.id)&&placedOf(S,c.id)>0))ids.add(c.id);
+  return [...ids].map(id=>{const c=item(id),bp=S.backpack[id]|0,k=sellableNow(id),why=k>0?reasonOf(id):reasonOf(id)||'这件现在不能卖',ok=k>0&&!why;
+   return `<div class="r3-row" data-r9-furn="${id}"><span class="r3-emoji">${c.emoji||'🪑'}</span><span><b>${esc(c.name)}</b><small>背包 ${bp}${isBB(id)?`（可卖 ${k}）· 回收价 🪙 ${unitOf(id)}`:''}${why?`<br>${esc(why)}`:''}</small></span>${isBB(id)?`<button class="btn ghost" data-r9-sellback="${id}" ${ok?'':'disabled style="opacity:.5"'}>卖回 1</button>`:''}</div>`;}).join('');}
+ function renderSell(){const sheet=$('#sheet'),nav=sheet?.querySelector('.r3-tabs');if(!nav)return;
+  while(nav.nextSibling)nav.nextSibling.remove();
+  const ci=sellCap(),wrap=document.createElement('div');wrap.dataset.r9SellTab='1';
+- const note=ci.shared?(X.mode==='local'||X.mode==='offline'?'（未联网，和今日事项、善缘兑换共用 40）':'（和今日事项、善缘兑换共用 40）'):'';
+- let html=`<h3>作物 / 产物</h3><p class="r3-balance" id="r9SellCap">今日出售 ${ci.used}/${ci.cap}${note}</p>`+(cropRows(ci)||'<p class="center">背包里还没有作物和产物，去小院收获吧。</p>');
++ const note=ci.uncapped?'':ci.shared?(X.mode==='local'||X.mode==='offline'?'（未联网，和今日事项、善缘兑换共用 40）':'（和今日事项、善缘兑换共用 40）'):'';
++ const capLine=ci.uncapped?'按背包数量出售，没有每日铜钱上限':`今日出售 ${ci.used}/${ci.cap}${note}`;
++ let html=`<h3>作物 / 产物</h3><p class="r3-balance" id="r9SellCap">${capLine}</p>`+(cropRows(ci)||'<p class="center">背包里还没有作物和产物，去小院收获吧。</p>');
+  if(X.fb!=='hidden'&&X.fb!=='?'){
+   html+=`<h3>回收家具</h3><p class="r3-balance" id="r9SbCap">在商铺买的家具和装饰，收进背包后可按原价一半卖回 · 今日回收 ${sbUsed()}/${SB_CAP}</p>`;
+   if(getPends().length)html+=`<p class="center" id="r9SbPend">${serverUp()?'上一笔卖回还在和商铺确认，确认前先不能卖别的家具。':'没有联网：上一笔卖回要等联网后自动确认，确认前先不能卖别的家具。'}</p>`;
+@@ -299,8 +370,11 @@
+ let lastHint=0;
+ const hv=harvest;harvest=function(){const before=Object.values(S.inventory||{}).reduce((a,b)=>a+(b|0),0);const out=hv.apply(this,arguments);
+  Promise.resolve(out).then(()=>{const now=Date.now(),after=Object.values(S.inventory||{}).reduce((a,b)=>a+(b|0),0);
+-  if(after>before&&now-lastHint>180000&&sellCap().left>0&&!visiting()){lastHint=now;setTimeout(()=>toast('收获的作物可以到集市花木铺「卖作物 · 换铜钱」，也可从背包直接去卖'),1600);}}).catch(()=>{});return out;};
++  const room=sellCap();if(after>before&&now-lastHint>180000&&(room.uncapped||room.left>0)&&!visiting()){lastHint=now;setTimeout(()=>toast('收获的作物可以到集市花木铺「卖作物 · 换铜钱」，也可从背包直接去卖'),1600);}}).catch(()=>{});return out;};
+ 
++// Test seam. Reads and writes the save the sale code already closes over. It does not change prices, caps, or request-id rules.
++X.debugState=function(){const d=r6Daily();return {coins:S.coins,merit:S.merit,inventory:Object.assign({},S.inventory),backpack:Object.assign({},S.backpack),sellable:Object.assign({},S.sellable),sellSeeded:S.sellSeeded,sellApplied:(S.sellApplied||[]).slice(),daily:{coinsEarned:d.coinsEarned|0,sellCoins:d.sellCoins|0,sellbackCoins:d.sellbackCoins|0,meritCoins:d.meritCoins|0}};};
++X.debugPatch=function(p){if(!p)return X.debugState();if('coins' in p)S.coins=p.coins;if('merit' in p)S.merit=p.merit;if(p.inventory)S.inventory=Object.assign({},p.inventory);if(p.backpack)S.backpack=Object.assign({},p.backpack);if(p.sellable)S.sellable=Object.assign({},p.sellable);if('sellSeeded' in p)S.sellSeeded=p.sellSeeded;if(p.sellApplied)S.sellApplied=p.sellApplied.slice();if(p.daily){const d=r6Daily();for(const k of ['coinsEarned','sellCoins','sellbackCoins','meritCoins'])if(k in p.daily)d[k]=p.daily[k];}return X.debugState();};
+ /* ---------- boot ---------- */
+ setTimeout(()=>{X.probe().then(()=>{if(!S.sellSeeded||(S.sellSeeded==='local'&&X.fb==='server'))X.seedNow();if(getPends().length)retryPending();});},4000);
+ window.addEventListener('online',()=>{X.probe().then(()=>{if(getPends().length)retryPending();});});

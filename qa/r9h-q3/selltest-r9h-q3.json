@@ -1,0 +1,1096 @@
+{
+ "build": "/workspace/v4/index.r9h-q3-candidate.html",
+ "fails": 0,
+ "results": [
+  {
+   "name": "A1 local mode = shared 40",
+   "ok": true,
+   "info": {
+    "mode": "local",
+    "fb": "local",
+    "cap0": "今日出售 0/40（未联网，和今日事项、善缘兑换共用 40）",
+    "after": {
+     "coins": 90,
+     "melon": 5,
+     "coinsEarned": 40,
+     "sellCoins": 40,
+     "cap": "今日出售 40/40（未联网，和今日事项、善缘兑换共用 40）",
+     "toast": "已卖出 西瓜×5，得 40 铜钱；今日卖作物已满 40，剩下 5 份明天再卖",
+     "oneDisabled": true,
+     "cabDisabled": true
+    },
+    "tab": [
+     "家具",
+     "装饰",
+     "缘堂陈设",
+     "牲畜",
+     "卖作物/产物",
+     "善缘阁",
+     "坐骑"
+    ]
+   }
+  },
+  {
+   "name": "A2 全卖 sells what fits (5 melons = 40)",
+   "ok": true,
+   "info": {
+    "coins": 90,
+    "melon": 5,
+    "coinsEarned": 40,
+    "sellCoins": 40,
+    "cap": "今日出售 40/40（未联网，和今日事项、善缘兑换共用 40）",
+    "toast": "已卖出 西瓜×5，得 40 铜钱；今日卖作物已满 40，剩下 5 份明天再卖",
+    "oneDisabled": true,
+    "cabDisabled": true
+   }
+  },
+  {
+   "name": "A3 toast explains the rest waits",
+   "ok": true,
+   "info": "已卖出 西瓜×5，得 40 铜钱；今日卖作物已满 40，剩下 5 份明天再卖"
+  },
+  {
+   "name": "A4 卖 1 disabled at cap, display 40/40",
+   "ok": true,
+   "info": "今日出售 40/40（未联网，和今日事项、善缘兑换共用 40）"
+  },
+  {
+   "name": "A5 tab renamed 卖作物/产物",
+   "ok": true,
+   "info": [
+    "家具",
+    "装饰",
+    "缘堂陈设",
+    "牲畜",
+    "卖作物/产物",
+    "善缘阁",
+    "坐骑"
+   ]
+  },
+  {
+   "name": "A6 merit exchange local ok; refused at shared cap without losing 善缘",
+   "ok": true,
+   "info": {
+    "a": {
+     "ok": true,
+     "merit": 35,
+     "meritCoins": 1,
+     "coinsEarned": 1
+    },
+    "ok2": false,
+    "merit2": 35,
+    "toast": "今日兑换已达上限"
+   }
+  },
+  {
+   "name": "A7 sellCoins/sellbackCoins reset daily",
+   "ok": true,
+   "info": {
+    "sellCoins": 0,
+    "sellbackCoins": 0,
+    "coinsEarned": 0
+   }
+  },
+  {
+   "name": "A8 shop buy adds sellable for buy-back ids only (offering none)",
+   "ok": true,
+   "info": {
+    "afterBuy": {
+     "bp": 1,
+     "sl": 1,
+     "coins": 440
+    },
+    "oid": "fruit-plate"
+   }
+  },
+  {
+   "name": "A9 confirm dialog text; 再想想 changes nothing",
+   "ok": true,
+   "info": "把 🪑 木桌 ×1 卖回商铺，得 🪙 30？"
+  },
+  {
+   "name": "A10 local buy-back: bp-1, sellable-1, +30, sellbackCoins 30",
+   "ok": true,
+   "info": {
+    "bp": 0,
+    "sl": 0,
+    "coins": 435,
+    "sb": 30
+   }
+  },
+  {
+   "name": "A11 starter cushion not sellable, reason shown",
+   "ok": true,
+   "info": [
+    "wood-table:背包 1（可卖 1）· 回收价 🪙 30",
+    "vase:背包 1（可卖 0）· 回收价 🪙 12初始赠送的不能卖；只有在商铺用铜钱买的才能卖回",
+    "cushion:背包 1（可卖 0）· 回收价 🪙 10初始赠送的不能卖；只有在商铺用铜钱买的才能卖回"
+   ]
+  },
+  {
+   "name": "A12 buy-back daily cap 400 (local)",
+   "ok": true,
+   "info": {
+    "bp": 1,
+    "sb": 390,
+    "toast": "今日回收已满 400 铜钱，明天再来"
+   }
+  },
+  {
+   "name": "A13 no selling while visiting (even canEdit)",
+   "ok": true,
+   "info": {
+    "txt": "作物 / 产物今日出售 0/40（未联网，和今日事项、善缘兑换共用 40）🥬白菜库存 3 · 单价 🪙 1卖 1全卖🍉西瓜库存 5 · 单价 🪙 8卖 1全卖回收家具在商铺买的家具和装饰，收进背包后可按原价一半卖回 · 今日回收 390/400串门时不能卖，回自己家再卖。",
+    "t": "串门时不能卖回家具，回自己家再卖",
+    "bp": 1
+   }
+  },
+  {
+   "name": "A14 placed item: 请先收起",
+   "ok": true,
+   "info": "背包 0（可卖 0）· 回收价 🪙 40已摆放 1 件，请先收起再卖"
+  },
+  {
+   "name": "A errors 0",
+   "ok": true,
+   "info": []
+  },
+  {
+   "name": "B1 r9 mode cap 100",
+   "ok": true,
+   "info": {
+    "mode": "r9",
+    "fb": "server",
+    "cap0": "今日出售 0/100"
+   }
+  },
+  {
+   "name": "B2 全卖 up to 100: 12 melons (96) then 4 cabbage; task pool untouched",
+   "ok": true,
+   "info": {
+    "a": {
+     "melon": 8,
+     "sellCoins": 96,
+     "coinsEarned": 0,
+     "toast": "已卖出 西瓜×12，得 96 铜钱；今日卖作物已满 100，剩下 8 份明天再卖"
+    },
+    "b": {
+     "cab": 6,
+     "sellCoins": 100,
+     "cap": "今日出售 100/100"
+    }
+   }
+  },
+  {
+   "name": "B3 earn called with source sell, exact",
+   "ok": true,
+   "info": [
+    [
+     "earn",
+     96,
+     "sell",
+     true
+    ],
+    [
+     "earn",
+     4,
+     "sell",
+     true
+    ]
+   ]
+  },
+  {
+   "name": "B4 merit exchange passes merit (not task); not blocked by a full sell cap",
+   "ok": true,
+   "info": {
+    "ok": true,
+    "last": [
+     "earn",
+     1,
+     "merit",
+     false
+    ],
+    "coinsEarned": 1
+   }
+  },
+  {
+   "name": "B5 shopBuy fire-and-forget per unit",
+   "ok": true,
+   "info": {
+    "sl": {
+     "wood-table": 2,
+     "lantern": 1
+    },
+    "buys": [
+     [
+      "shopBuy",
+      "wood-table",
+      1
+     ],
+     [
+      "shopBuy",
+      "wood-table",
+      1
+     ],
+     [
+      "shopBuy",
+      "lantern",
+      1
+     ]
+    ],
+    "credit": {
+     "wood-table": 2,
+     "lantern": 1
+    }
+   }
+  },
+  {
+   "name": "B6 online sell-back: unit 30, req persisted BEFORE the call, applied after ok, not in sell cap",
+   "ok": true,
+   "info": {
+    "k": 2,
+    "call": [
+     "sellback",
+     "wood-table",
+     1,
+     30,
+     "sell-mwjcxjfq-0ymb8th2",
+     null,
+     null,
+     "[{\"id\":\"wood-table\",\"qty\":1,\"unit\":30,\"req\":\"sell-mwjcxjfq-0ymb8th2\",\"at\":1794839222438,\"acct\":\"default\"}]"
+    ],
+    "bp": 1,
+    "sl": 1,
+    "sb": 30,
+    "sellCoins": 100,
+    "pend": null,
+    "toast": "已把 木桌 卖回商铺，得 🪙 30"
+   }
+  },
+  {
+   "name": "B7 error keeps pending + local unchanged; retry reuses the same req",
+   "ok": true,
+   "info": {
+    "p1": [
+     {
+      "id": "wood-table",
+      "qty": 1,
+      "unit": 30,
+      "req": "sell-mwjcxjo4-pxmsfn20",
+      "at": 1794839222740,
+      "acct": "default"
+     }
+    ],
+    "bp1": 1,
+    "same": true,
+    "calls": [
+     "sell-mwjcxjo4-pxmsfn20",
+     "sell-mwjcxjo4-pxmsfn20"
+    ],
+    "bp2": 0,
+    "coins2": 30,
+    "pend2": []
+   }
+  },
+  {
+   "name": "B8 bad_req/bad_qty/not_sellable/price_changed/daily_cap/no_credit: nothing changes, pending cleared, toast",
+   "ok": true,
+   "info": {
+    "bad_req": {
+     "same": true,
+     "pend": [],
+     "toast": "这笔卖回没有成功，请重新再卖一次"
+    },
+    "bad_qty": {
+     "same": true,
+     "pend": [],
+     "toast": "这笔卖回没有成功，请重新再卖一次"
+    },
+    "not_sellable": {
+     "same": true,
+     "pend": [],
+     "toast": "这件不能卖回商铺"
+    },
+    "price_changed": {
+     "same": true,
+     "pend": [],
+     "toast": "回收价有变动，已刷新，请再确认一次"
+    },
+    "daily_cap": {
+     "same": true,
+     "pend": [],
+     "toast": "今日回收已满 400 铜钱，明天再来"
+    },
+    "no_credit": {
+     "same": true,
+     "pend": [],
+     "toast": "商铺没有这件的购买记录（没联网时买的或别处得来的），不能卖回"
+    }
+   }
+  },
+  {
+   "name": "B9 bought offline (local credit, no server credit) → not sellable online, reason shown",
+   "ok": true,
+   "info": {
+    "txt": "背包 1（可卖 0）· 回收价 🪙 15没有联网时买的，联网后不能卖回",
+    "dis": true
+   }
+  },
+  {
+   "name": "B errors 0",
+   "ok": true,
+   "info": []
+  },
+  {
+   "name": "C1 old client: shared 40, 全卖 partial (5)",
+   "ok": true,
+   "info": {
+    "mode": "old-client",
+    "fb": "hidden",
+    "cap0": "今日出售 0/40（和今日事项、善缘兑换共用 40）",
+    "furn": false,
+    "melon": 5,
+    "ce": 40,
+    "sc": 40,
+    "earn": [
+     [
+      "earn",
+      40,
+      "sell",
+      true
+     ]
+    ]
+   }
+  },
+  {
+   "name": "C2 old client: furniture buy-back hidden",
+   "ok": true,
+   "info": "hidden"
+  },
+  {
+   "name": "C3 backpack button 卖作物换铜钱",
+   "ok": true,
+   "info": "卖作物换铜钱"
+  },
+  {
+   "name": "C errors 0",
+   "ok": true,
+   "info": []
+  },
+  {
+   "name": "D1 old server: fallback shared 40 (5 wool)",
+   "ok": true,
+   "info": {
+    "mode": "old-server",
+    "fb": "hidden",
+    "cap0": "今日出售 0/40（和今日事项、善缘兑换共用 40）",
+    "furn": false,
+    "wool": 5,
+    "ce": 40,
+    "toast": "已卖出 羊驼毛×5，得 40 铜钱；今日卖作物已满 40，剩下 5 份明天再卖"
+   }
+  },
+  {
+   "name": "D2 old server: buy-back hidden (old_schema)",
+   "ok": true,
+   "info": "hidden"
+  },
+  {
+   "name": "D errors 0",
+   "ok": true,
+   "info": []
+  },
+  {
+   "name": "E1 offline: shared 40 local cap",
+   "ok": true,
+   "info": {
+    "mode": "offline",
+    "fb": "local",
+    "cap0": "今日出售 0/40（未联网，和今日事项、善缘兑换共用 40）",
+    "melon": 5,
+    "ce": 40,
+    "dis": false,
+    "bench": 0,
+    "sb": 15
+   }
+  },
+  {
+   "name": "E2 offline: buy-back by local rules",
+   "ok": true,
+   "info": {
+    "mode": "offline",
+    "fb": "local",
+    "cap0": "今日出售 0/40（未联网，和今日事项、善缘兑换共用 40）",
+    "melon": 5,
+    "ce": 40,
+    "dis": false,
+    "bench": 0,
+    "sb": 15
+   }
+  },
+  {
+   "name": "E errors 0",
+   "ok": true,
+   "info": []
+  },
+  {
+   "name": "F1 local seed: ≤10/item, starter −1, 1000 budget",
+   "ok": true,
+   "info": {
+    "flag": true,
+    "sl": {
+     "wood-table": 3,
+     "bench": 1,
+     "daybed": 10,
+     "cushion": 1
+    },
+    "seed": {
+     "kind": "local",
+     "flag": true,
+     "value": 915,
+     "items": {
+      "daybed": 10,
+      "wood-table": 3,
+      "bench": 1,
+      "cushion": 1
+     }
+    }
+   }
+  },
+  {
+   "name": "F2 seed runs once",
+   "ok": true,
+   "info": {
+    "x": "skip",
+    "d": 2
+   }
+  },
+  {
+   "name": "F3 after reload: flag kept, no re-seed",
+   "ok": true,
+   "info": {
+    "flag": true,
+    "d": 2
+   }
+  },
+  {
+   "name": "F errors 0",
+   "ok": true,
+   "info": []
+  },
+  {
+   "name": "F4 server seed at boot ran with flush",
+   "ok": true,
+   "info": {
+    "flag": true,
+    "calls": [
+     "flush",
+     "sellbackSeed",
+     "flush"
+    ]
+   }
+  },
+  {
+   "name": "F5 no_save / stale_save → flush + retry, then ok",
+   "ok": true,
+   "info": {
+    "a": "no_save",
+    "b": "stale_save",
+    "c": "ok",
+    "flag": true
+   }
+  },
+  {
+   "name": "F6 flush before every seed call",
+   "ok": true,
+   "info": [
+    "flush",
+    "sellbackCredit",
+    "sellbackSeed",
+    "flush",
+    "flush",
+    "sellbackSeed",
+    "flush",
+    "flush",
+    "sellbackSeed",
+    "sellbackCredit",
+    "flush"
+   ]
+  },
+  {
+   "name": "F7 seed sends owned = backpack + placed; local aligned to server credit",
+   "ok": true,
+   "info": {
+    "items": {
+     "wood-table": 3,
+     "bench": 1,
+     "daybed": 13,
+     "vase": 1,
+     "cushion": 2
+    },
+    "sl": {
+     "wood-table": 3,
+     "bench": 1,
+     "daybed": 10,
+     "cushion": 1
+    }
+   }
+  },
+  {
+   "name": "F8 before seeding: rows say 正在核对 and 卖回 disabled",
+   "ok": true,
+   "info": "背包 3（可卖 0）· 回收价 🪙 30正在核对旧存档里的家具，稍等片刻"
+  },
+  {
+   "name": "F errors 0 (server)",
+   "ok": true,
+   "info": []
+  },
+  {
+   "name": "G1 starter cushion/vase: no credit; new save already seeded",
+   "ok": true,
+   "info": {
+    "c": 1,
+    "v": 1,
+    "sl": {},
+    "seeded": true
+   }
+  },
+  {
+   "name": "G2 gift / market claim (TG_INV_GIVE) never sellable",
+   "ok": true,
+   "info": [
+    "vase:true:背包 1（可卖 0）· 回收价 🪙 12初始赠送的不能卖；只有在商铺用铜钱买的才能卖回",
+    "lantern:true:背包 1（可卖 0）· 回收价 🪙 20寄售、赠送或家人那里得来的，不能卖回商铺",
+    "screen:true:背包 2（可卖 0）· 回收价 🪙 40寄售、赠送或家人那里得来的，不能卖回商铺",
+    "cushion:true:背包 1（可卖 0）· 回收价 🪙 10初始赠送的不能卖；只有在商铺用铜钱买的才能卖回",
+    "golden_buddha:nobtn:背包 1善缘换来的，不能折成铜钱"
+   ]
+  },
+  {
+   "name": "G3 善缘阁 item never sellable (row shows reason, no button)",
+   "ok": true,
+   "info": {
+    "id": "golden_buddha",
+    "bp": 1,
+    "sl": 0,
+    "reason": "善缘换来的，不能折成铜钱",
+    "row": "✨石灯背包 1善缘换来的，不能折成铜钱",
+    "btn": false
+   }
+  },
+  {
+   "name": "G4 family stow adds no credit",
+   "ok": true,
+   "info": {
+    "sl": 0,
+    "before": 0
+   }
+  },
+  {
+   "name": "G5 market listing clamps credit to backpack",
+   "ok": true,
+   "info": {
+    "before": 1,
+    "after": 0
+   }
+  },
+  {
+   "name": "G errors 0",
+   "ok": true,
+   "info": []
+  },
+  {
+   "name": "H1 dropped response: 1 pending, local unchanged, server already applied",
+   "ok": true,
+   "info": {
+    "pend": [
+     {
+      "id": "lantern",
+      "qty": 1,
+      "unit": 20,
+      "req": "sell-mwjczmev-9ijrxgyx",
+      "at": 1794839319607,
+      "acct": "default"
+     }
+    ],
+    "bp": 3,
+    "sl": 3,
+    "same": true,
+    "srv": {
+     "credit": 2,
+     "sb": 380
+    },
+    "toast": "网络不稳，这笔卖回还没确认；稍后会自动再试，先别重复卖",
+    "c0": 1850
+   }
+  },
+  {
+   "name": "H2 while pending: every 卖回 button disabled + banner; selling the screen is refused with no server call",
+   "ok": true,
+   "info": {
+    "dis": [
+     true,
+     true
+    ],
+    "rowS": "背包 1（可卖 1）· 回收价 🪙 40上一笔卖回还在确认，请稍候",
+    "banner": "上一笔卖回还在和商铺确认，确认前先不能卖别的家具。",
+    "calls": 0,
+    "toast": "上一笔卖回还在确认，请稍候",
+    "screen": 1,
+    "pend": 1
+   }
+  },
+  {
+   "name": "H3 auto-retry after 15 s replays the lantern with the same req, credited once",
+   "ok": true,
+   "info": {
+    "pend": 0,
+    "bp": 2,
+    "sl": 2,
+    "coins": 1870,
+    "sbCoins": 20,
+    "reqs": [
+     "sell-mwjczmev-9ijrxgyx",
+     "sell-mwjczmev-9ijrxgyx"
+    ],
+    "srv": {
+     "credit": 2,
+     "sb": 380
+    },
+    "btn": false
+   }
+  },
+  {
+   "name": "H4 after the replay the screen sells normally",
+   "ok": true,
+   "info": {
+    "gain": 40,
+    "screen": 0,
+    "pend": 0,
+    "sb": 60
+   }
+  },
+  {
+   "name": "H5 list of pendings: each replayed independently with its own req, once; a second retry makes no call",
+   "ok": true,
+   "info": {
+    "bp0": 4,
+    "r1": {
+     "bp": 2,
+     "gain": 40,
+     "pend": 0,
+     "calls": [
+      "sell-h5a",
+      "sell-h5b"
+     ]
+    },
+    "again": 0,
+    "gainAfter": 40,
+    "srv": {
+     "sb": 300
+    }
+   }
+  },
+  {
+   "name": "H6 an r9a single-object pending record is read and replayed once",
+   "ok": true,
+   "info": {
+    "n": 1,
+    "bp": -1,
+    "gain": 20,
+    "pend": 0,
+    "raw": null
+   }
+  },
+  {
+   "name": "H7 replay that errors again stays pending; next replay credits once",
+   "ok": true,
+   "info": {
+    "p1": 1,
+    "p2": 1,
+    "mid": 0,
+    "gain": 20,
+    "bp": 1,
+    "pend": 0
+   }
+  },
+  {
+   "name": "H errors 0",
+   "ok": true,
+   "info": []
+  },
+  {
+   "name": "I1 first open right after an online buy: 可卖 1, button enabled, no 「没有联网时买的」",
+   "ok": true,
+   "info": {
+    "screen": {
+     "txt": "背包 1（可卖 1）· 回收价 🪙 40",
+     "dis": false
+    },
+    "lantern": {
+     "txt": "背包 1（可卖 1）· 回收价 🪙 20",
+     "dis": false
+    }
+   }
+  },
+  {
+   "name": "I2 still correct 2.5 s later; cached credit = server credit",
+   "ok": true,
+   "info": {
+    "first": {
+     "screen": {
+      "txt": "背包 1（可卖 1）· 回收价 🪙 40",
+      "dis": false
+     },
+     "lantern": {
+      "txt": "背包 1（可卖 1）· 回收价 🪙 20",
+      "dis": false
+     }
+    },
+    "later": {
+     "screen": {
+      "txt": "背包 1（可卖 1）· 回收价 🪙 40",
+      "dis": false
+     },
+     "lantern": {
+      "txt": "背包 1（可卖 1）· 回收价 🪙 20",
+      "dis": false
+     }
+    },
+    "credit": {
+     "screen": 1,
+     "lantern": 1
+    },
+    "srv": {
+     "screen": 1,
+     "lantern": 1
+    }
+   }
+  },
+  {
+   "name": "I3 server credit changed elsewhere → open tab re-renders after the probe",
+   "ok": true,
+   "info": {
+    "t0": false,
+    "t1": true,
+    "txt": "背包 1（可卖 0）· 回收价 🪙 20没有联网时买的，联网后不能卖回"
+   }
+  },
+  {
+   "name": "I4 refused shop log (rate) takes the optimistic credit back and re-renders",
+   "ok": true,
+   "info": {
+    "t0": {
+     "dis": false,
+     "cr": 1
+    },
+    "t1": {
+     "dis": true,
+     "cr": 0,
+     "txt": "背包 1（可卖 0）· 回收价 🪙 15没有联网时买的，联网后不能卖回"
+    }
+   }
+  },
+  {
+   "name": "I errors 0",
+   "ok": true,
+   "info": []
+  },
+  {
+   "name": "J1 offline with a pending sale: per-account key, buy-back locked with a clear offline reason, no server call",
+   "ok": true,
+   "info": {
+    "req": "sell-mwjd0kjl-9h48arlu",
+    "fb": "local",
+    "row": "背包 1（可卖 1）· 回收价 🪙 40没有联网：上一笔卖回要等联网后自动确认，确认前先不能卖别的家具",
+    "banner": "没有联网：上一笔卖回要等联网后自动确认，确认前先不能卖别的家具。",
+    "dis": true,
+    "toast": "没有联网：上一笔卖回要等联网后自动确认，确认前先不能卖别的家具",
+    "calls": 0,
+    "keys": [
+     "templeGarden.r9.sellbackPending.u1"
+    ]
+   }
+  },
+  {
+   "name": "J2 after switching to another account its buy-back is not locked by the first account's record",
+   "ok": true,
+   "info": {
+    "pend": 0,
+    "dis": false,
+    "row": "背包 1（可卖 1）· 回收价 🪙 40",
+    "gain": 40,
+    "who": "u2",
+    "item": "screen"
+   }
+  },
+  {
+   "name": "J3 the other account's record is never replayed under u2 (still stored for u1 after the 15 s window)",
+   "ok": true,
+   "info": {
+    "reps": 1,
+    "byU2": 0,
+    "u1": 1
+   }
+  },
+  {
+   "name": "J4 back on u1: its record replays once with the same req and is credited",
+   "ok": true,
+   "info": {
+    "gain": 20,
+    "reps": 2,
+    "last": "u1",
+    "pend": 0
+   }
+  },
+  {
+   "name": "J5 signed out: no account → no pending shown, nothing replayed",
+   "ok": true,
+   "info": {
+    "n": 0,
+    "acct": null
+   }
+  },
+  {
+   "name": "J errors 0",
+   "ok": true,
+   "info": []
+  },
+  {
+   "name": "K1 a unit being sold back cannot be placed or listed (r3/r6 placement, TG_INV_TAKE); other items unaffected",
+   "ok": true,
+   "info": {
+    "pend": 1,
+    "place": "这件正在卖回商铺确认中，先不能摆放",
+    "place6": "这件正在卖回商铺确认中，先不能摆放",
+    "take": false,
+    "bp": 1,
+    "other": "田地、牧栏和门前通道需要留空"
+   }
+  },
+  {
+   "name": "K2 server confirmed but the item left the backpack → coins + quota still credited (server is authoritative), toast explains",
+   "ok": true,
+   "info": {
+    "r1": {
+     "gain": 20,
+     "sb": 20,
+     "sl": 1,
+     "pend": 0,
+     "toast": "这件已不在背包里，但商铺已经收下这笔卖回，补给你 🪙 20"
+    },
+    "gain2": 20,
+    "applied": 1
+   }
+  },
+  {
+   "name": "K3 never double-credited (a second retry adds nothing; req recorded in the save)",
+   "ok": true,
+   "info": {
+    "r1": {
+     "gain": 20,
+     "sb": 20,
+     "sl": 1,
+     "pend": 0,
+     "toast": "这件已不在背包里，但商铺已经收下这笔卖回，补给你 🪙 20"
+    },
+    "gain2": 20,
+    "applied": 1
+   }
+  },
+  {
+   "name": "K errors 0",
+   "ok": true,
+   "info": []
+  },
+  {
+   "name": "L1 pending stored per account (…Pending.t1), no shared key",
+   "ok": true,
+   "info": {
+    "p": {
+     "id": "lantern",
+     "qty": 1,
+     "unit": 20,
+     "req": "sell-mwjd1fyr-r1r7fcpz",
+     "at": 1794839404563,
+     "acct": "t1"
+    },
+    "legacy": null,
+    "own": "[{\"id\":\"lantern\",\"qty\":1,\"unit\":20,\"req\":\"sell-mwjd1fyr-r1r7fcpz\",\"at\":1794839404563,\"acct\":\"t1\"}]",
+    "locks": true
+   }
+  },
+  {
+   "name": "L2 two tabs replay the same pending record at once → credited exactly once (Web Locks)",
+   "ok": true,
+   "info": {
+    "ga": 0,
+    "gb": 20,
+    "ready": {
+     "pend": 1,
+     "locks": true
+    },
+    "after": {
+     "pend": 0,
+     "applied": [
+      "sell-mwjd1fyr-r1r7fcpz"
+     ]
+    }
+   }
+  },
+  {
+   "name": "L3 later replays in either tab add nothing (Web Locks)",
+   "ok": true,
+   "info": [
+    0,
+    0
+   ]
+  },
+  {
+   "name": "L4 a req already credited by another tab is dropped without a server call or coins",
+   "ok": true,
+   "info": {
+    "calls": 0,
+    "gain": 0,
+    "pend": 0
+   }
+  },
+  {
+   "name": "L5 IndexedDB claim is atomic across tabs: 20 simultaneous claims per req from 2 tabs → exactly one winner each (Web Locks)",
+   "ok": true,
+   "info": {
+    "ca": [
+     "no",
+     "no",
+     "no",
+     "no",
+     "no",
+     "no",
+     "no",
+     "no",
+     "no",
+     "no",
+     "no",
+     "no",
+     "no",
+     "no",
+     "no",
+     "no",
+     "no",
+     "no",
+     "no",
+     "no"
+    ],
+    "cb": [
+     "yes",
+     "yes",
+     "yes",
+     "yes",
+     "yes",
+     "yes",
+     "yes",
+     "yes",
+     "yes",
+     "yes",
+     "yes",
+     "yes",
+     "yes",
+     "yes",
+     "yes",
+     "yes",
+     "yes",
+     "yes",
+     "yes",
+     "yes"
+    ]
+   }
+  },
+  {
+   "name": "L errors 0 (Web Locks)",
+   "ok": true,
+   "info": []
+  },
+  {
+   "name": "L2 two tabs replay the same pending record at once → credited exactly once (localStorage lease, no Web Locks)",
+   "ok": true,
+   "info": {
+    "ga": 0,
+    "gb": 20,
+    "ready": {
+     "pend": 1,
+     "locks": false
+    },
+    "after": {
+     "pend": 0,
+     "applied": [
+      "sell-mwjd202m-gtacyacf"
+     ]
+    }
+   }
+  },
+  {
+   "name": "L3 later replays in either tab add nothing (localStorage lease, no Web Locks)",
+   "ok": true,
+   "info": [
+    0,
+    0
+   ]
+  },
+  {
+   "name": "L5 IndexedDB claim is atomic across tabs: 20 simultaneous claims per req from 2 tabs → exactly one winner each (localStorage lease, no Web Locks)",
+   "ok": true,
+   "info": {
+    "ca": [
+     "no",
+     "no",
+     "no",
+     "no",
+     "no",
+     "no",
+     "no",
+     "no",
+     "no",
+     "no",
+     "no",
+     "no",
+     "no",
+     "no",
+     "no",
+     "no",
+     "no",
+     "no",
+     "no",
+     "no"
+    ],
+    "cb": [
+     "yes",
+     "yes",
+     "yes",
+     "yes",
+     "yes",
+     "yes",
+     "yes",
+     "yes",
+     "yes",
+     "yes",
+     "yes",
+     "yes",
+     "yes",
+     "yes",
+     "yes",
+     "yes",
+     "yes",
+     "yes",
+     "yes",
+     "yes"
+    ]
+   }
+  },
+  {
+   "name": "L errors 0 (localStorage lease, no Web Locks)",
+   "ok": true,
+   "info": []
+  }
+ ]
+}

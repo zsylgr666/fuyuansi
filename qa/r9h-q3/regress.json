@@ -1,0 +1,464 @@
+{
+  "passed": 25,
+  "failed": 0,
+  "total": 25,
+  "results": [
+    {
+      "name": "r9h page has no 32-bit crop grant coercion",
+      "ok": true
+    },
+    {
+      "name": "an earn before classification does not authorize unlimited",
+      "ok": true,
+      "detail": {
+        "mode": "pending",
+        "cap": null,
+        "uncapped": false,
+        "confirmedUncapped": false,
+        "serverLeft": null,
+        "epoch": null,
+        "class": "pending",
+        "classified": false,
+        "pending": true,
+        "gen": 1,
+        "shared": false
+      }
+    },
+    {
+      "name": "status false epoch 7 caps the page",
+      "ok": true,
+      "detail": {
+        "mode": "r9",
+        "cap": 100,
+        "uncapped": false,
+        "confirmedUncapped": false,
+        "serverLeft": 100,
+        "epoch": 7,
+        "class": "epoch",
+        "classified": true,
+        "pending": false,
+        "gen": 1,
+        "shared": false
+      }
+    },
+    {
+      "name": "earn true at the same epoch does not reopen unlimited",
+      "ok": true,
+      "detail": {
+        "mode": "r9",
+        "cap": 100,
+        "uncapped": false,
+        "confirmedUncapped": false,
+        "serverLeft": 100,
+        "epoch": 7,
+        "class": "epoch",
+        "classified": true,
+        "pending": false,
+        "gen": 1,
+        "shared": false
+      }
+    },
+    {
+      "name": "earn true at a newer epoch does not reopen unlimited",
+      "ok": true,
+      "detail": {
+        "mode": "r9",
+        "cap": 100,
+        "uncapped": false,
+        "confirmedUncapped": false,
+        "serverLeft": 100,
+        "epoch": 7,
+        "class": "epoch",
+        "classified": true,
+        "pending": false,
+        "gen": 1,
+        "shared": false
+      }
+    },
+    {
+      "name": "earn true with no epoch does not reopen unlimited",
+      "ok": true,
+      "detail": {
+        "mode": "r9",
+        "cap": 100,
+        "uncapped": false,
+        "confirmedUncapped": false,
+        "serverLeft": 100,
+        "epoch": 7,
+        "class": "epoch",
+        "classified": true,
+        "pending": false,
+        "gen": 1,
+        "shared": false
+      }
+    },
+    {
+      "name": "account switch before the next status drops the mode and does not sell",
+      "ok": true,
+      "detail": {
+        "acct": "B",
+        "pol": {
+          "mode": "pending",
+          "cap": null,
+          "uncapped": false,
+          "confirmedUncapped": false,
+          "serverLeft": null,
+          "epoch": null,
+          "class": "pending",
+          "classified": false,
+          "pending": true,
+          "gen": 2,
+          "shared": false
+        }
+      }
+    },
+    {
+      "name": "provenance page had no uncaught error",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "name": "settlement pays 2147483647 and keeps it in the save",
+      "ok": true,
+      "detail": {
+        "n": 2147483647,
+        "ok": true,
+        "coins": 2147483647,
+        "inv": 0,
+        "saved": 2147483647,
+        "savedInv": 0,
+        "pending": 0
+      }
+    },
+    {
+      "name": "settlement pays 2147483648 and keeps it in the save",
+      "ok": true,
+      "detail": {
+        "n": 2147483648,
+        "ok": true,
+        "coins": 2147483648,
+        "inv": 0,
+        "saved": 2147483648,
+        "savedInv": 0,
+        "pending": 0
+      }
+    },
+    {
+      "name": "settlement pays 3000000000 and keeps it in the save",
+      "ok": true,
+      "detail": {
+        "n": 3000000000,
+        "ok": true,
+        "coins": 3000000000,
+        "inv": 0,
+        "saved": 3000000000,
+        "savedInv": 0,
+        "pending": 0
+      }
+    },
+    {
+      "name": "settlement pays 9007199254740991 and keeps it in the save",
+      "ok": true,
+      "detail": {
+        "n": 9007199254740991,
+        "ok": true,
+        "coins": 9007199254740991,
+        "inv": 0,
+        "saved": 9007199254740991,
+        "savedInv": 0,
+        "pending": 0
+      }
+    },
+    {
+      "name": "268435456 melons settle as 2147483648, not a wrapped 32-bit grant",
+      "ok": true,
+      "detail": {
+        "ok": true,
+        "coins": 2147483648,
+        "inv": 0,
+        "saved": 2147483648
+      }
+    },
+    {
+      "name": "a product past the safe integer is refused with inventory and coins untouched",
+      "ok": true,
+      "detail": {
+        "coins": 11,
+        "inv": 1125899906842624,
+        "pending": 0
+      }
+    },
+    {
+      "name": "big-amount page had no uncaught error",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "name": "overflow stops after three tries and shows the reason",
+      "ok": true,
+      "detail": {
+        "coins": 9007199254740991,
+        "inv": 3,
+        "text": "这笔出售商铺已经收下，但铜钱多到加不进去。先花掉一些，再点确认。自动重试已停。",
+        "btn": true
+      }
+    },
+    {
+      "name": "manual recovery after spending pays the reserved crop once",
+      "ok": true,
+      "detail": {
+        "coins": 11,
+        "inv": 3,
+        "pending": 0
+      }
+    },
+    {
+      "name": "overflow page had no uncaught error",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "name": "reload while a reservation is open pays it once",
+      "ok": true,
+      "detail": {
+        "before": {
+          "coins": 5,
+          "inv": 0,
+          "pending": 1
+        },
+        "once": {
+          "coins": 14,
+          "inv": 0,
+          "pending": 0
+        },
+        "twice": 14
+      }
+    },
+    {
+      "name": "reload page had no uncaught error",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "name": "malformed ok:true grants keep the debit and the receipt",
+      "ok": true,
+      "detail": [
+        {
+          "granted": null,
+          "ok": false,
+          "coins": 40,
+          "inv": 5,
+          "n": 1,
+          "pause": "bad_grant",
+          "after": {
+            "coins": 40,
+            "inv": 5
+          }
+        },
+        {
+          "granted": "3e9",
+          "ok": false,
+          "coins": 40,
+          "inv": 5,
+          "n": 1,
+          "pause": "bad_grant",
+          "after": {
+            "coins": 40,
+            "inv": 5
+          }
+        },
+        {
+          "granted": "3000000000.0",
+          "ok": false,
+          "coins": 40,
+          "inv": 5,
+          "n": 1,
+          "pause": "bad_grant",
+          "after": {
+            "coins": 40,
+            "inv": 5
+          }
+        },
+        {
+          "granted": "true",
+          "ok": false,
+          "coins": 40,
+          "inv": 5,
+          "n": 1,
+          "pause": "bad_grant",
+          "after": {
+            "coins": 40,
+            "inv": 5
+          }
+        },
+        {
+          "granted": " 3",
+          "ok": false,
+          "coins": 40,
+          "inv": 5,
+          "n": 1,
+          "pause": "bad_grant",
+          "after": {
+            "coins": 40,
+            "inv": 5
+          }
+        },
+        {
+          "granted": "03",
+          "ok": false,
+          "coins": 40,
+          "inv": 5,
+          "n": 1,
+          "pause": "bad_grant",
+          "after": {
+            "coins": 40,
+            "inv": 5
+          }
+        }
+      ]
+    },
+    {
+      "name": "a canonical integer string is a real grant",
+      "ok": true,
+      "detail": {
+        "ok": true,
+        "coins": 3000000001,
+        "inv": 0
+      }
+    },
+    {
+      "name": "the registered five-minute callback observes rollback through probe",
+      "ok": true,
+      "detail": {
+        "mode": "r9",
+        "cap": 100,
+        "uncapped": false,
+        "confirmedUncapped": false,
+        "serverLeft": 40,
+        "epoch": 8,
+        "class": "epoch",
+        "classified": true,
+        "pending": false,
+        "gen": 1,
+        "shared": false
+      }
+    },
+    {
+      "name": "another account is not paused and switching back stays paused",
+      "ok": true,
+      "detail": {
+        "rows": [
+          {
+            "granted": null,
+            "ok": false,
+            "coins": 40,
+            "inv": 5,
+            "n": 1,
+            "pause": "bad_grant",
+            "after": {
+              "coins": 40,
+              "inv": 5
+            }
+          },
+          {
+            "granted": "3e9",
+            "ok": false,
+            "coins": 40,
+            "inv": 5,
+            "n": 1,
+            "pause": "bad_grant",
+            "after": {
+              "coins": 40,
+              "inv": 5
+            }
+          },
+          {
+            "granted": "3000000000.0",
+            "ok": false,
+            "coins": 40,
+            "inv": 5,
+            "n": 1,
+            "pause": "bad_grant",
+            "after": {
+              "coins": 40,
+              "inv": 5
+            }
+          },
+          {
+            "granted": "true",
+            "ok": false,
+            "coins": 40,
+            "inv": 5,
+            "n": 1,
+            "pause": "bad_grant",
+            "after": {
+              "coins": 40,
+              "inv": 5
+            }
+          },
+          {
+            "granted": " 3",
+            "ok": false,
+            "coins": 40,
+            "inv": 5,
+            "n": 1,
+            "pause": "bad_grant",
+            "after": {
+              "coins": 40,
+              "inv": 5
+            }
+          },
+          {
+            "granted": "03",
+            "ok": false,
+            "coins": 40,
+            "inv": 5,
+            "n": 1,
+            "pause": "bad_grant",
+            "after": {
+              "coins": 40,
+              "inv": 5
+            }
+          }
+        ],
+        "canon": {
+          "ok": true,
+          "coins": 3000000001,
+          "inv": 0
+        },
+        "pol": {
+          "mode": "r9",
+          "cap": 100,
+          "uncapped": false,
+          "confirmedUncapped": false,
+          "serverLeft": 40,
+          "epoch": 8,
+          "class": "epoch",
+          "classified": true,
+          "pending": false,
+          "gen": 1,
+          "shared": false
+        },
+        "five": true,
+        "other": {
+          "q": false,
+          "sold": true,
+          "coins": 3,
+          "inv": 3
+        },
+        "back": {
+          "q": true,
+          "sold": false,
+          "coins": 3,
+          "inv": 3,
+          "same": true
+        }
+      }
+    },
+    {
+      "name": "grant and account page had no uncaught error",
+      "ok": true,
+      "detail": []
+    }
+  ]
+}

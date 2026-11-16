@@ -1,0 +1,50 @@
+--- /workspace/qa/r9h-candidate/r9-sell.js	2026-11-16 13:26:24.701055465 +0000
++++ /workspace/qa/r9h-q2/r9-sell.js	2026-11-16 13:26:24.697055493 +0000
+@@ -23,7 +23,7 @@
+  * - Entries: backpack button, 花木铺 prompt, hint after harvest.
+  * The fortune stalls are NOT here. window.TG_R9 is the shared namespace. Save key stays templeGarden.v1. */
+ (()=>{
+-const R=window.TG_R9=Object.assign(window.TG_R9||{},{sell:{version:'r9h-q',mode:'?',cap:null,uncapped:false,confirmedUncapped:false,serverLeft:null,epoch:null,class:'pending',classified:false,gen:1,fb:'?',credit:null,prices:null,sbLeft:null,seed:null,log:[]}});
++const R=window.TG_R9=Object.assign(window.TG_R9||{},{sell:{version:'r9h-q2',mode:'?',cap:null,uncapped:false,confirmedUncapped:false,serverLeft:null,epoch:null,class:'pending',classified:false,gen:1,fb:'?',credit:null,prices:null,sbLeft:null,seed:null,log:[]}});
+ const X=R.sell;
+ const BUYBACK=['wood-table','bench','cabinet','daybed','altar-table','rocking-chair','vase','lantern','bonsai','screen','cushion'];
+ const STARTER={cushion:1,vase:1},SHARED_CAP=40,SB_CAP=400,SEED_BUDGET=1000,SEED_PER=10;
+@@ -75,6 +75,7 @@
+ X.asCount=asCount;
+ function noteSellStatus(st,fromStatus){
+  // Provenance: an earn/confirm reply never changes mode or epoch. Only status() may.
++ if(fromStatus&&st&&st.crop_hold===true)noteServerHold(st);
+  if(!fromStatus)return policy();
+  const kind=statusKind(st);
+  if(kind==='error'){scheduleStatusRetry();return policy();}
+@@ -217,12 +218,21 @@
+ function grantKey(a){return 'templeGarden.r9.grantProofs.'+(a||'default');}
+ function loadQuarantine(){const a=acct()||'default';try{X.quarantine=JSON.parse(localStorage.getItem(qKey(a))||'null');}catch(e){X.quarantine=null;}return X.quarantine;}
+ function quarantineActive(){loadQuarantine();return !!(X.quarantine&&X.quarantine.paused&&X.quarantine.acct===(acct()||'default'));}
++function noteServerHold(info){
++ const a=acct()||'default';
++ if(!info||(info.crop_hold!==true&&info.reason!=='quarantine'))return loadQuarantine();
++ const prev=(()=>{try{return JSON.parse(localStorage.getItem(qKey(a))||'null');}catch(e){return null;}})();
++ const fromServer=!!(info.hold_local&&info.hold_remote);
++ if(prev&&prev.paused&&prev.local&&prev.remote&&!fromServer){X.quarantine=prev;return prev;}
++ const rec={paused:true,reason:info.hold_reason||info.reason||'save_conflict',at:Date.now(),acct:a,local:info.hold_local||info.local||(prev&&prev.local)||null,remote:info.hold_remote||info.remote||(prev&&prev.remote)||null,base:info.hold_base||info.base||(prev&&prev.base)||null,remoteRev:info.hold_rev!=null?info.hold_rev:(info.remoteRev!=null?info.remoteRev:(prev&&prev.remoteRev!=null?prev.remoteRev:null)),device:info.hold_device||null,source:info.hold_source||'server'};
++ try{localStorage.setItem(qKey(a),JSON.stringify(rec));}catch(e){}
++ X.quarantine=rec;return rec;}
+ function noteConflict(info){const a=acct()||'default';const prev=(()=>{try{return JSON.parse(localStorage.getItem(qKey(a))||'null');}catch(e){return null;}})();
+  if(prev&&prev.paused&&prev.local&&prev.remote){X.quarantine=prev;return prev;}
+  const rec=info&&info.paused?info:{paused:true,reason:'save_conflict',at:Date.now(),acct:a,local:info&&info.local||null,remote:info&&info.remote||null,base:info&&info.base||null,remoteRev:info&&info.remoteRev!=null?info.remoteRev:null,grants:(prev&&prev.grants)||[]};
+  if(info&&Array.isArray(info.grants))rec.grants=info.grants;try{localStorage.setItem(qKey(a),JSON.stringify(rec));}catch(e){}X.quarantine=rec;return rec;}
+ function rememberGrant(rec,g){const a=acct()||'default';let list=[];try{list=JSON.parse(localStorage.getItem(grantKey(a))||'[]');}catch(e){list=[];}if(!Array.isArray(list))list=[];if(!list.some(x=>x&&x.req===rec.req&&x.granted===g))list.push({req:rec.req,granted:g,id:rec.id,n:rec.n,at:Date.now()});try{localStorage.setItem(grantKey(a),JSON.stringify(list.slice(-64)));}catch(e){}X.grantProofs=list;return list;}
+-X.noteConflict=noteConflict;X.quarantineActive=quarantineActive;X.loadQuarantine=loadQuarantine;
++X.noteConflict=noteConflict;X.noteServerHold=noteServerHold;X.quarantineActive=quarantineActive;X.loadQuarantine=loadQuarantine;
+ function sellQty(id,qty){
+  if(r3DenyVisit())return false;syncAccount();loadQuarantine();
+  if(quarantineActive()){saleToast('quarantine');return false;}
+@@ -277,6 +287,7 @@
+ async function applyCropResult(rec,r){
+  if(!rec||!rec.acct)return false;
+  if(acct()!==rec.acct)return false;   // another account is on screen; the reservation stays for the account that started it
++ if(r&&(r.reason==='quarantine'||r.crop_hold===true)){noteServerHold(r);if(r.replay&&r.ok){const g=canonicalGrant(r.granted);if(g!=null)rememberGrant(rec,g);}return false;}
+  if(rec.pause==='bad_grant')return false;
+  if(!r||r.reason==='error'||r.reason==='offline'){if(!quarantineActive())scheduleCrop();return false;}
+  if(cropApplied(rec.req)){if(quarantineActive())return false;forgetCrop(rec.acct,rec.req);return true;}

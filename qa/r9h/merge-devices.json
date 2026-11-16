@@ -1,0 +1,108 @@
+{
+  "passed": 10,
+  "failed": 0,
+  "total": 10,
+  "cloudRev": 3,
+  "results": [
+    {
+      "name": "site page unions crop receipts in merge3",
+      "ok": true
+    },
+    {
+      "name": "device A establishes the shared base save",
+      "ok": true,
+      "detail": {
+        "rev": 7,
+        "status": "synced"
+      }
+    },
+    {
+      "name": "device B loads the cloud save through the real storage load",
+      "ok": true,
+      "detail": {
+        "rev": 7,
+        "coins": 100,
+        "cabbage": 80,
+        "base": true
+      }
+    },
+    {
+      "name": "device A uploaded the deducted inventory and the receipt",
+      "ok": true,
+      "detail": {
+        "rev": 9,
+        "keys": [
+          "crop-merge-0001"
+        ]
+      }
+    },
+    {
+      "name": "B conflicting with an empty receipt list keeps A receipt and the deduction",
+      "ok": true,
+      "detail": {
+        "mergedBA": {
+          "status": "synced",
+          "rev": 10
+        },
+        "inv": {
+          "cabbage": 0
+        },
+        "coins": 140,
+        "pending": {
+          "id": "cabbage",
+          "n": 80,
+          "gain": 80,
+          "price": 1,
+          "req": "crop-merge-0001",
+          "acct": "merge-user",
+          "epoch": 2,
+          "name": "白菜",
+          "at": 1
+        }
+      }
+    },
+    {
+      "name": "the opposite direction also keeps the receipt and the deducted stack",
+      "ok": true,
+      "detail": {
+        "inv": {
+          "cabbage": 0
+        },
+        "coins": 155,
+        "pending": true
+      }
+    },
+    {
+      "name": "a missing base does not throw away the local receipt",
+      "ok": true,
+      "detail": {
+        "pending": 80,
+        "inv": 0,
+        "coins": 90
+      }
+    },
+    {
+      "name": "a credited request stays credited and is not payable a second time",
+      "ok": true,
+      "detail": {
+        "applied": true,
+        "coins": 180
+      }
+    },
+    {
+      "name": "reloading a merged save that already credited the request pays nothing more",
+      "ok": true,
+      "detail": {
+        "before": 180,
+        "after": 180,
+        "pending": 0,
+        "applied": true
+      }
+    },
+    {
+      "name": "merge pages had no unexpected page error",
+      "ok": true,
+      "detail": []
+    }
+  ]
+}

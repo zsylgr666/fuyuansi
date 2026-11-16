@@ -1,0 +1,99 @@
+--- /tmp/crop-baseline-ref/backend/tg-r6.js	2026-11-14 17:34:21.000000000 +0000
++++ /tmp/r9d-build/backend/tg-r6.js	2026-11-16 03:07:10.187348141 +0000
+@@ -37,9 +37,13 @@
+  * window.TG_LOTUS    koi() -> SYNC {ok, left, server:Promise | ok:false, reason:'daily'} (3/day; local mirror of the server count; koiAsync() waits)   wish(text) (3/day)   status()
+  * window.TG_ECON     earn(coins, source 'sell'|'task'|'merit'|'steal', exact?) -> SYNC granted coins (local mirror of today's server caps,
+  *        reported to econ_earn in the background)   earnAsync(...) -> Promise<server-granted coins>   status()
+- *   Server daily caps (r9, 方案 B): sell 100 (crops/produce), task+merit 40 (merit <= 8), stolen 15; furniture sell-back 400.
+- *   exact=true: all-or-nothing. Pre-r9 server: 'sell' still shares the 40 (detected from econ_status; no sell_left).
+- *   r9: left(source) -> today's mirrored allowance or null ('sell'|'task'|'merit'|'earn'|'steal'|'sellback')
++ *   Server caps (r9d): crops/produce have NO daily coin ceiling when econ_status.sell_uncapped is true
++ *   (not a larger number). task+merit 40 (merit <= 8), stolen 15, furniture sell-back 400 stay.
++ *   exact=true: all-or-nothing. Pre-r9 server: 'sell' still shares the 40 (no sell_left and no sell_uncapped).
++ *   Legacy r9: numeric sell_left is that day's remaining crop coins (usually a 100 cap). Once this page has
++ *   seen sell_uncapped, a later status that merely repeats sell_left does not put 100 back; TG_R9.sell.noteSellStatus
++ *   owns that decision. left('sell') is null when uncapped (null here means "no ceiling", and the game checks
++ *   policy().uncapped rather than treating null as the old 100).
+  *       shopBuy(item, qty) -> Promise   log a coin purchase from the shop (fire-and-forget; same req on retry)
+  *       sellback(item, qty, unit, req?) -> Promise<{ok, granted, unit, credit_left, left} | {ok:false, reason, req}>
+  *         reason: no_credit | daily_cap | price_changed | not_sellable | bad_qty | offline | old_schema (r9 not installed:
+@@ -291,13 +295,24 @@
+   // The game calls TG_LOTUS.koi() and TG_ECON.earn() synchronously (r6-net.js), so both answer at once from a local mirror of the
+   // server's daily counters (econ_status / lotus_status, refreshed on login, every 5 min and after each call) and report to the
+   // server in the background. The server stays authoritative for its own counters; the *Async variants wait for its answer.
+-  var MIR = { day: null, earn: null, merit: null, steal: null, koi: null, sell: null, sellback: null, r9: false };
++  var MIR = { day: null, earn: null, merit: null, steal: null, koi: null, sell: null, sellback: null, r9: false, sellUncapped: false };
+   function sday() { return new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10); }
+-  function mirFresh() { if (MIR.day && MIR.day !== sday()) { MIR = { day: sday(), earn: null, merit: null, steal: null, koi: null, sell: null, sellback: null, r9: MIR.r9 }; refreshMir(); } }
++  function mirFresh() { if (MIR.day && MIR.day !== sday()) { MIR = { day: sday(), earn: null, merit: null, steal: null, koi: null, sell: null, sellback: null, r9: MIR.r9, sellUncapped: MIR.sellUncapped }; refreshMir(); } }
++  function adoptSell(p) {
++    if (!p) return p;
++    if (p.uncapped) { MIR.r9 = true; MIR.sellUncapped = true; MIR.sell = null; }
++    else if (p.mode === 'r9') { MIR.r9 = true; MIR.sellUncapped = false; if (typeof p.serverLeft === 'number') MIR.sell = p.serverLeft; }
++    else { MIR.r9 = false; MIR.sellUncapped = false; MIR.sell = null; }
++    return p;
++  }
+   async function refreshMir() {
+     if (!online()) return;
+     try { var e = await rpc('econ_status', {}); if (e && e.day) { MIR.day = e.day; MIR.earn = e.earn_left; MIR.merit = e.merit_coins_left; MIR.steal = e.steal_left;
+-      MIR.r9 = typeof e.sell_left === 'number'; MIR.sell = MIR.r9 ? e.sell_left : null; MIR.sellback = typeof e.sellback_left === 'number' ? e.sellback_left : null; } } catch (x) {}
++      MIR.sellback = typeof e.sellback_left === 'number' ? e.sellback_left : null;
++      var note = window.TG_R9 && TG_R9.sell && TG_R9.sell.noteSellStatus;
++      if (note) adoptSell(note(e));
++      else { MIR.sellUncapped = e.sell_uncapped === true; MIR.r9 = MIR.sellUncapped || typeof e.sell_left === 'number'; MIR.sell = MIR.sellUncapped ? null : (MIR.r9 ? e.sell_left : null); }
++    } } catch (x) {}
+     try { var l = await rpc('lotus_status', {}); if (l && l.day) MIR.koi = l.koi_left; } catch (x) {}
+   }
+   setInterval(refreshMir, 300000);
+@@ -305,12 +320,15 @@
+     coins = Math.floor(Number(coins) || 0); if (coins <= 0) return Promise.resolve(0);
+     if (!online()) return Promise.resolve(coins);
+     return call('econ_earn', { p_coins: coins, p_source: source || 'sell', p_exact: !!exact }).then(function (r) {
++      if (r && r.sell_uncapped === true && window.TG_R9 && TG_R9.sell && TG_R9.sell.noteSellStatus) TG_R9.sell.noteSellStatus({ sell_uncapped: true, day: r.day || MIR.day || 'earn' });
+       if (r && r.reason === 'error') return coins;   // backend down / old schema: client caps only
+-      if (r && typeof r.left === 'number') MIR[mirKey(source || 'sell')] = r.left;
++      // A numeric left must not reintroduce a crop ceiling after sell_uncapped. Task/merit/steal still mirror their own pools.
++      if (r && typeof r.left === 'number' && !((source || 'sell') === 'sell' && sellUncapped())) MIR[mirKey(source || 'sell')] = r.left;
+       return (r && r.granted) | 0;
+     });
+   }
+-  function mirKey(source) { return source === 'steal' ? 'steal' : (source === 'sell' && MIR.r9) ? 'sell' : 'earn'; }   // r9: sell has its own pool
++  function sellUncapped() { return !!(MIR.sellUncapped || (window.TG_R9 && TG_R9.sell && TG_R9.sell.policy && TG_R9.sell.policy().uncapped)); }
++  function mirKey(source) { return source === 'steal' ? 'steal' : (source === 'sell' && (MIR.r9 || sellUncapped())) ? 'sell' : 'earn'; }   // uncapped sell is not the 40 earn pool
+   // r9 RPCs: a missing function (r9.sql not applied) must NOT flip NO_R6 (that would park every r6 feature for 10 min)
+   var NO_R9 = 0;
+   async function call9(fn, args) {
+@@ -341,23 +359,28 @@
+     koiAsync: koiAsync,
+     wish: function (t) { return call('lotus_wish', { p_body: String(t || '') }); }, status: function () { return call('lotus_status', {}); } };
+   window.TG_ECON = {
+-    earn: function (coins, source, exact) {   // sync: number of coins granted now (0 = over today's cap)
++    earn: function (coins, source, exact) {   // sync: number of coins granted now (0 = over today's cap). Uncapped crop sales are not clamped.
+       coins = Math.floor(Number(coins) || 0); if (coins <= 0) return 0;
++      if (!Number.isSafeInteger(coins)) return 0;
+       mirFresh(); source = source || 'sell';
+-      var key = mirKey(source), left = MIR[key], g = coins;
+-      if (left != null) g = Math.min(g, Math.max(0, left));
++      var uncapped = source === 'sell' && sellUncapped();
++      var key = mirKey(source), left = uncapped ? null : MIR[key], g = coins;
++      if (!uncapped && left != null) g = Math.min(g, Math.max(0, left));
+       if (source === 'merit' && MIR.merit != null) g = Math.min(g, Math.max(0, MIR.merit));
+       if (g <= 0 || (exact && g < coins)) return 0;
+-      if (left != null) MIR[key] = left - g;
++      if (!Number.isSafeInteger(g)) return 0;
++      if (!uncapped && left != null) MIR[key] = left - g;
+       if (source === 'merit' && MIR.merit != null) MIR.merit -= g;
+       if (online()) econAsync(g, source, true).then(function (sv) { if (sv < g) console.warn('[TG_ECON] server granted', sv, 'of', g); });
+       return g;
+     },
++    adoptSell: adoptSell,
+     earnAsync: econAsync,
+     status: function () { return call('econ_status', {}); },
+     // ---- r9 ----
+-    left: function (source) {   // today's mirrored allowance (null = unknown / offline)
++    left: function (source) {   // today's mirrored allowance. sell returns null when uncapped (no ceiling) and when unknown.
+       mirFresh(); source = source || 'sell';
++      if (source === 'sell' && sellUncapped()) return null;
+       if (source === 'sellback') return MIR.sellback;
+       if (source === 'merit') return MIR.merit == null ? null : (MIR.earn == null ? MIR.merit : Math.min(MIR.merit, MIR.earn));
+       return MIR[mirKey(source)];
