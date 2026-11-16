@@ -144,3 +144,42 @@ node qa/r9d-uncap/test/browser-sale.mjs
 ```
 
 The recorded run is `qa/r9d-uncap/browser-results.json`.
+
+## Follow-up: original r9c selltest and entry peaks
+
+The original `qa/r9c/tools` archive (`97e3714aab3421585f25396a27c2eaeeb565f5b8b2a38ca8fd29dbd405c49486`) was extracted only as a reference. The runner checked in at `qa/r9c/tools/selltest.mjs` changes two paths and nothing else: `ROOT` is `/workspace`, and Playwright is `qa/tools-node` (`playwright-core` 1.65.1) instead of `/workspace/temple-garden/qa/tools-node`. `BUILD` is the frozen file `v4/index.r9d.html`. No assertion in that file was edited.
+
+Result: **84/84 pass, 0 failures.** `qa/r9c/out/selltest.json`.
+
+| Category | Cases | Result | What it locks |
+| --- | --- | --- | --- |
+| A | 15 | pass | No backend: shared 40, partial sell-all, merit, local buy-back, 400 cap, visiting, placed item |
+| B | 10 | pass | Legacy r9 mock (`sell_cap: 100`, no `sell_uncapped`): crop cap 100, merit not blocked by a full sell cap, shop buy, sell-back request id |
+| C | 4 | pass | Old client: shared 40, buy-back hidden |
+| D | 3 | pass | Old server: shared 40, buy-back hidden |
+| E | 3 | pass | Offline: shared 40, local buy-back |
+| F | 10 | pass | Local and server seed, including reload |
+| G | 6 | pass | Starter, gift, merit item, family stow, market clamp |
+| H | 8 | pass | Dropped response, pending lock, 15 s replay, same request id once |
+| I | 5 | pass | Credit shown on first open, probe refresh, refused shop log |
+| J | 6 | pass | Per-account pending, offline reason, account switch, signed out |
+| K | 4 | pass | Reserved unit cannot be placed or listed; credit-only payout; no second credit |
+| L | 10 | pass | Two tabs, Web Locks and the lease fallback, IndexedDB claim once |
+
+Changed crop-cap expectations: **none.** The original mock never sends `sell_uncapped`, so it is still the legacy r9 server. B1 still requires `今日出售 0/100`. B2 still sells 12 melons (96) then 4 cabbage and stops at 100, with `coinsEarned` left at 0. That is the hotfix's compatibility rule, not a leftover 100 on the uncapped server. The uncapped cases (no numeric ceiling, stale `sell_left` ignored) stay in the earlier reconstructed run.
+
+Entry-frame peaks, same method as `smoke-r9c.mjs` section 3b (600 ms after `go`, four yaws, `renderer.info.reset()` then one render). Stable figure is the later single render. Frozen sha256 was `4ecd25c9…` before and after. Page errors 0. Highest entry frame 98 (portrait plaza). Highest stable frame 112 (portrait hall). Both are under 150.
+
+| Scene | Portrait entry (4 yaws) | Portrait stable | Landscape entry | Landscape stable |
+| --- | --- | --- | --- | --- |
+| plaza | 98, 54, 67, 56 | 66 | 64, 53, 42, 53 | 77 |
+| gate | 35, 32, 32, 30 | 43 | 39, 39, 36, 36 | 47 |
+| hall | 69, 36, 56, 36 | 112 | 80, 68, 81, 85 | 50 |
+| yard | 35, 17, 20, 18 | 50 | 39, 25, 20, 24 | 54 |
+| zen | 9, 15, 9, 13 | 23 | 17, 16, 17, 14 | 27 |
+| study | 7, 8, 6, 13 | 26 | 16, 11, 15, 14 | 27 |
+| market | 31, 29, 28, 33 | 44 | 42, 40, 39, 43 | 55 |
+| tea | 50, 38, 41, 43 | 75 | 54, 49, 43, 56 | 79 |
+| lotus | 42, 34, 37, 35 | 52 | 45, 41, 41, 44 | 56 |
+
+Full numbers: `qa/r9c/out/smoke-r9d-entry.json`. The frozen HTML was not rewritten. No live database, no player cleanup, no merge.
