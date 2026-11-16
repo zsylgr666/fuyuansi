@@ -1,0 +1,242 @@
+{
+  "results": [
+    {
+      "name": "legacy r9 probe keeps a numeric crop cap and does not invent uncapped",
+      "ok": true,
+      "detail": "{\"mode\":\"r9\",\"cap\":100,\"uncapped\":false,\"fb\":\"server\",\"err\":null}"
+    },
+    {
+      "name": "legacy sell-all is partial at the 100 coin cap (150 cabbage price 1)",
+      "ok": true,
+      "detail": "{\"ok\":true,\"coins\":100,\"left\":50,\"earned\":0,\"sell\":100,\"cap\":{\"cap\":100,\"left\":0,\"used\":100,\"shared\":false,\"uncapped\":false}}"
+    },
+    {
+      "name": "legacy refuses another crop coin after the cap",
+      "ok": true,
+      "detail": "{\"ok\":false,\"coins\":0,\"left\":50}"
+    },
+    {
+      "name": "uncapped probe clears the numeric cap",
+      "ok": true,
+      "detail": "{\"mode\":\"uncapped\",\"cap\":null,\"uncapped\":true,\"fb\":\"server\",\"err\":null}"
+    },
+    {
+      "name": "two large crop sales in one day pay in full (150 + 40*8 = 470) with no cap line",
+      "ok": true,
+      "detail": "{\"a\":true,\"b\":true,\"coins\":470,\"cabbage\":0,\"melon\":0,\"earned\":0,\"earnedBefore\":0,\"text\":\"按背包数量出售，没有每日铜钱上限\",\"furn\":\"在商铺买的家具和装饰，收进背包后可按原价一半卖回 · 今日回收 0/400\",\"pol\":{\"mode\":\"uncapped\",\"cap\":null,\"uncapped\":true,\"confirmedUncapped\":true,\"serverLeft\":null,\"shared\":false}}"
+    },
+    {
+      "name": "after uncapped is confirmed, a stale sell_left/sell_cap 100 does not come back",
+      "ok": true,
+      "detail": "{\"ok\":true,\"coins\":80,\"left\":0,\"pol\":{\"mode\":\"uncapped\",\"cap\":null,\"uncapped\":true,\"confirmedUncapped\":true,\"serverLeft\":null,\"shared\":false},\"cap\":{\"cap\":null,\"left\":null,\"used\":550,\"shared\":false,\"uncapped\":true}}"
+    },
+    {
+      "name": "merit stops at 8 and task/merit pool stops at 40 after uncapped crop sales",
+      "ok": true,
+      "detail": "{\"merit\":8,\"ninth\":false,\"tasks\":4,\"over\":false,\"earned\":40,\"coins\":40,\"sellback\":0}"
+    },
+    {
+      "name": "zero, negative, fractional, excess and unsafe coin totals are rejected",
+      "ok": true,
+      "detail": "{\"bad\":{\"zero\":false,\"neg\":false,\"frac\":false,\"excess\":false,\"unsafe\":false},\"negLeft\":-3,\"fracLeft\":2.5,\"exLeft\":2,\"unsafeLeft\":2,\"coins\":9007199254740991}"
+    },
+    {
+      "name": "sell-all aborts when inventory shrinks during the sale and does not keep the coins",
+      "ok": true,
+      "detail": "{\"ok\":false,\"coins\":100,\"inv\":4,\"before\":100}"
+    },
+    {
+      "name": "furniture buy-back still stops at 400 (13 * 30 = 390, 14th blocked)",
+      "ok": true,
+      "detail": "{\"sold\":13,\"blocked\":true,\"coins\":390,\"sb\":390,\"left\":10,\"backpack\":7}"
+    },
+    {
+      "name": "lost sell-back response retries the same request id and does not pay twice",
+      "ok": true,
+      "detail": "{\"mid\":{\"coins\":0,\"pending\":1,\"calls\":3},\"after\":{\"coins\":30,\"pending\":0,\"calls\":[\"sell-mwipb9a7-d7zfplya\",\"sell-mwipb9a7-d7zfplya\",\"sell-mwipb9a7-d7zfplya\",\"sell-mwipb9a7-d7zfplya\"]},\"coins\":30,\"pending\":0,\"sameReq\":true,\"calls\":4}"
+    },
+    {
+      "name": "pending records stay on their account; the other account is not locked and legacy key migrates once",
+      "ok": true,
+      "detail": "{\"list\":[\"sell-legacy01\"],\"moved\":true,\"other\":0,\"tookOther\":true,\"tookOwn\":false,\"takeBefore\":1,\"mine\":[\"sell-legacy01\"],\"replayed\":0,\"hooked\":true}"
+    },
+    {
+      "name": "offline and online pending copy stays account-specific",
+      "ok": true,
+      "detail": "{\"offline\":\"没有联网：上一笔卖回要等联网后自动确认，确认前先不能卖别的家具。\",\"online\":\"上一笔卖回还在和商铺确认，确认前先不能卖别的家具。\",\"pending\":1}"
+    },
+    {
+      "name": "both tabs see the same pending request",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "two tabs crediting one request id pay exactly once",
+      "ok": true,
+      "detail": "{\"coinsA\":100,\"coinsB\":130}"
+    },
+    {
+      "name": "a new page load against the rolled-back server applies 100 again",
+      "ok": true,
+      "detail": "{\"rolledBoot\":{\"mode\":\"r9\",\"cap\":100,\"uncapped\":false,\"fb\":\"server\",\"err\":null},\"sale\":{\"ok\":true,\"left\":30,\"coins\":200}}"
+    },
+    {
+      "name": "explicit sell_uncapped false restores the numeric cap in the same session",
+      "ok": true,
+      "detail": "{\"ok\":true,\"left\":30,\"pol\":{\"mode\":\"r9\",\"cap\":100,\"uncapped\":false,\"confirmedUncapped\":false,\"serverLeft\":100,\"shared\":false}}"
+    },
+    {
+      "name": "sale pages produced no uncaught exception",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "smoke 9 scenes at 390x844 and 844x390, settled draw calls between 1 and 150",
+      "ok": true,
+      "detail": "[{\"viewport\":\"390x844\",\"blocked\":false,\"frames\":[{\"id\":\"gate\",\"calls\":35,\"current\":\"gate\",\"errs\":[],\"title\":\"里门\"},{\"id\":\"plaza\",\"calls\":41,\"current\":\"plaza\",\"errs\":[],\"title\":\"福缘里 · 大厅\"},{\"id\":\"market\",\"calls\":31,\"current\":\"market\",\"errs\":[],\"title\":\"集市\"},{\"id\":\"yard\",\"calls\":24,\"current\":\"yard\",\"errs\":[],\"title\":\"心田小院\"},{\"id\":\"lotus\",\"calls\":59,\"current\":\"lotus\",\"errs\":[],\"title\":\"荷塘\"},{\"id\":\"hall\",\"calls\":38,\"current\":\"hall\",\"errs\":[],\"title\":\"缘堂\"},{\"id\":\"zen\",\"calls\":9,\"current\":\"zen\",\"errs\":[],\"title\":\"静室\"},{\"id\":\"study\",\"calls\":7,\"current\":\"study\",\"errs\":[],\"title\":\"书房\"},{\"id\":\"tea\",\"calls\":50,\"current\":\"tea\",\"errs\":[],\"title\":\"茶会小院\"}],\"errors\":[]},{\"viewport\":\"844x390\",\"blocked\":false,\"frames\":[{\"id\":\"gate\",\"calls\":55,\"current\":\"gate\",\"errs\":[],\"title\":\"里门\"},{\"id\":\"plaza\",\"calls\":66,\"current\":\"plaza\",\"errs\":[],\"title\":\"福缘里 · 大厅\"},{\"id\":\"market\",\"calls\":96,\"current\":\"market\",\"errs\":[],\"title\":\"集市\"},{\"id\":\"yard\",\"calls\":18,\"current\":\"yard\",\"errs\":[],\"title\":\"心田小院\"},{\"id\":\"lotus\",\"calls\":67,\"current\":\"lotus\",\"errs\":[],\"title\":\"荷塘\"},{\"id\":\"hall\",\"calls\":45,\"current\":\"hall\",\"errs\":[],\"title\":\"缘堂\"},{\"id\":\"zen\",\"calls\":15,\"current\":\"zen\",\"errs\":[],\"title\":\"静室\"},{\"id\":\"study\",\"calls\":14,\"current\":\"study\",\"errs\":[],\"title\":\"书房\"},{\"id\":\"tea\",\"calls\":52,\"current\":\"tea\",\"errs\":[],\"title\":\"茶会小院\"}],\"errors\":[]}]"
+    }
+  ],
+  "smoke": [
+    {
+      "viewport": "390x844",
+      "blocked": false,
+      "frames": [
+        {
+          "id": "gate",
+          "calls": 35,
+          "current": "gate",
+          "errs": [],
+          "title": "里门"
+        },
+        {
+          "id": "plaza",
+          "calls": 41,
+          "current": "plaza",
+          "errs": [],
+          "title": "福缘里 · 大厅"
+        },
+        {
+          "id": "market",
+          "calls": 31,
+          "current": "market",
+          "errs": [],
+          "title": "集市"
+        },
+        {
+          "id": "yard",
+          "calls": 24,
+          "current": "yard",
+          "errs": [],
+          "title": "心田小院"
+        },
+        {
+          "id": "lotus",
+          "calls": 59,
+          "current": "lotus",
+          "errs": [],
+          "title": "荷塘"
+        },
+        {
+          "id": "hall",
+          "calls": 38,
+          "current": "hall",
+          "errs": [],
+          "title": "缘堂"
+        },
+        {
+          "id": "zen",
+          "calls": 9,
+          "current": "zen",
+          "errs": [],
+          "title": "静室"
+        },
+        {
+          "id": "study",
+          "calls": 7,
+          "current": "study",
+          "errs": [],
+          "title": "书房"
+        },
+        {
+          "id": "tea",
+          "calls": 50,
+          "current": "tea",
+          "errs": [],
+          "title": "茶会小院"
+        }
+      ],
+      "errors": []
+    },
+    {
+      "viewport": "844x390",
+      "blocked": false,
+      "frames": [
+        {
+          "id": "gate",
+          "calls": 55,
+          "current": "gate",
+          "errs": [],
+          "title": "里门"
+        },
+        {
+          "id": "plaza",
+          "calls": 66,
+          "current": "plaza",
+          "errs": [],
+          "title": "福缘里 · 大厅"
+        },
+        {
+          "id": "market",
+          "calls": 96,
+          "current": "market",
+          "errs": [],
+          "title": "集市"
+        },
+        {
+          "id": "yard",
+          "calls": 18,
+          "current": "yard",
+          "errs": [],
+          "title": "心田小院"
+        },
+        {
+          "id": "lotus",
+          "calls": 67,
+          "current": "lotus",
+          "errs": [],
+          "title": "荷塘"
+        },
+        {
+          "id": "hall",
+          "calls": 45,
+          "current": "hall",
+          "errs": [],
+          "title": "缘堂"
+        },
+        {
+          "id": "zen",
+          "calls": 15,
+          "current": "zen",
+          "errs": [],
+          "title": "静室"
+        },
+        {
+          "id": "study",
+          "calls": 14,
+          "current": "study",
+          "errs": [],
+          "title": "书房"
+        },
+        {
+          "id": "tea",
+          "calls": 52,
+          "current": "tea",
+          "errs": [],
+          "title": "茶会小院"
+        }
+      ],
+      "errors": []
+    }
+  ],
+  "failed": 0
+}
