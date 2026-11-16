@@ -400,5 +400,9 @@ No fortune stalls. No merge, no deploy, no live SQL.
 
 This is a verification of one strategy: on a cross-device save conflict, pause crop selling and keep both original inventory, coin, and receipt snapshots. It is not r9i, it is not a release, and the frozen r9d–r9h pages above are unchanged. The record is `qa/r9h-candidate/VERIFICATION.md`. The server sketch in `qa/r9h-candidate/SERVER-QUARANTINE-DRAFT.sql` was not executed.
 
+## Candidate r9h-q2 — server hold, not a freeze
+
+r9h-q2 adds the account hold on top of r9h-q. A conflicting save stores both snapshots, the base, and device metadata under `auth.uid()`, and `save_put` / new crop `econ_earn` then refuse. It is not a release. Frozen r9d–r9h are unchanged. No live SQL was applied. The record is `qa/r9h-q2/VERIFICATION.md`.
+
 
 
