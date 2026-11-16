@@ -396,5 +396,9 @@ Safe order:
 
 No fortune stalls. No merge, no deploy, no live SQL.
 
+## Candidate r9h-q — not a freeze
+
+This is a verification of one strategy: on a cross-device save conflict, pause crop selling and keep both original inventory, coin, and receipt snapshots. It is not r9i, it is not a release, and the frozen r9d–r9h pages above are unchanged. The record is `qa/r9h-candidate/VERIFICATION.md`. The server sketch in `qa/r9h-candidate/SERVER-QUARANTINE-DRAFT.sql` was not executed.
+
 
 

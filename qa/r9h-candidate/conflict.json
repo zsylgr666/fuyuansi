@@ -1,0 +1,382 @@
+{
+  "passed": 13,
+  "failed": 0,
+  "total": 13,
+  "results": [
+    {
+      "name": "device A establishes the shared base",
+      "ok": true,
+      "detail": {
+        "rev": 1,
+        "status": "synced",
+        "epoch": 2
+      }
+    },
+    {
+      "name": "device B boots against the existing cloud without a pause",
+      "ok": true,
+      "detail": {
+        "q": false,
+        "coins": 100,
+        "cabbage": 12,
+        "rev": 2,
+        "status": "synced"
+      }
+    },
+    {
+      "name": "device B adopts that base without pausing",
+      "ok": true,
+      "detail": {
+        "rev": 2,
+        "coins": 100,
+        "cabbage": 12,
+        "q": false,
+        "epoch": 2,
+        "uid": "merge-user"
+      }
+    },
+    {
+      "name": "conflict keeps both original snapshots",
+      "ok": true,
+      "detail": {
+        "paused": true,
+        "reason": "save_conflict",
+        "at": 1794834031020,
+        "acct": "merge-user",
+        "local": {
+          "coins": 103,
+          "merit": 9,
+          "inventory": {
+            "cabbage": 8
+          },
+          "cropPending": {
+            "crop-dev-b-0001": {
+              "id": "cabbage",
+              "n": 4,
+              "gain": 4,
+              "price": 1,
+              "req": "crop-dev-b-0001",
+              "acct": "merge-user",
+              "epoch": 2,
+              "name": "白菜"
+            }
+          },
+          "cropApplied": null
+        },
+        "remote": {
+          "coins": 100,
+          "merit": 9,
+          "inventory": {
+            "cabbage": 7
+          },
+          "cropPending": {
+            "crop-dev-a-0001": {
+              "id": "cabbage",
+              "n": 5,
+              "gain": 5,
+              "price": 1,
+              "req": "crop-dev-a-0001",
+              "acct": "merge-user",
+              "epoch": 2,
+              "name": "白菜"
+            }
+          },
+          "cropApplied": null
+        },
+        "base": {
+          "coins": 100,
+          "merit": 9,
+          "inventory": {
+            "cabbage": 12
+          },
+          "cropPending": null,
+          "cropApplied": null
+        },
+        "remoteRev": 3
+      }
+    },
+    {
+      "name": "the cloud blob is not rewritten into a union",
+      "ok": true,
+      "detail": {
+        "rev": 3,
+        "cloudA": 3,
+        "inv": {
+          "cabbage": 7
+        },
+        "coins": 100,
+        "pending": [
+          "crop-dev-a-0001"
+        ]
+      }
+    },
+    {
+      "name": "replay, direct earn, offline, and a local receipt do not pay or move stock",
+      "ok": true,
+      "detail": {
+        "before": {
+          "coins": 103,
+          "cabbage": 8,
+          "pending": [
+            "crop-dev-b-0001"
+          ]
+        },
+        "after": {
+          "coins": 103,
+          "cabbage": 8,
+          "pending": [
+            "crop-dev-b-0001"
+          ]
+        },
+        "sold": false,
+        "earned": false,
+        "offlineSold": false,
+        "earnN": 0,
+        "q": true
+      }
+    },
+    {
+      "name": "the other device is not paused and a later save still lands",
+      "ok": true,
+      "detail": {
+        "aStill": {
+          "q": false,
+          "rev": 4
+        },
+        "rev": 4
+      }
+    },
+    {
+      "name": "reload keeps the journal, the local quantities, and does not upload",
+      "ok": true,
+      "detail": {
+        "reloaded": {
+          "q": true,
+          "coins": 103,
+          "after": 103,
+          "cabbage": 8,
+          "afterCabbage": 8,
+          "localCoins": 103,
+          "remoteN": 5
+        },
+        "rev": 4
+      }
+    },
+    {
+      "name": "a second tab of the same account stays paused",
+      "ok": true,
+      "detail": {
+        "q": true,
+        "before": {
+          "coins": 103,
+          "cabbage": 8
+        },
+        "sold": false,
+        "after": {
+          "coins": 103,
+          "cabbage": 8
+        }
+      }
+    },
+    {
+      "name": "the other account can sell and the paused account still cannot",
+      "ok": true,
+      "detail": {
+        "mid": {
+          "q": false,
+          "sold": true,
+          "coins": 11,
+          "cabbage": 2
+        },
+        "back": {
+          "q": true,
+          "blocked": false,
+          "coins": 11,
+          "cabbage": 2,
+          "same": true
+        },
+        "journalSame": true
+      }
+    },
+    {
+      "name": "a raw save_put replaces the cloud blob and leaves this device journal",
+      "ok": true,
+      "detail": {
+        "cloud": {
+          "coins": 1,
+          "inventory": {
+            "cabbage": 12
+          }
+        },
+        "localN": 4
+      }
+    },
+    {
+      "name": "same request pending against applied keeps both snapshots and does not pay again",
+      "ok": true,
+      "detail": {
+        "js": {
+          "paused": true,
+          "reason": "save_conflict",
+          "at": 1794834272244,
+          "acct": "merge-user",
+          "local": {
+            "coins": 100,
+            "merit": 0,
+            "inventory": {
+              "cabbage": 4
+            },
+            "cropPending": {
+              "crop-same-0001": {
+                "id": "cabbage",
+                "n": 8,
+                "gain": 8,
+                "price": 1,
+                "req": "crop-same-0001",
+                "acct": "merge-user",
+                "epoch": 2,
+                "name": "白菜"
+              }
+            },
+            "cropApplied": null
+          },
+          "remote": {
+            "coins": 108,
+            "merit": 0,
+            "inventory": {
+              "cabbage": 4
+            },
+            "cropPending": null,
+            "cropApplied": {
+              "crop-same-0001": 1
+            }
+          },
+          "base": {
+            "coins": 100,
+            "merit": 0,
+            "inventory": {
+              "cabbage": 12
+            },
+            "cropPending": null,
+            "cropApplied": null
+          },
+          "remoteRev": 3
+        },
+        "sameReplay": {
+          "before": {
+            "coins": 100,
+            "cabbage": 4
+          },
+          "after": {
+            "coins": 100,
+            "cabbage": 4
+          },
+          "earnN": 0,
+          "q": true
+        }
+      }
+    },
+    {
+      "name": "an in-flight grant is kept as proof and does not pay or restore after the conflict",
+      "ok": true,
+      "detail": {
+        "eCaught": {
+          "rev": 2,
+          "coins": 50,
+          "cabbage": 20,
+          "q": false
+        },
+        "eMove": {
+          "rev": 3,
+          "q": false,
+          "coins": 60
+        },
+        "flushed": {
+          "q": true
+        },
+        "fBase": {
+          "rev": 2,
+          "coins": 50,
+          "cabbage": 20,
+          "q": false,
+          "epoch": 2,
+          "uid": "merge-user"
+        },
+        "inflight": {
+          "ok": false,
+          "coins": 50,
+          "cabbage": 19,
+          "pending": {
+            "crop-mwja1gyq-qwj3v87v": {
+              "id": "cabbage",
+              "n": 1,
+              "gain": 1,
+              "price": 1,
+              "req": "crop-mwja1gyq-qwj3v87v",
+              "acct": "merge-user",
+              "epoch": 2,
+              "name": "白菜",
+              "at": 1794834367010
+            }
+          },
+          "proofs": [
+            {
+              "req": "crop-mwja1gyq-qwj3v87v",
+              "granted": 1,
+              "id": "cabbage",
+              "n": 1,
+              "at": 1794834367025
+            }
+          ],
+          "q": true
+        },
+        "journal": {
+          "paused": true,
+          "reason": "save_conflict",
+          "at": 1794834367020,
+          "acct": "merge-user",
+          "local": {
+            "coins": 50,
+            "merit": 0,
+            "inventory": {
+              "cabbage": 19
+            },
+            "cropPending": {
+              "crop-mwja1gyq-qwj3v87v": {
+                "id": "cabbage",
+                "n": 1,
+                "gain": 1,
+                "price": 1,
+                "req": "crop-mwja1gyq-qwj3v87v",
+                "acct": "merge-user",
+                "epoch": 2,
+                "name": "白菜",
+                "at": 1794834367010
+              }
+            },
+            "cropApplied": null
+          },
+          "remote": {
+            "coins": 60,
+            "merit": 0,
+            "inventory": {
+              "cabbage": 20
+            },
+            "cropPending": null,
+            "cropApplied": null
+          },
+          "base": {
+            "coins": 50,
+            "merit": 0,
+            "inventory": {
+              "cabbage": 20
+            },
+            "cropPending": null,
+            "cropApplied": null
+          },
+          "remoteRev": 3
+        }
+      }
+    }
+  ]
+}
