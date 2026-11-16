@@ -1,12 +1,19 @@
--- r9h-q2 ROLLBACK DRAFT. Not applied to any live database.
--- Removes the crop-hold enforcement added by r9h-q2-hold.sql.
--- Restores save_get and save_put to the r7.2 bodies, and econ_earn / econ_status
--- to the r9f bodies (the same text as backend/r9f-uncap.sql).
--- Does not bump or reset sell_policy.epoch. Does not drop econ_earn_reqs.
--- Does not drop the saves hold columns, so the stored snapshots remain on the row.
--- After this file, save_put no longer consults crop_hold, so a later save can
--- replace state again. That is the rollback. It does not choose a winner and it
--- does not delete the evidence columns.
+-- r9h-q2 HOLD ROLLBACK DRAFT. Not applied to any live database.
+-- This is the only rollback for backend/r9h-q2-hold.sql.
+-- Do NOT apply backend/r9f-uncap-rollback.sql by itself while the hold is
+-- installed. That file replaces econ_earn and moves sell_policy, and it leaves
+-- the hold's save_put in place, so a new earn can pay while save_put still
+-- returns quarantine.
+--
+-- This file restores save_get and save_put to the r7.2 bodies, and econ_earn /
+-- econ_status to the r9f forward bodies (the same text as backend/r9f-uncap.sql).
+-- It does not bump or reset sell_policy.epoch. It does not drop econ_earn_reqs.
+-- It does not drop the hold columns. It does clear crop_hold and the snapshot
+-- values on every row. Copy crop_hold_review() first if that evidence must be
+-- kept. Re-applying r9h-q2-hold.sql after this file must not treat those old
+-- snapshots as a new freeze, because the flag and the values are gone.
+-- Clearing the flag is the operator's explicit rollback. It is not a choice
+-- of which device's coins win.
 begin;
 
 drop trigger if exists saves_hold on public.saves;
@@ -14,6 +21,14 @@ drop function if exists public.tg_saves_hold();
 drop function if exists public.save_quarantine(bigint, jsonb, jsonb, jsonb, text, text);
 drop function if exists public.crop_hold_review();
 drop function if exists public.crop_hold_clear();
+
+-- Clearing the flag must not bump saves.rev. Otherwise the next save_put
+-- looks like a conflict with a write that never changed the game state.
+select set_config('tg.save_rpc', '1', true);
+update public.saves set crop_hold = false, hold_reason = null, hold_local = null,
+  hold_remote = null, hold_base = null, hold_at = null, hold_rev = null,
+  hold_device = null, hold_source = null
+where crop_hold;
 
 create or replace function public.save_get() returns jsonb
 language sql stable security definer set search_path = public as $$

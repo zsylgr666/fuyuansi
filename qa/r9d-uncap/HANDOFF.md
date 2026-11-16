@@ -404,5 +404,9 @@ This is a verification of one strategy: on a cross-device save conflict, pause c
 
 r9h-q2 adds the account hold on top of r9h-q. A conflicting save stores both snapshots, the base, and device metadata under `auth.uid()`, and `save_put` / new crop `econ_earn` then refuse. It is not a release. Frozen r9d–r9h are unchanged. No live SQL was applied. The record is `qa/r9h-q2/VERIFICATION.md`.
 
+## Candidate r9h-q3 — review fixes, not a freeze
+
+r9h-q3 closes three review holes in the hold: a session setting can no longer rewrite a held row, the companion rollback clears leftover snapshot flags, and deleting the local pause key does not resume selling while the server hold remains. It is not a release. The live site page is still r9h. The record is `qa/r9h-q3/VERIFICATION.md`.
+
 
 

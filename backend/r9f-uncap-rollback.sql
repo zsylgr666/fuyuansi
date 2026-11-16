@@ -9,6 +9,10 @@
 -- and its old epoch; the replay does not turn uncapped back on and does not take the coins a second time.
 -- Does not drop shop credit, sell-back ledgers, or the sell-back 400 path.
 -- DRAFT. Do not apply to production from the agent.
+-- Do not apply this file by itself on top of backend/r9h-q2-hold.sql.
+-- It replaces econ_earn and moves sell_policy, and it leaves the hold's
+-- save_put in place, so a new earn can pay while save_put still returns
+-- quarantine. Roll the hold back only with backend/r9h-q2-hold-rollback.sql.
 begin;
 
 create table if not exists public.sell_policy (

@@ -1,17 +1,28 @@
--- r9h-q2 CANDIDATE — account crop hold. DRAFT. Not applied to any live database.
+-- r9h-q2 CANDIDATE hold, revised after review. DRAFT. Not applied to any live database.
 -- Apply AFTER backend/r9f-uncap.sql. Idempotent. Does not bump sell_policy.epoch.
--- Does not add crop stock. Does not change furniture, task, merit, or steal caps.
+-- Does not add crop stock. Does not change the furniture sell-back function.
 --
--- Lock order, the same in every function that takes more than one of these:
+-- Do NOT apply backend/r9f-uncap-rollback.sql by itself on top of this file.
+-- That rollback replaces econ_earn and moves sell_policy, and it leaves this
+-- save_put in place, so a new earn can pay while save_put still returns
+-- quarantine. The only rollback for this hold is backend/r9h-q2-hold-rollback.sql.
+--
+-- Lock order, matching the function bodies. The advisory lock is taken BEFORE
+-- the row lock, not after:
 --   1. pg_advisory_xact_lock(hashtext('tg_save:' || uid))
 --   2. saves row FOR UPDATE
 --   3. pg_advisory_xact_lock(hashtext('tg_econ'), hashtext(uid))   -- earn only
 --   4. sell_policy row FOR UPDATE                                 -- earn only
--- save_put and save_quarantine stop at step 2, so they cannot deadlock with earn.
--- A sell grant is inserted only after step 2 has seen crop_hold = false.
--- A hold that commits first makes the waiting earn return reason quarantine
--- and insert nothing. A grant that commits first stays; later calls replay it.
+-- save_put and save_quarantine stop after step 2. Two calls that follow this
+-- order do not deadlock each other. Residual risk: a session that already
+-- holds saves FOR UPDATE, and then calls one of these functions, can raise
+-- deadlock detected, because the function takes the advisory lock and then
+-- waits for that same row. Do not hold the row lock and call the RPC.
+-- A new econ_earn of any source is inserted only after step 2 has seen
+-- crop_hold = false. Replay of a request id that was stored before the hold
+-- still returns that stored row. The hold does not delete it.
 -- The account is always auth.uid(). No function here takes a caller-chosen owner.
+-- There is no session GUC that lifts the hold. set_config cannot disable the trigger.
 begin;
 
 alter table public.saves add column if not exists crop_hold boolean not null default false;
@@ -24,12 +35,13 @@ alter table public.saves add column if not exists hold_rev bigint;
 alter table public.saves add column if not exists hold_device text;
 alter table public.saves add column if not exists hold_source text;
 
--- Direct table writes bypass save_put. While the hold is set they must not
--- replace the state or clear the evidence. crop_hold_clear sets tg.crop_hold_mgr.
+-- Direct table writes bypass save_put. While the hold is set, any UPDATE is
+-- refused. A session GUC cannot lift this. crop_hold_clear disables the
+-- trigger itself, and only the function owner can do that.
 create or replace function public.tg_saves_hold() returns trigger
 language plpgsql as $$
 begin
-  if tg_op = 'UPDATE' and old.crop_hold and coalesce(current_setting('tg.crop_hold_mgr', true), '') <> '1' then
+  if tg_op = 'UPDATE' and old.crop_hold then
     raise exception 'crop_hold' using errcode = 'P0001';
   end if;
   return new;
@@ -142,17 +154,26 @@ end $$;
 
 -- Operator draft. Not granted to anon or authenticated. The game never calls it.
 -- There is no TTL. Logout and save_put reset do not call it.
+-- The trigger is disabled only inside this owner function. A player setting
+-- a GUC cannot do that, and cannot UPDATE the row.
 create or replace function public.crop_hold_clear() returns jsonb
 language plpgsql security definer set search_path = public as $$
 declare uid uuid := auth.uid(); n int;
 begin
   if uid is null then return jsonb_build_object('ok', false, 'reason', 'not_signed_in'); end if;
   perform pg_advisory_xact_lock(hashtext('tg_save:' || uid::text));
-  perform set_config('tg.crop_hold_mgr', '1', true);
-  perform set_config('tg.save_rpc', '1', true);
-  update saves set crop_hold = false where user_id = uid and crop_hold;
-  perform set_config('tg.save_rpc', '', true);
-  get diagnostics n = row_count;
+  execute 'alter table public.saves disable trigger saves_hold';
+  begin
+    perform set_config('tg.save_rpc', '1', true);
+    update saves set crop_hold = false, hold_reason = null, hold_local = null, hold_remote = null,
+      hold_base = null, hold_at = null, hold_rev = null, hold_device = null, hold_source = null
+    where user_id = uid and crop_hold;
+    get diagnostics n = row_count;
+    execute 'alter table public.saves enable trigger saves_hold';
+  exception when others then
+    execute 'alter table public.saves enable trigger saves_hold';
+    raise;
+  end;
   return jsonb_build_object('ok', true, 'cleared', n);
 end $$;
 
@@ -188,7 +209,9 @@ begin
     select result into v_prev from econ_earn_reqs where owner = uid and req = p_req;
     if found then return v_prev || jsonb_build_object('replay', true, 'crop_hold', v_hold); end if;
   end if;
-  if p_source = 'sell' and v_hold then
+  -- Any new coin grant from this function waits while the crop hold is set.
+  -- Furniture sell-back is a different function and is not consulted here.
+  if v_hold then
     select epoch, uncapped into v_epoch, v_uncapped from sell_policy where id = 1 for update;
     if not found then v_uncapped := false; end if;
     return jsonb_build_object('ok', false, 'reason', 'quarantine', 'granted', 0, 'crop_hold', true,
@@ -267,6 +290,7 @@ begin
     'hold_base', v_save.hold_base, 'hold_rev', v_save.hold_rev, 'hold_device', v_save.hold_device, 'hold_source', v_save.hold_source);
 end $$;
 
+revoke insert, update, delete on table public.saves from public, anon, authenticated;
 revoke all on function public.tg_saves_hold() from public, anon, authenticated;
 revoke all on function public.save_quarantine(bigint, jsonb, jsonb, jsonb, text, text) from public, anon;
 revoke all on function public.crop_hold_review() from public, anon;

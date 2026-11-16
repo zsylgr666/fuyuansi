@@ -45,7 +45,7 @@ export async function loadDb(db) {
   const epoch = (await c.query('select epoch, uncapped from sell_policy where id=1')).rows[0];
   await c.query(files.hold.replace(/notify pgrst, 'reload schema';\s*$/, ''));
   const epochAfter = (await c.query('select epoch, uncapped from sell_policy where id=1')).rows[0];
-  await c.query(`grant usage on schema public to authenticated; grant select, insert, update on public.saves to authenticated;`);
+  await c.query(`grant usage on schema public to authenticated;`);
   await c.end();
   return { epoch, epochAfter };
 }

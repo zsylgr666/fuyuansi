@@ -1,0 +1,847 @@
+{
+  "passed": 24,
+  "failed": 0,
+  "total": 24,
+  "results": [
+    {
+      "name": "hold migration does not move the sell_policy epoch",
+      "ok": true,
+      "detail": {
+        "before": {
+          "epoch": "1",
+          "uncapped": true
+        },
+        "after": {
+          "epoch": "1",
+          "uncapped": true
+        }
+      }
+    },
+    {
+      "name": "first save_put lands at rev 1",
+      "ok": true,
+      "detail": {
+        "ok": true,
+        "rev": 1,
+        "crop_hold": false
+      }
+    },
+    {
+      "name": "a grant committed before the hold is stored",
+      "ok": true,
+      "detail": {
+        "ok": true,
+        "cap": 100,
+        "left": 100,
+        "granted": 5,
+        "sell_cap": 100,
+        "crop_hold": false,
+        "sell_left": 100,
+        "sell_epoch": 1,
+        "sell_uncapped": true
+      }
+    },
+    {
+      "name": "a current revision write still lands",
+      "ok": true,
+      "detail": {
+        "ok": true,
+        "rev": 2,
+        "crop_hold": false
+      }
+    },
+    {
+      "name": "a stale save_put conflicts and does not replace state",
+      "ok": true,
+      "detail": {
+        "ok": false,
+        "rev": 2,
+        "state": {
+          "coins": 100,
+          "inventory": {
+            "cabbage": 7
+          },
+          "cropApplied": null,
+          "cropPending": {
+            "crop-prehold-0001": {
+              "n": 5,
+              "req": "crop-prehold-0001"
+            }
+          }
+        },
+        "reason": "conflict",
+        "crop_hold": false,
+        "updated_at": "2026-11-16T14:15:28.256663+00:00"
+      }
+    },
+    {
+      "name": "quarantine at a stale revision does not set the hold",
+      "ok": true,
+      "detail": {
+        "ok": false,
+        "rev": 2,
+        "state": {
+          "coins": 100,
+          "inventory": {
+            "cabbage": 7
+          },
+          "cropApplied": null,
+          "cropPending": {
+            "crop-prehold-0001": {
+              "n": 5,
+              "req": "crop-prehold-0001"
+            }
+          }
+        },
+        "reason": "conflict",
+        "crop_hold": false
+      }
+    },
+    {
+      "name": "quarantine at the current revision stores both snapshots, the base, and the device",
+      "ok": true,
+      "detail": {
+        "ok": true,
+        "rev": 2,
+        "state": {
+          "coins": 100,
+          "inventory": {
+            "cabbage": 7
+          },
+          "cropApplied": null,
+          "cropPending": {
+            "crop-prehold-0001": {
+              "n": 5,
+              "req": "crop-prehold-0001"
+            }
+          }
+        },
+        "already": false,
+        "hold_rev": 2,
+        "crop_hold": true,
+        "hold_base": {
+          "coins": 100,
+          "inventory": {
+            "cabbage": 12
+          },
+          "cropApplied": null,
+          "cropPending": null
+        },
+        "hold_local": {
+          "coins": 103,
+          "inventory": {
+            "cabbage": 8
+          },
+          "cropApplied": null,
+          "cropPending": {
+            "crop-dev-b-0001": {
+              "n": 4,
+              "req": "crop-dev-b-0001",
+              "acct": "00000000-0000-0000-0000-0000000000b2"
+            }
+          }
+        },
+        "hold_device": "device-b-0001",
+        "hold_reason": "save_conflict",
+        "hold_remote": {
+          "coins": 100,
+          "inventory": {
+            "cabbage": 7
+          },
+          "cropApplied": null,
+          "cropPending": {
+            "crop-prehold-0001": {
+              "n": 5,
+              "req": "crop-prehold-0001"
+            }
+          }
+        },
+        "hold_source": "save_conflict"
+      }
+    },
+    {
+      "name": "the row owner is auth.uid and the committed state was not replaced",
+      "ok": true,
+      "detail": {
+        "user_id": "00000000-0000-0000-0000-0000000000a1",
+        "rev": "2",
+        "crop_hold": true,
+        "state": {
+          "coins": 100,
+          "inventory": {
+            "cabbage": 7
+          },
+          "cropApplied": null,
+          "cropPending": {
+            "crop-prehold-0001": {
+              "n": 5,
+              "req": "crop-prehold-0001"
+            }
+          }
+        },
+        "hold_local": {
+          "coins": 103,
+          "inventory": {
+            "cabbage": 8
+          },
+          "cropApplied": null,
+          "cropPending": {
+            "crop-dev-b-0001": {
+              "n": 4,
+              "req": "crop-dev-b-0001",
+              "acct": "00000000-0000-0000-0000-0000000000b2"
+            }
+          }
+        },
+        "hold_remote": {
+          "coins": 100,
+          "inventory": {
+            "cabbage": 7
+          },
+          "cropApplied": null,
+          "cropPending": {
+            "crop-prehold-0001": {
+              "n": 5,
+              "req": "crop-prehold-0001"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "a second quarantine keeps the original pair",
+      "ok": true,
+      "detail": {
+        "ok": true,
+        "rev": 2,
+        "state": {
+          "coins": 100,
+          "inventory": {
+            "cabbage": 7
+          },
+          "cropApplied": null,
+          "cropPending": {
+            "crop-prehold-0001": {
+              "n": 5,
+              "req": "crop-prehold-0001"
+            }
+          }
+        },
+        "reason": "quarantine",
+        "already": true,
+        "hold_at": "2026-11-16T14:15:28.273601+00:00",
+        "hold_rev": 2,
+        "crop_hold": true,
+        "hold_base": {
+          "coins": 100,
+          "inventory": {
+            "cabbage": 12
+          },
+          "cropApplied": null,
+          "cropPending": null
+        },
+        "hold_local": {
+          "coins": 103,
+          "inventory": {
+            "cabbage": 8
+          },
+          "cropApplied": null,
+          "cropPending": {
+            "crop-dev-b-0001": {
+              "n": 4,
+              "req": "crop-dev-b-0001",
+              "acct": "00000000-0000-0000-0000-0000000000b2"
+            }
+          }
+        },
+        "hold_device": "device-b-0001",
+        "hold_reason": "save_conflict",
+        "hold_remote": {
+          "coins": 100,
+          "inventory": {
+            "cabbage": 7
+          },
+          "cropApplied": null,
+          "cropPending": {
+            "crop-prehold-0001": {
+              "n": 5,
+              "req": "crop-prehold-0001"
+            }
+          }
+        },
+        "hold_source": "save_conflict"
+      }
+    },
+    {
+      "name": "save_put and unconditional reset are refused and the state stays",
+      "ok": true,
+      "detail": {
+        "blockedPut": {
+          "ok": false,
+          "rev": 2,
+          "state": {
+            "coins": 100,
+            "inventory": {
+              "cabbage": 7
+            },
+            "cropApplied": null,
+            "cropPending": {
+              "crop-prehold-0001": {
+                "n": 5,
+                "req": "crop-prehold-0001"
+              }
+            }
+          },
+          "reason": "quarantine",
+          "hold_at": "2026-11-16T14:15:28.273601+00:00",
+          "hold_rev": 2,
+          "crop_hold": true,
+          "hold_base": {
+            "coins": 100,
+            "inventory": {
+              "cabbage": 12
+            },
+            "cropApplied": null,
+            "cropPending": null
+          },
+          "hold_local": {
+            "coins": 103,
+            "inventory": {
+              "cabbage": 8
+            },
+            "cropApplied": null,
+            "cropPending": {
+              "crop-dev-b-0001": {
+                "n": 4,
+                "req": "crop-dev-b-0001",
+                "acct": "00000000-0000-0000-0000-0000000000b2"
+              }
+            }
+          },
+          "updated_at": "2026-11-16T14:15:28.256663+00:00",
+          "hold_device": "device-b-0001",
+          "hold_reason": "save_conflict",
+          "hold_remote": {
+            "coins": 100,
+            "inventory": {
+              "cabbage": 7
+            },
+            "cropApplied": null,
+            "cropPending": {
+              "crop-prehold-0001": {
+                "n": 5,
+                "req": "crop-prehold-0001"
+              }
+            }
+          },
+          "hold_source": "save_conflict"
+        },
+        "blockedReset": {
+          "ok": false,
+          "rev": 2,
+          "state": {
+            "coins": 100,
+            "inventory": {
+              "cabbage": 7
+            },
+            "cropApplied": null,
+            "cropPending": {
+              "crop-prehold-0001": {
+                "n": 5,
+                "req": "crop-prehold-0001"
+              }
+            }
+          },
+          "reason": "quarantine",
+          "hold_at": "2026-11-16T14:15:28.273601+00:00",
+          "hold_rev": 2,
+          "crop_hold": true,
+          "hold_base": {
+            "coins": 100,
+            "inventory": {
+              "cabbage": 12
+            },
+            "cropApplied": null,
+            "cropPending": null
+          },
+          "hold_local": {
+            "coins": 103,
+            "inventory": {
+              "cabbage": 8
+            },
+            "cropApplied": null,
+            "cropPending": {
+              "crop-dev-b-0001": {
+                "n": 4,
+                "req": "crop-dev-b-0001",
+                "acct": "00000000-0000-0000-0000-0000000000b2"
+              }
+            }
+          },
+          "updated_at": "2026-11-16T14:15:28.256663+00:00",
+          "hold_device": "device-b-0001",
+          "hold_reason": "save_conflict",
+          "hold_remote": {
+            "coins": 100,
+            "inventory": {
+              "cabbage": 7
+            },
+            "cropApplied": null,
+            "cropPending": {
+              "crop-prehold-0001": {
+                "n": 5,
+                "req": "crop-prehold-0001"
+              }
+            }
+          },
+          "hold_source": "save_conflict"
+        }
+      }
+    },
+    {
+      "name": "an old request replays and a new crop grant is not stored",
+      "ok": true,
+      "detail": {
+        "replay": {
+          "ok": true,
+          "cap": 100,
+          "left": 100,
+          "replay": true,
+          "granted": 5,
+          "sell_cap": 100,
+          "crop_hold": true,
+          "sell_left": 100,
+          "sell_epoch": 1,
+          "sell_uncapped": true
+        },
+        "fresh": {
+          "ok": false,
+          "reason": "quarantine",
+          "granted": 0,
+          "hold_rev": 2,
+          "sell_cap": 100,
+          "crop_hold": true,
+          "sell_left": 100,
+          "sell_epoch": 1,
+          "hold_device": "device-b-0001",
+          "hold_source": "save_conflict",
+          "sell_uncapped": true
+        },
+        "oldShape": {
+          "ok": false,
+          "reason": "quarantine",
+          "granted": 0,
+          "hold_rev": 2,
+          "sell_cap": 100,
+          "crop_hold": true,
+          "sell_left": 100,
+          "sell_epoch": 1,
+          "hold_device": "device-b-0001",
+          "hold_source": "save_conflict",
+          "sell_uncapped": true
+        },
+        "n": 1
+      }
+    },
+    {
+      "name": "a new task earn is also refused while the crop hold is set",
+      "ok": true,
+      "detail": {
+        "ok": false,
+        "reason": "quarantine",
+        "granted": 0,
+        "hold_rev": 2,
+        "sell_cap": 100,
+        "crop_hold": true,
+        "sell_left": 100,
+        "sell_epoch": 1,
+        "hold_device": "device-b-0001",
+        "hold_source": "save_conflict",
+        "sell_uncapped": true
+      }
+    },
+    {
+      "name": "malformed snapshots, device, and source are refused; a null base is stored",
+      "ok": true,
+      "detail": {
+        "badSnap": {
+          "ok": false,
+          "reason": "bad_snapshot"
+        },
+        "badDev": {
+          "ok": false,
+          "reason": "bad_device"
+        },
+        "badSource": {
+          "ok": false,
+          "reason": "bad_source"
+        },
+        "noBase": {
+          "ok": true,
+          "rev": 1,
+          "state": {
+            "coins": 10,
+            "inventory": {
+              "cabbage": 3
+            },
+            "cropApplied": null,
+            "cropPending": null
+          },
+          "already": false,
+          "hold_rev": 1,
+          "crop_hold": true,
+          "hold_base": null,
+          "hold_local": {
+            "coins": 10,
+            "inventory": {
+              "cabbage": 3
+            },
+            "cropApplied": null,
+            "cropPending": null
+          },
+          "hold_device": "device-b-0001",
+          "hold_reason": "save_conflict",
+          "hold_remote": {
+            "coins": 10,
+            "inventory": {
+              "cabbage": 3
+            },
+            "cropApplied": null,
+            "cropPending": null
+          },
+          "hold_source": "save_conflict"
+        }
+      }
+    },
+    {
+      "name": "user A cannot write user B through table privileges",
+      "ok": true,
+      "detail": {
+        "forged": "permission denied for table saves",
+        "bStill": {
+          "state": {
+            "coins": 10,
+            "inventory": {
+              "cabbage": 3
+            },
+            "cropApplied": null,
+            "cropPending": null
+          },
+          "crop_hold": true
+        }
+      }
+    },
+    {
+      "name": "a direct update without table privilege cannot replace a held save",
+      "ok": true,
+      "detail": {
+        "direct": "permission denied for table saves",
+        "aStill": {
+          "coins": "100",
+          "crop_hold": true,
+          "local_coins": "103"
+        }
+      }
+    },
+    {
+      "name": "set_config of the old manager GUC cannot rewrite a held row",
+      "ok": true,
+      "detail": {
+        "guc": "crop_hold",
+        "afterGuc": {
+          "coins": "100",
+          "crop_hold": true,
+          "local_coins": "103",
+          "remote_cabbage": "7"
+        }
+      }
+    },
+    {
+      "name": "authenticated cannot call the operator clear",
+      "ok": true,
+      "detail": "permission denied for function crop_hold_clear"
+    },
+    {
+      "name": "the signed-in review read returns this account evidence only",
+      "ok": true,
+      "detail": {
+        "ok": true,
+        "rev": 2,
+        "hold_at": "2026-11-16T14:15:28.273601+00:00",
+        "hold_rev": 2,
+        "crop_hold": true,
+        "hold_base": {
+          "coins": 100,
+          "inventory": {
+            "cabbage": 12
+          },
+          "cropApplied": null,
+          "cropPending": null
+        },
+        "hold_local": {
+          "coins": 103,
+          "inventory": {
+            "cabbage": 8
+          },
+          "cropApplied": null,
+          "cropPending": {
+            "crop-dev-b-0001": {
+              "n": 4,
+              "req": "crop-dev-b-0001",
+              "acct": "00000000-0000-0000-0000-0000000000b2"
+            }
+          }
+        },
+        "hold_device": "device-b-0001",
+        "hold_reason": "save_conflict",
+        "hold_remote": {
+          "coins": 100,
+          "inventory": {
+            "cabbage": 7
+          },
+          "cropApplied": null,
+          "cropPending": {
+            "crop-prehold-0001": {
+              "n": 5,
+              "req": "crop-prehold-0001"
+            }
+          }
+        },
+        "hold_source": "save_conflict"
+      }
+    },
+    {
+      "name": "an earn that waits on the save lock observes the hold and inserts nothing",
+      "ok": true,
+      "detail": {
+        "waiting": 1,
+        "earned": {
+          "ok": false,
+          "reason": "quarantine",
+          "granted": 0,
+          "hold_rev": 1,
+          "sell_cap": 100,
+          "crop_hold": true,
+          "sell_left": 100,
+          "sell_epoch": 1,
+          "hold_device": "device-c-0001",
+          "hold_source": "save_conflict",
+          "sell_uncapped": true
+        },
+        "newRows": 0,
+        "oldReplay": {
+          "ok": true,
+          "cap": 100,
+          "left": 100,
+          "replay": true,
+          "granted": 1,
+          "sell_cap": 100,
+          "crop_hold": true,
+          "sell_left": 100,
+          "sell_epoch": 1,
+          "sell_uncapped": true
+        }
+      }
+    },
+    {
+      "name": "a reset that waits on the lock is refused and the evidence stays",
+      "ok": true,
+      "detail": {
+        "put": {
+          "ok": false,
+          "rev": 1,
+          "state": {
+            "coins": 50,
+            "inventory": {
+              "cabbage": 20
+            },
+            "cropApplied": null,
+            "cropPending": null
+          },
+          "reason": "quarantine",
+          "hold_at": "2026-11-16T14:15:28.402381+00:00",
+          "hold_rev": 1,
+          "crop_hold": true,
+          "hold_base": {
+            "coins": 50,
+            "inventory": {
+              "cabbage": 20
+            },
+            "cropApplied": null,
+            "cropPending": null
+          },
+          "hold_local": {
+            "coins": 40,
+            "inventory": {
+              "cabbage": 19
+            },
+            "cropApplied": null,
+            "cropPending": {
+              "crop-linear-new-01": {
+                "n": 1
+              }
+            }
+          },
+          "updated_at": "2026-11-16T14:15:28.389121+00:00",
+          "hold_device": "device-c-0001",
+          "hold_reason": "save_conflict",
+          "hold_remote": {
+            "coins": 60,
+            "inventory": {
+              "cabbage": 20
+            },
+            "cropApplied": null,
+            "cropPending": null
+          },
+          "hold_source": "save_conflict"
+        },
+        "afterPut": {
+          "rev": "1",
+          "state": {
+            "coins": 50,
+            "inventory": {
+              "cabbage": 20
+            },
+            "cropApplied": null,
+            "cropPending": null
+          },
+          "crop_hold": true,
+          "hold_local": {
+            "coins": 40,
+            "inventory": {
+              "cabbage": 19
+            },
+            "cropApplied": null,
+            "cropPending": {
+              "crop-linear-new-01": {
+                "n": 1
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "companion rollback clears the hold flag and the snapshots and does not move the epoch",
+      "ok": true,
+      "detail": {
+        "beforeRb": {
+          "epoch": "1"
+        },
+        "afterRb": {
+          "epoch": "1"
+        },
+        "evidence": {
+          "crop_hold": false,
+          "hold_local": null,
+          "hold_remote": null
+        },
+        "lifted": {
+          "ok": true,
+          "cap": 100,
+          "left": 100,
+          "granted": 3,
+          "sell_cap": 100,
+          "sell_left": 100,
+          "sell_epoch": 1,
+          "sell_uncapped": true
+        },
+        "putAfter": {
+          "ok": true,
+          "rev": 2
+        }
+      }
+    },
+    {
+      "name": "re-applying the hold draft does not revive the old snapshots as a freeze",
+      "ok": true,
+      "detail": {
+        "revived": {
+          "crop_hold": false,
+          "hold_local": null,
+          "hold_remote": null
+        },
+        "putRevived": {
+          "ok": true,
+          "rev": 3,
+          "crop_hold": false
+        }
+      }
+    },
+    {
+      "name": "standalone r9f rollback is the wrong file: earn pays while save_put stays quarantined",
+      "ok": true,
+      "detail": {
+        "mixEarn": {
+          "ok": true,
+          "cap": 100,
+          "left": 89,
+          "granted": 11,
+          "sell_cap": 100,
+          "sell_left": 89,
+          "sell_epoch": 2,
+          "sell_uncapped": false
+        },
+        "mixPut": {
+          "ok": false,
+          "rev": 1,
+          "state": {
+            "coins": 11,
+            "inventory": {
+              "cabbage": 11
+            },
+            "cropApplied": null,
+            "cropPending": null
+          },
+          "reason": "quarantine",
+          "hold_at": "2026-11-16T14:15:29.141809+00:00",
+          "hold_rev": 1,
+          "crop_hold": true,
+          "hold_base": null,
+          "hold_local": {
+            "coins": 11,
+            "inventory": {
+              "cabbage": 11
+            },
+            "cropApplied": null,
+            "cropPending": null
+          },
+          "updated_at": "2026-11-16T14:15:29.136198+00:00",
+          "hold_device": "device-a-0001",
+          "hold_reason": "save_conflict",
+          "hold_remote": {
+            "coins": 12,
+            "inventory": {
+              "cabbage": 12
+            },
+            "cropApplied": null,
+            "cropPending": null
+          },
+          "hold_source": "save_conflict"
+        },
+        "epochMixBefore": {
+          "epoch": "1",
+          "uncapped": true
+        },
+        "epochMixAfter": {
+          "epoch": "2",
+          "uncapped": false
+        }
+      }
+    },
+    {
+      "name": "the companion rollback is what clears that leftover hold",
+      "ok": true,
+      "detail": {
+        "mixCleared": {
+          "crop_hold": false,
+          "hold_local": null
+        },
+        "mixPut2": {
+          "ok": true,
+          "rev": 2
+        }
+      }
+    }
+  ]
+}
