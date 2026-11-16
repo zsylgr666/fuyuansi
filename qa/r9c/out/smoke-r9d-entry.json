@@ -1,8 +1,8 @@
 {
- "build": "/workspace/v4/index.r9d.html",
+ "build": "/workspace/v4/index.r9e.html",
  "before": {
-  "sha256": "4ecd25c97847963860755de0e5caf279405b6d413c08adc277492ac3bd811520",
-  "size": 1888370
+  "sha256": "745f685e65aa324cd0f001aef7f62bd632c1c78dd71ebd217d7c6c3dc468a454",
+  "size": 1888936
  },
  "smoke": {
   "portrait": {
@@ -32,7 +32,7 @@
    },
    "hall": {
     "active": "hall",
-    "calls": 112,
+    "calls": 45,
     "errors": [],
     "entry600": [
      69,
@@ -68,7 +68,7 @@
    },
    "study": {
     "active": "study",
-    "calls": 26,
+    "calls": 17,
     "errors": [],
     "entry600": [
      7,
@@ -104,7 +104,7 @@
    },
    "lotus": {
     "active": "lotus",
-    "calls": 52,
+    "calls": 53,
     "errors": [],
     "entry600": [
      42,
@@ -158,12 +158,12 @@
     "calls": 54,
     "errors": [],
     "entry600": [
-     39,
-     25,
-     20,
-     24
+     29,
+     29,
+     29,
+     29
     ],
-    "entry600Max": 39
+    "entry600Max": 29
    },
    "zen": {
     "active": "zen",
@@ -179,7 +179,7 @@
    },
    "study": {
     "active": "study",
-    "calls": 27,
+    "calls": 26,
     "errors": [],
     "entry600": [
      16,
@@ -215,7 +215,7 @@
    },
    "lotus": {
     "active": "lotus",
-    "calls": 56,
+    "calls": 55,
     "errors": [],
     "entry600": [
      45,
@@ -227,13 +227,13 @@
    },
    "errorsTotal": 0
   },
-  "maxStable": 112,
+  "maxStable": 79,
   "maxEntry600": 98,
   "errors": 0
  },
  "after": {
-  "sha256": "4ecd25c97847963860755de0e5caf279405b6d413c08adc277492ac3bd811520",
-  "size": 1888370
+  "sha256": "745f685e65aa324cd0f001aef7f62bd632c1c78dd71ebd217d7c6c3dc468a454",
+  "size": 1888936
  },
  "frozenUntouched": true
 }

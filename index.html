@@ -13713,13 +13713,16 @@ R.avoidNow=avoid;R.markAltar=markAltar;
 })();
 
 /* r9 part 1 — 卖作物/产物 + 回收家具 front end.
- * r9d hotfix: crops/produce have NO daily coin ceiling once the server says sell_uncapped.
+ * r9e hotfix: crops/produce have NO daily coin ceiling once the server says sell_uncapped.
  *   That is the absence of a cap, not a larger number. Owned quantity still has to be a safe integer,
  *   and the coin total has to stay inside Number.MAX_SAFE_INTEGER.
  *   A positive numeric sell_left (legacy r9, usually 100) is honoured only until this page has seen
  *   sell_uncapped:true. After that, offline / error / a stale status that still carries sell_left
- *   does NOT put the old 100 back. A full reload reads the server again (so an exact SQL rollback
- *   applies on the next load). Pre-r9 servers, and offline before any uncapped confirmation, keep
+ *   does NOT put the old 100 back. An already-open page DOES revoke unlimited when the status
+ *   says sell_uncapped:false (the rollback flag). No reload is required for that.
+ *   While uncapped, a status may also carry sell_cap/sell_left 100. Those numbers are the legacy
+ *   advertisement already-open r9b/r9c pages need so they do not fall onto the shared 40.
+ *   This page ignores them. Pre-r9 servers, and offline before any uncapped confirmation, keep
  *   the shared 40 with 今日事项 / 善缘兑换.
  * - Furniture buy-back at floor(price/2) for the 11 shop items, only shop-bought units (S.sellable) that are stowed in the
  *   backpack; confirm dialog; never while visiting; separate cap 400/day; server credit when the r9 RPCs exist, hidden when the
@@ -13728,7 +13731,7 @@ R.avoidNow=avoid;R.markAltar=markAltar;
  * - Entries: backpack button, 花木铺 prompt, hint after harvest.
  * The fortune stalls are NOT here. window.TG_R9 is the shared namespace. Save key stays templeGarden.v1. */
 (()=>{
-const R=window.TG_R9=Object.assign(window.TG_R9||{},{sell:{version:'r9d',mode:'?',cap:null,uncapped:false,confirmedUncapped:false,serverLeft:null,fb:'?',credit:null,prices:null,sbLeft:null,seed:null,log:[]}});
+const R=window.TG_R9=Object.assign(window.TG_R9||{},{sell:{version:'r9e',mode:'?',cap:null,uncapped:false,confirmedUncapped:false,serverLeft:null,fb:'?',credit:null,prices:null,sbLeft:null,seed:null,log:[]}});
 const X=R.sell;
 const BUYBACK=['wood-table','bench','cabinet','daybed','altar-table','rocking-chair','vase','lantern','bonsai','screen','cushion'];
 const STARTER={cushion:1,vase:1},SHARED_CAP=40,SB_CAP=400,SEED_BUDGET=1000,SEED_PER=10;
@@ -13751,7 +13754,9 @@ function reduceSellStatus(prev,st){
   return {mode:'unknown',cap:null,confirmedUncapped:false,serverLeft:null,shared:true,uncapped:false,kind:'ambiguous'};}
  if(st.sell_uncapped===true)return {mode:'uncapped',cap:null,confirmedUncapped:true,serverLeft:null,shared:false,uncapped:true,kind:'uncapped'};
  if(st.reason==='offline'||st.reason==='error'){if(confirmed)return keep();return {mode:'offline',cap:null,confirmedUncapped:false,serverLeft:null,shared:true,uncapped:false,kind:'offline'};}
- if(st.sell_uncapped===false&&typeof st.sell_left==='number'&&Number.isFinite(st.sell_left))return capped(st,'explicit-cap');
+ // Explicit rollback. Revokes unlimited on an already-open page. A missing sell_left fails closed (left 0) rather than staying uncapped.
+ if(st.sell_uncapped===false){const hasLeft=typeof st.sell_left==='number'&&Number.isFinite(st.sell_left);
+  return {mode:'r9',cap:positiveInt(st.sell_cap),confirmedUncapped:false,serverLeft:hasLeft?Math.max(0,Math.floor(st.sell_left)):0,shared:false,uncapped:false,kind:'explicit-cap'};}
  if(typeof st.sell_left==='number'&&Number.isFinite(st.sell_left)){if(confirmed)return keep();return capped(st,'capped');}
  if(st.day){if(confirmed)return keep();return {mode:'old-server',cap:null,confirmedUncapped:false,serverLeft:null,shared:true,uncapped:false,kind:'old-server'};}
  if(confirmed)return keep();
@@ -16350,8 +16355,11 @@ window.addEventListener('storage',e=>{if(e.key&&e.key.startsWith(PEND_KEY)&&$('#
  * window.TG_LOTUS    koi() -> SYNC {ok, left, server:Promise | ok:false, reason:'daily'} (3/day; local mirror of the server count; koiAsync() waits)   wish(text) (3/day)   status()
  * window.TG_ECON     earn(coins, source 'sell'|'task'|'merit'|'steal', exact?) -> SYNC granted coins (local mirror of today's server caps,
  *        reported to econ_earn in the background)   earnAsync(...) -> Promise<server-granted coins>   status()
- *   Server caps (r9d): crops/produce have NO daily coin ceiling when econ_status.sell_uncapped is true
- *   (not a larger number). task+merit 40 (merit <= 8), stolen 15, furniture sell-back 400 stay.
+ *   Server caps (r9e): crops/produce have NO daily coin ceiling when econ_status.sell_uncapped is true
+ *   (not a larger number). A status may also carry sell_cap/sell_left 100 for already-open r9 pages;
+ *   those pages have no unlimited signal, and null sell_left makes them share the 40. This client
+ *   ignores the numbers while sell_uncapped is true, and leaves unlimited when the status says false.
+ *   task+merit 40 (merit <= 8), stolen 15, furniture sell-back 400 stay.
  *   exact=true: all-or-nothing. Pre-r9 server: 'sell' still shares the 40 (no sell_left and no sell_uncapped).
  *   Legacy r9: numeric sell_left is that day's remaining crop coins (usually a 100 cap). Once this page has
  *   seen sell_uncapped, a later status that merely repeats sell_left does not put 100 back; TG_R9.sell.noteSellStatus

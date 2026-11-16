@@ -37,8 +37,11 @@
  * window.TG_LOTUS    koi() -> SYNC {ok, left, server:Promise | ok:false, reason:'daily'} (3/day; local mirror of the server count; koiAsync() waits)   wish(text) (3/day)   status()
  * window.TG_ECON     earn(coins, source 'sell'|'task'|'merit'|'steal', exact?) -> SYNC granted coins (local mirror of today's server caps,
  *        reported to econ_earn in the background)   earnAsync(...) -> Promise<server-granted coins>   status()
- *   Server caps (r9d): crops/produce have NO daily coin ceiling when econ_status.sell_uncapped is true
- *   (not a larger number). task+merit 40 (merit <= 8), stolen 15, furniture sell-back 400 stay.
+ *   Server caps (r9e): crops/produce have NO daily coin ceiling when econ_status.sell_uncapped is true
+ *   (not a larger number). A status may also carry sell_cap/sell_left 100 for already-open r9 pages;
+ *   those pages have no unlimited signal, and null sell_left makes them share the 40. This client
+ *   ignores the numbers while sell_uncapped is true, and leaves unlimited when the status says false.
+ *   task+merit 40 (merit <= 8), stolen 15, furniture sell-back 400 stay.
  *   exact=true: all-or-nothing. Pre-r9 server: 'sell' still shares the 40 (no sell_left and no sell_uncapped).
  *   Legacy r9: numeric sell_left is that day's remaining crop coins (usually a 100 cap). Once this page has
  *   seen sell_uncapped, a later status that merely repeats sell_left does not put 100 back; TG_R9.sell.noteSellStatus

@@ -1,0 +1,8 @@
+4ecd25c97847963860755de0e5caf279405b6d413c08adc277492ac3bd811520     1888370  v4/index.r9d.html
+745f685e65aa324cd0f001aef7f62bd632c1c78dd71ebd217d7c6c3dc468a454     1888936  v4/index.r9e.html
+ddd97aee1cb78018336b892d7eee3b93ba23c0dc1b5064373d3459a655a2ea59     2363576  index.html
+b25ddf7606fa9eac53fb9a7ed8090846e9a12789b408eda68c09eb61cb30d4ab      804391  qa/r9e-uncap/source-snapshot.tar.gz
+e12c8f683889aac77bb79b41e31d85ff705cafc63ebb8adbd537fbfe3b312a1e       41139  qa/r9e-uncap/src/r9-sell.js
+87d69af0a3627de46e0b623b3c681670a46fa71d4b4d5dc71943c38564c82df8        6475  backend/r9e-uncap.sql
+3e9bd44056a3bdb7ff682ac3f2c8abd3d0217d2a6ea9af69c664e9cc27385fed        5166  backend/r9e-uncap-rollback.sql
+db1e8881f1fe7710c4a348af1470c9b41fa4ce35f6aed8239290414c4d5ff4b7       36172  backend/tg-r6.js

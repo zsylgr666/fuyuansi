@@ -183,3 +183,47 @@ Entry-frame peaks, same method as `smoke-r9c.mjs` section 3b (600 ms after `go`,
 | lotus | 42, 34, 37, 35 | 52 | 45, 41, 41, 44 | 56 |
 
 Full numbers: `qa/r9c/out/smoke-r9d-entry.json`. The frozen HTML was not rewritten. No live database, no player cleanup, no merge.
+
+## Follow-up: audit gates, r9e
+
+The attached findings (extracted from `bc-af38b055-bdf1-530b-b0a1-8282d63cc3eb`) were read. The full `/opt/cursor/artifacts/r9d-audit/AUDIT-zh.md` is not on this machine and was not assumed. Frozen r9d is unchanged: sha256 `4ecd25c97847963860755de0e5caf279405b6d413c08adc277492ac3bd811520`, 1,888,370 bytes.
+
+r9e is the release candidate. `v4/index.r9e.html` sha256 `745f685e65aa324cd0f001aef7f62bd632c1c78dd71ebd217d7c6c3dc468a454`, 1,888,936 bytes. Site `index.html` sha256 `ddd97aee1cb78018336b892d7eee3b93ba23c0dc1b5064373d3459a655a2ea59`, 2,363,576 bytes. Snapshot `qa/r9e-uncap/source-snapshot.tar.gz` sha256 `b25ddf7606fa9eac53fb9a7ed8090846e9a12789b408eda68c09eb61cb30d4ab`, 804,391 bytes.
+
+### Gate 1 — real `tg_take_daily` and `econ_sellback`
+
+Both bodies are in the attached migration archive (`backend/upstream/r6.sql` and `backend/upstream/r9.sql`). An isolated PGlite loaded those texts. `pg_get_functiondef` shows `tg_take_daily` writing `daily_counts` with `for update`, and `econ_sellback` writing `sellback_ledger` against `sellback_coins`. Mocked scaffolding only: `auth.users` and `auth.uid()`. 27/27 in `qa/r9e/sql-real.mjs`.
+
+- Uncapped sell of 50, 101, 5,000, and 9,007,199,254,740,991 is granted. `sell_coins` stays 0.
+- Task stops at 40 (`earn_coins` counter is 40). Merit stops at 8 and consumes that same pool. A full task pool does not block a crop sale.
+- Real sell-back: 13 wood tables (30 each = 390) succeed, the 14th returns `daily_cap` with left 10. The same request id replays once. Another account does not replay it.
+- Rollback sets `sell_uncapped` false and restores the 100 refusal. Sell-back limit stays 400.
+
+Not in the archive, not invented, not executed: `market_listings` table DDL, `tg_market_ttl()`, `tg_can_edit()`, and `showcases`. `market_buy` and `space_save` were not created. If those must be re-checked, the lead needs those definitions read-only.
+
+### Gate 2 — open new page must revoke on explicit false
+
+`backend/r9e-uncap-rollback.sql` returns `sell_uncapped: false` plus the numeric 100. A missing flag still does not restore the cap. On `v4/index.r9e.html`, without reload: uncapped sale of 400, then a stale `sell_left: 0` / `sell_cap: 100` still sells, then explicit false stops the next sale at 100 (150 cabbage → 100 sold, 50 left, `coinsEarned` stays 0). N1–N3 in `qa/r9e/compat.mjs`.
+
+### Gate 3 — old open pages must not fall onto the shared 40
+
+The unchanged r9b page (`a328f7c` `index.html`) only keeps its own crop pool when `sell_left` is a number (`index.html` at that commit, the `typeof st.sell_left === 'number'` branch). It has no unlimited value.
+
+- Proven bad shape, `sell_left: null`: mode is not r9, 10 melons sell as 5, and `coinsEarned` becomes 40. O1.
+- r9e status shape, `sell_uncapped: true` together with `sell_cap: 100` and `sell_left: 100`: the old page ignores the flag, stays in r9, sells 96 of melon plus 4 of cabbage, stops at 100, and `coinsEarned` stays 0. O2–O3. A lost sell-back reply leaves the item in the backpack; the later retry of the same request id pays 30 once. O4.
+
+Technical blocker, stated plainly: an already-open r9b/r9c page cannot be made unlimited. Any number it receives becomes a cap. Null drops it onto the shared 40. A huge number would pretend it is unlimited, and this draft does not do that. The 100 in the new status is the ceiling those pages already had. They keep it until the player loads r9e. That load is the gate. Do not describe old pages as unlimited.
+
+### Gate 4 — two-tab crop saves
+
+Not fixed and not claimed safe. Crop coins are still client-side. Two tabs last-write the save. The audit's 10-vs-20 result, and a three-way merge that can keep one side's coins and both inventory deductions, still stand.
+
+### Gate 5 — draw calls on r9e
+
+Same sampler as `smoke-r9c.mjs` section 3b. Page errors 0. Highest entry frame 98 (portrait plaza). Highest later stable frame 79 (landscape tea). Both are at or under 150. `qa/r9e/smoke-entry.json`. This is not the audit's per-render Three.js 76 / single-GL 135 sampler, and it does not replace that note.
+
+### Original 84 on r9e
+
+`qa/r9c/tools/selltest.mjs` against `v4/index.r9e.html`: **84/84, zero assertion edits.** The original mock still does not send `sell_uncapped`, so B1/B2 still require the legacy 100. Categories A–L all pass. `qa/r9e/selltest-r9e.json`.
+
+No fortune stalls. No merge, no deploy, no live SQL.

@@ -1,5 +1,5 @@
 {
- "build": "/workspace/v4/index.r9d.html",
+ "build": "/workspace/v4/index.r9e.html",
  "fails": 0,
  "results": [
   {
@@ -254,10 +254,10 @@
      "wood-table",
      1,
      30,
-     "sell-mwipimao-adfj1rx9",
+     "sell-mwj35xta-waafwy0e",
      null,
      null,
-     "[{\"id\":\"wood-table\",\"qty\":1,\"unit\":30,\"req\":\"sell-mwipimao-adfj1rx9\",\"at\":1794799895136,\"acct\":\"default\"}]"
+     "[{\"id\":\"wood-table\",\"qty\":1,\"unit\":30,\"req\":\"sell-mwj35xta-waafwy0e\",\"at\":1794822818158,\"acct\":\"default\"}]"
     ],
     "bp": 1,
     "sl": 1,
@@ -276,16 +276,16 @@
       "id": "wood-table",
       "qty": 1,
       "unit": 30,
-      "req": "sell-mwipimj2-vkemmqmw",
-      "at": 1794799895438,
+      "req": "sell-mwj35y1p-we62k9s9",
+      "at": 1794822818461,
       "acct": "default"
      }
     ],
     "bp1": 1,
     "same": true,
     "calls": [
-     "sell-mwipimj2-vkemmqmw",
-     "sell-mwipimj2-vkemmqmw"
+     "sell-mwj35y1p-we62k9s9",
+     "sell-mwj35y1p-we62k9s9"
     ],
     "bp2": 0,
     "coins2": 30,
@@ -609,8 +609,8 @@
       "id": "lantern",
       "qty": 1,
       "unit": 20,
-      "req": "sell-mwipksn4-7q86wfwr",
-      "at": 1794799996672,
+      "req": "sell-mwj383ng-4p8u43vi",
+      "at": 1794822919036,
       "acct": "default"
      }
     ],
@@ -651,8 +651,8 @@
     "coins": 1870,
     "sbCoins": 20,
     "reqs": [
-     "sell-mwipksn4-7q86wfwr",
-     "sell-mwipksn4-7q86wfwr"
+     "sell-mwj383ng-4p8u43vi",
+     "sell-mwj383ng-4p8u43vi"
     ],
     "srv": {
      "credit": 2,
@@ -801,7 +801,7 @@
    "name": "J1 offline with a pending sale: per-account key, buy-back locked with a clear offline reason, no server call",
    "ok": true,
    "info": {
-    "req": "sell-mwiplr87-a1u2s9gw",
+    "req": "sell-mwj390j1-9dasakgm",
     "fb": "local",
     "row": "背包 1（可卖 1）· 回收价 🪙 40没有联网：上一笔卖回要等联网后自动确认，确认前先不能卖别的家具",
     "banner": "没有联网：上一笔卖回要等联网后自动确认，确认前先不能卖别的家具。",
@@ -912,12 +912,12 @@
      "id": "lantern",
      "qty": 1,
      "unit": 20,
-     "req": "sell-mwipmk7n-rkb2ucga",
-     "at": 1794800079059,
+     "req": "sell-mwj39ug8-hmpkipbw",
+     "at": 1794823000424,
      "acct": "t1"
     },
     "legacy": null,
-    "own": "[{\"id\":\"lantern\",\"qty\":1,\"unit\":20,\"req\":\"sell-mwipmk7n-rkb2ucga\",\"at\":1794800079059,\"acct\":\"t1\"}]",
+    "own": "[{\"id\":\"lantern\",\"qty\":1,\"unit\":20,\"req\":\"sell-mwj39ug8-hmpkipbw\",\"at\":1794823000424,\"acct\":\"t1\"}]",
     "locks": true
    }
   },
@@ -934,7 +934,7 @@
     "after": {
      "pend": 0,
      "applied": [
-      "sell-mwipmk7n-rkb2ucga"
+      "sell-mwj39ug8-hmpkipbw"
      ]
     }
    }
@@ -1024,7 +1024,7 @@
     "after": {
      "pend": 0,
      "applied": [
-      "sell-mwipn3wm-e2vby9m7"
+      "sell-mwj3adj6-bphw0kcz"
      ]
     }
    }
@@ -1042,28 +1042,6 @@
    "ok": true,
    "info": {
     "ca": [
-     "no",
-     "no",
-     "no",
-     "no",
-     "no",
-     "no",
-     "no",
-     "no",
-     "no",
-     "no",
-     "no",
-     "no",
-     "no",
-     "no",
-     "no",
-     "no",
-     "no",
-     "no",
-     "no",
-     "no"
-    ],
-    "cb": [
      "yes",
      "yes",
      "yes",
@@ -1084,6 +1062,28 @@
      "yes",
      "yes",
      "yes"
+    ],
+    "cb": [
+     "no",
+     "no",
+     "no",
+     "no",
+     "no",
+     "no",
+     "no",
+     "no",
+     "no",
+     "no",
+     "no",
+     "no",
+     "no",
+     "no",
+     "no",
+     "no",
+     "no",
+     "no",
+     "no",
+     "no"
     ]
    }
   },
