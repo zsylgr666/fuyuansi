@@ -340,4 +340,61 @@ Diff from r9f: `qa/r9g-uncap/r9-sell-from-r9f.patch`.
 
 No fortune stalls. No merge, no deploy, no live SQL, no player-data changes.
 
+## Follow-up: r9h, the r9g audit
+
+The r9g audit is right, and the earlier “all passed” did not cover these paths. r9g never settled a grant above 2,147,483,647, so `r.granted|0` looked fine. It never ran the real `merge3` with a pending receipt against another device. And an earn reply whose `sell_epoch` was equal to or newer than the status epoch still called `applyPolicy`, so epoch 7 false followed by epoch 7 true reopened unlimited. The named audit file was not on this machine.
+
+r9d, r9e, r9f, and r9g HTML files are unchanged. SQL is still the r9f epoch drafts. Roll back with `backend/r9f-uncap-rollback.sql` only. Do not use the r9e rollback.
+
+### 1. Amounts
+
+`|0` is a signed 32-bit conversion. 3,000,000,000 becomes negative, so `r.ok && (r.granted|0)>0` treated a successful grant as a failure, restored the crop, deleted the receipt, and paid nothing. r9h reads grants and stack counts with `asCount` (a safe integer, or a decimal string of one). The same fix is on `earnAsync`'s returned grant in `tg-r6.js`. Settlement of 2,147,483,647, 2,147,483,648, 3,000,000,000, and 9,007,199,254,740,991 pays that amount and the save matches. 268,435,456 melons settle as 2,147,483,648. A product past the safe integer is refused before anything is deducted. SQL `econ_earn` returns those four amounts unchanged. Isolated PGlite, 4/4.
+
+### 2. Save merge
+
+`merge3` in the inlined shop client (index.html, the `TG_STORAGE` 3-way merge) treats a conflicting array as “server wins”. Device A’s receipt array against device B’s `cropPending: []` dropped the receipt and kept A’s deducted inventory. r9h unions `cropPending` and `cropApplied` by request id inside that function, and the stack named by a surviving receipt keeps the smaller count. This is only those fields. The rest of the merge is unchanged.
+
+Two independent browser contexts loaded the site page and shared a cloud only as transport. Conflict handling and `merge3` ran in the page. Both directions kept the receipt and the deducted stack (coins followed the device that had edited coins: 140 and 155). A missing base does not drop the local receipt. A request already in `cropApplied` is not left payable. Reloading that merged save pays nothing more. The missing-base and already-credited cases call the page’s `TG_STORAGE._merge3` with those states. The two conflict directions go through `save_put`. 10/10. `qa/r9h/merge-devices.mjs`.
+
+### 3. Provenance
+
+Only `noteSellStatus(st, true)`, which `probe` passes for `status()`, may change mode or epoch. An earn or confirm reply returns the current policy and does not apply. After status epoch 7 false, earn true at epoch 7, earn true at epoch 9, and earn true with no epoch all leave the page capped at epoch 7. An earn before classification does not authorize unlimited. Switching account still clears the mode, and that account cannot sell until its own status.
+
+### 4. Rollout
+
+Confirmed settlement happens only when the open page is r9h (or a later page with the same gate) and `status` includes `sell_epoch`, which the r9f epoch SQL emits. There is no forced refresh. An already-open r9b tab keeps optimistic credit until that tab loads the new page. That was not enforced and was not tested as a force-close.
+
+Safe order:
+
+1. Apply `backend/r9f-uncap.sql` (epoch, uncapped true). Do not apply `r9e-uncap-rollback.sql` on top of it.
+2. Publish the r9h page. The first status a new load sees then already carries `sell_epoch`, and the first crop sale reserves.
+3. If the page is published first, status has no epoch, the page classifies the server as legacy, and crop sales stay on synchronous `earn()` until a later status carries `sell_epoch`. That window is still optimistic. Do not describe it as confirmed.
+4. To turn unlimited off, apply `backend/r9f-uncap-rollback.sql`. It bumps the epoch and sets uncapped false. The same `econ_earn` stays. An open r9h page revokes on that status. It does not revoke on an r9e rollback, which has no epoch.
+
+### Counts
+
+- Original selltest on `v4/index.r9h.html`: **84/84**, no assertion edits. `qa/r9h/selltest-r9h.json`.
+- Provenance, big settlement, overflow stop and manual recovery, reload pays once: **20/20**. `qa/r9h/audit.mjs`.
+- Two-device merge: **10/10**. `qa/r9h/merge-devices.mjs`.
+- SQL big grants: **4/4**. `qa/r9h/sql-big.mjs`.
+- Entry and steady draw: errors 0. Highest entry frame 85 (landscape hall). Highest steady frame 79 (landscape tea).
+
+### Checksums
+
+- `v4/index.r9h.html` sha256 `92b0b39b61bb7c13a10ee9de0eb10a74eb751f80ff715aac016de9f19d8423d1`, 1,901,463 bytes
+- site `index.html` sha256 `cb16d57350901f2a3097e5fc0c0fa31ccac5c591e0bd8bfee824b70de54befc6`, 2,381,040 bytes
+- `backend/tg-r6.js` sha256 `0a01050b19122e06cc3d0f6ce5bde134993581e4d312d9d4c7f6d354e63fde8e`, 37,756 bytes
+- snapshot `qa/r9h-uncap/source-snapshot.tar.gz` sha256 `ecc856f74e6130dfb68d5f8d434938b2c0313a8f88f538e25bd8f8c07dea54d0`, 860,710 bytes
+
+### Limits that remain
+
+- A new r9h page on SQL that does not send `sell_epoch` still uses synchronous `earn()` after that status. A later refusal on that old server can leave coins.
+- An already-open r9b tab is unchanged until it loads r9h. Nothing in this build closes it.
+- Coins and other non-receipt fields still follow the old 3-way rule: when both devices changed a number, the server value wins. Two tabs can still last-write-wins a crop stack that is not covered by a surviving receipt.
+- Nested objects that `merge3` recurses into still receive a `_savedAt` of their own. That behavior was already in `merge3`. This round did not rewrite it.
+- `market_listings`, `tg_market_ttl`, `tg_can_edit`, and showcases were not executed. No live SQL and no player rows.
+
+No fortune stalls. No merge, no deploy, no live SQL.
+
+
 

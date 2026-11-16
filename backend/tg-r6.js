@@ -333,7 +333,8 @@
       if (r && r.reason === 'error') return coins;   // backend down / old schema: client caps only
       // A numeric left must not reintroduce a crop ceiling after sell_uncapped. Task/merit/steal still mirror their own pools.
       if (r && typeof r.left === 'number' && !((source || 'sell') === 'sell' && sellUncapped())) MIR[mirKey(source || 'sell')] = r.left;
-      return (r && r.granted) | 0;
+      var granted = r && r.granted, gn = typeof granted === 'number' ? granted : Number(granted);
+      return Number.isSafeInteger(gn) && gn > 0 ? gn : 0;
     });
   }
   function sellUncapped() { return !!(MIR.sellUncapped || (window.TG_R9 && TG_R9.sell && TG_R9.sell.policy && TG_R9.sell.policy().uncapped)); }

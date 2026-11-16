@@ -1,0 +1,239 @@
+{
+ "build": "/workspace/v4/index.r9h.html",
+ "before": {
+  "sha256": "92b0b39b61bb7c13a10ee9de0eb10a74eb751f80ff715aac016de9f19d8423d1",
+  "size": 1901463
+ },
+ "smoke": {
+  "portrait": {
+   "plaza": {
+    "active": "plaza",
+    "calls": 66,
+    "errors": [],
+    "entry600": [
+     53,
+     38,
+     40,
+     39
+    ],
+    "entry600Max": 53
+   },
+   "gate": {
+    "active": "gate",
+    "calls": 43,
+    "errors": [],
+    "entry600": [
+     35,
+     32,
+     32,
+     30
+    ],
+    "entry600Max": 35
+   },
+   "hall": {
+    "active": "hall",
+    "calls": 45,
+    "errors": [],
+    "entry600": [
+     69,
+     36,
+     56,
+     36
+    ],
+    "entry600Max": 69
+   },
+   "yard": {
+    "active": "yard",
+    "calls": 41,
+    "errors": [],
+    "entry600": [
+     26,
+     26,
+     26,
+     26
+    ],
+    "entry600Max": 26
+   },
+   "zen": {
+    "active": "zen",
+    "calls": 19,
+    "errors": [],
+    "entry600": [
+     9,
+     15,
+     9,
+     13
+    ],
+    "entry600Max": 15
+   },
+   "study": {
+    "active": "study",
+    "calls": 18,
+    "errors": [],
+    "entry600": [
+     7,
+     8,
+     6,
+     13
+    ],
+    "entry600Max": 13
+   },
+   "market": {
+    "active": "market",
+    "calls": 44,
+    "errors": [],
+    "entry600": [
+     31,
+     29,
+     28,
+     33
+    ],
+    "entry600Max": 33
+   },
+   "tea": {
+    "active": "tea",
+    "calls": 75,
+    "errors": [],
+    "entry600": [
+     50,
+     38,
+     41,
+     43
+    ],
+    "entry600Max": 50
+   },
+   "lotus": {
+    "active": "lotus",
+    "calls": 54,
+    "errors": [],
+    "entry600": [
+     43,
+     34,
+     38,
+     35
+    ],
+    "entry600Max": 43
+   },
+   "errorsTotal": 0
+  },
+  "landscape": {
+   "plaza": {
+    "active": "plaza",
+    "calls": 77,
+    "errors": [],
+    "entry600": [
+     64,
+     53,
+     42,
+     53
+    ],
+    "entry600Max": 64
+   },
+   "gate": {
+    "active": "gate",
+    "calls": 47,
+    "errors": [],
+    "entry600": [
+     39,
+     39,
+     36,
+     36
+    ],
+    "entry600Max": 39
+   },
+   "hall": {
+    "active": "hall",
+    "calls": 50,
+    "errors": [],
+    "entry600": [
+     80,
+     68,
+     81,
+     85
+    ],
+    "entry600Max": 85
+   },
+   "yard": {
+    "active": "yard",
+    "calls": 54,
+    "errors": [],
+    "entry600": [
+     39,
+     25,
+     20,
+     24
+    ],
+    "entry600Max": 39
+   },
+   "zen": {
+    "active": "zen",
+    "calls": 29,
+    "errors": [],
+    "entry600": [
+     17,
+     16,
+     17,
+     14
+    ],
+    "entry600Max": 17
+   },
+   "study": {
+    "active": "study",
+    "calls": 26,
+    "errors": [],
+    "entry600": [
+     16,
+     11,
+     15,
+     14
+    ],
+    "entry600Max": 16
+   },
+   "market": {
+    "active": "market",
+    "calls": 55,
+    "errors": [],
+    "entry600": [
+     42,
+     40,
+     39,
+     43
+    ],
+    "entry600Max": 43
+   },
+   "tea": {
+    "active": "tea",
+    "calls": 79,
+    "errors": [],
+    "entry600": [
+     54,
+     49,
+     43,
+     56
+    ],
+    "entry600Max": 56
+   },
+   "lotus": {
+    "active": "lotus",
+    "calls": 58,
+    "errors": [],
+    "entry600": [
+     46,
+     42,
+     42,
+     45
+    ],
+    "entry600Max": 46
+   },
+   "errorsTotal": 0
+  },
+  "maxStable": 79,
+  "maxEntry600": 85,
+  "errors": 0
+ },
+ "after": {
+  "sha256": "92b0b39b61bb7c13a10ee9de0eb10a74eb751f80ff715aac016de9f19d8423d1",
+  "size": 1901463
+ },
+ "frozenUntouched": true
+}
