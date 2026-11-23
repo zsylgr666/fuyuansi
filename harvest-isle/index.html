@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#4b9ef2">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>丰收岛 · 3D 开心农场</title>
+<meta name="description" content="丰收岛：一座漂在海上的 3D 小农场。种菜、浇水、除草、捉虫、收获，去好友家偷菜，转盘抽奖，昼夜交替还会下雨。">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ctext y='52' font-size='52'%3E%F0%9F%8C%BB%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css">
+<script type="importmap">{ "imports": { "three": "./vendor/three.module.min.js" } }</script>
+</head>
+<body>
+<div id="app">
+  <div id="scene"></div>
+  <div id="vignette"></div>
+  <div id="labels"></div>
+  <div id="fly"></div>
+
+  <div id="hud" class="off">
+    <header id="topbar">
+      <div id="profile">
+        <div class="avatar"><span id="avatar">🧑‍🌾</span><b id="lv">1</b></div>
+        <div class="pmeta">
+          <div id="farmName">阳光农场</div>
+          <div class="xp"><i id="xpFill"></i><span id="xpText">0/40</span></div>
+        </div>
+      </div>
+      <div id="clock"><span id="clockIcon" class="ico"></span><b id="clockText">07:00</b></div>
+      <div id="wallet">
+        <button class="money" id="coinBtn" aria-label="金币"><span class="ico" data-icon="coin"></span><b id="coins">0</b><i>+</i></button>
+        <button class="money gem" id="gemBtn" aria-label="钻石"><span class="ico" data-icon="gem"></span><b id="gems">0</b><i>+</i></button>
+      </div>
+    </header>
+
+    <div id="visitBar" hidden>
+      <div class="vb-avatar" id="vbAvatar"></div>
+      <div class="vb-meta"><b id="vbName"></b><small id="vbSub"></small></div>
+      <button id="homeBtn" class="btn red sm"><span class="ico" data-icon="home"></span>回家</button>
+    </div>
+
+    <nav id="side">
+      <button data-open="shop"><span class="ico" data-icon="shop"></span><em>商店</em></button>
+      <button data-open="barn"><span class="ico" data-icon="barn"></span><em>仓库</em></button>
+      <button data-open="quests"><span class="ico" data-icon="quest"></span><em>任务</em><i class="dot" id="dotQuest"></i></button>
+      <button data-open="friends"><span class="ico" data-icon="friends"></span><em>好友</em><i class="dot" id="dotFriends"></i></button>
+      <button data-open="wheel"><span class="ico" data-icon="wheel"></span><em>转盘</em><i class="dot" id="dotWheel"></i></button>
+      <button data-open="settings" class="small"><span class="ico" data-icon="gear"></span><em>设置</em></button>
+    </nav>
+
+    <button id="harvestAll" class="btn gold" hidden><span class="ico" data-icon="basket"></span><span id="harvestAllText">一键收获</span></button>
+    <div id="hint" hidden><span class="ico" id="hintIco"></span><p id="hintText"></p><button class="x" id="hintClose" aria-label="关闭提示">×</button></div>
+    <div id="toolbar"></div>
+  </div>
+
+  <div id="toasts"></div>
+  <div id="tip" hidden></div>
+  <div id="pop" hidden></div>
+  <div id="modal" hidden><div class="mask"></div><div class="sheet"></div></div>
+  <div id="curtain"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+  <canvas id="confetti"></canvas>
+
+  <div id="splash">
+    <div class="logo">
+      <div class="logo-sub">HARVEST&nbsp;ISLE</div>
+      <h1><span>丰</span><span>收</span><span>岛</span></h1>
+      <p class="tagline">3D 开心农场 · 种菜 · 偷菜 · 抽大奖</p>
+    </div>
+    <button id="startBtn" class="btn big gold" disabled>正在开垦土地…</button>
+    <div class="credit">点击开始 · 建议打开声音 🔊</div>
+  </div>
+  <div id="fatal" hidden>你的浏览器不支持 WebGL2，换个新一点的浏览器再来种田吧～</div>
+</div>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
